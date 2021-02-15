@@ -1,0 +1,36 @@
+micronaut:
+  application:
+    name:  ${project.artifactId}
+
+  caches:
+    contexts:
+      # allow 100 contexts to be cached
+      maximum-size: 100
+      # renew the context in cache every 2 hours
+      expire-after-write: 2h
+
+---
+datasources:
+  default:
+    driverClassName: org.postgresql.Driver
+    url:  jdbc:postgresql://${datasources.default.host:localhost}:${datasources.default.port:5432}/${datasources.default.database}
+    dialect: org.hibernate.spatial.dialect.postgis.PostgisDialect
+    database: orion
+    username: orion
+    password: orion
+
+jackson:
+  serialization:
+    indentOutput: true
+
+---
+jpa:
+  default:
+    entity-scan:
+      packages:
+        - org.fiware.mintaka.persistence
+    properties:
+      hibernate:
+        hbm2ddl:
+          auto: update
+        show_sql: true

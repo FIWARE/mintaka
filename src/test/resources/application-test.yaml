@@ -1,0 +1,13 @@
+micronaut:
+  http:
+    services:
+      entities:
+        path: ngsi-ld/v1
+        url: http://localhost:1026
+
+
+test:
+  clientId: entities
+datasources:
+  default:
+    host: localhost
