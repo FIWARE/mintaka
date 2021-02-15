@@ -3,15 +3,11 @@ package org.fiware.mintaka.persistence;
 import lombok.RequiredArgsConstructor;
 import org.fiware.mintaka.domain.TimeRelation;
 import org.fiware.mintaka.exception.InvalidTimeRelationException;
-import org.fiware.ngsi.model.LinearRingDefinitionVO;
-import org.w3c.dom.Attr;
 
 import javax.inject.Singleton;
 import javax.persistence.EntityManager;
-import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 import java.time.Instant;
-import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 

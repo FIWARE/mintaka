@@ -1,4 +1,4 @@
-ame: Docker
+name: Docker Build&Push
 
 on:
   push:
