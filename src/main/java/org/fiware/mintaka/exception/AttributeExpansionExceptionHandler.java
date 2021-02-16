@@ -9,12 +9,15 @@ import lombok.extern.slf4j.Slf4j;
 
 import javax.inject.Singleton;
 
-
+/**
+ * Handler to map errors on attribute extension to matching responses
+ */
 @Produces
 @Singleton
 @Requires(classes = {AttributeExpansionException.class, ExceptionHandler.class})
 @Slf4j
 public class AttributeExpansionExceptionHandler implements ExceptionHandler<AttributeExpansionException, HttpResponse> {
+
 	@Override
 	public HttpResponse handle(HttpRequest request, AttributeExpansionException exception) {
 		log.warn("Was not able to expand attributes.");

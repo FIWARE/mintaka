@@ -1,31 +1,55 @@
 package org.fiware.mintaka.domain;
 
-import org.checkerframework.checker.nullness.Opt;
-import org.fiware.mintaka.persistence.Attribute;
+import org.fiware.mintaka.persistence.AbstractAttribute;
 import org.fiware.mintaka.persistence.ValueType;
 import org.fiware.ngsi.model.*;
 import org.geojson.LngLatAlt;
 import org.mapstruct.Mapper;
 
 import java.net.URI;
-import java.util.*;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
+/**
+ * Map objects between the internal persistence domain and the api.
+ */
 @Mapper(componentModel = "jsr330")
 public interface AttributePropertyVOMapper {
 
+	// value types the denote a {@link GeoPropertyVO}
 	Set<ValueType> GEO_TYPES = Set.of(ValueType.GeoLineString, ValueType.GeoMultiLineString, ValueType.GeoMultiPolygon, ValueType.GeoPoint, ValueType.GeoPolygon);
 
-	default boolean isGeoProperty(Attribute attribute) {
+	/**
+	 * Check if the given attribute from the persistence layer is a geoProperty
+	 *
+	 * @param attribute to check if its a geoproperty
+	 * @return true if its a geoProperty
+	 */
+	default boolean isGeoProperty(AbstractAttribute attribute) {
 		return GEO_TYPES.contains(attribute.getValueType());
 	}
 
-	default boolean isRelationShip(Attribute attribute) {
+	/**
+	 * Check if the given attribute from the persistence layer is a relationship
+	 *
+	 * @param attribute to check if its a relationship
+	 * @return true if its a relationship
+	 */
+	default boolean isRelationShip(AbstractAttribute attribute) {
 		return attribute.getValueType() == ValueType.Relationship;
 	}
 
-	default RelationshipVO attributeToRelationShip(Attribute attribute, Date createdAt) {
+	/**
+	 * Map the internal attribute to a relationship
+	 * @param attribute attribute to map
+	 * @param createdAt timestamp the relationship was created at
+	 * @return the mapped relationship
+	 */
+	default RelationshipVO attributeToRelationShip(AbstractAttribute attribute, Date createdAt) {
 		if (!isRelationShip(attribute)) {
 			throw new IllegalArgumentException("Received attribute is not a relationship");
 		}
@@ -42,7 +66,13 @@ public interface AttributePropertyVOMapper {
 		return relationshipVO;
 	}
 
-	default GeoPropertyVO attributeToGeoProperty(Attribute attribute, Date createdAt) {
+	/**
+	 * Map the internal attribute to a geoProperty
+	 * @param attribute attribute to map
+	 * @param createdAt timestamp the geoProperty was created at
+	 * @return the mapped geoProperty
+	 */
+	default GeoPropertyVO attributeToGeoProperty(AbstractAttribute attribute, Date createdAt) {
 		if (!isGeoProperty(attribute)) {
 			throw new IllegalArgumentException("Received attribute is not a geoproperty.");
 		}
@@ -105,7 +135,13 @@ public interface AttributePropertyVOMapper {
 		return geoPropertyVO;
 	}
 
-	default PropertyVO attributeToPropertyVO(Attribute attribute, Date createdAt) {
+	/**
+	 * Map the internal attribute to a property
+	 * @param attribute attribute to map
+	 * @param createdAt timestamp the property was created at
+	 * @return the mapped property
+	 */
+	default PropertyVO attributeToPropertyVO(AbstractAttribute attribute, Date createdAt) {
 		if (isGeoProperty(attribute)) {
 			throw new IllegalArgumentException("Received a geoproperty.");
 		}
@@ -145,6 +181,11 @@ public interface AttributePropertyVOMapper {
 		return propertyVO;
 	}
 
+	/**
+	 * Map a {@link org.geojson.GeoJsonObject} LngLat list to a linearRingDefinition
+	 * @param lngLatAltList geoJson to map
+	 * @return the linearRingDefinition
+	 */
 	default LinearRingDefinitionVO lgnLatAltListToLinearRing(List<LngLatAlt> lngLatAltList) {
 		return lngLatAltList.stream()
 				.map(this::lgnLatAltToPositionDefinition)
@@ -158,6 +199,11 @@ public interface AttributePropertyVOMapper {
 								}));
 	}
 
+	/**
+	 * Map a {@link org.geojson.GeoJsonObject} LngLat list to a linearStringDefinition
+	 * @param lngLatAltList geoJson to map
+	 * @return the linearStringDefinition
+	 */
 	default LineStringDefinitionVO lgnLatAltListToLineString(List<LngLatAlt> lngLatAltList) {
 		return lngLatAltList.stream()
 				.map(this::lgnLatAltToPositionDefinition)
@@ -171,6 +217,11 @@ public interface AttributePropertyVOMapper {
 								}));
 	}
 
+	/**
+	 * Map a {@link org.geojson.GeoJsonObject} list of LngLat lists to a polygonDefinition
+	 * @param lngLatAltListList geoJson to map
+	 * @return the polygonDefinition
+	 */
 	default PolygonDefinitionVO lgnLatAltListListToPolygonDefinition(List<List<LngLatAlt>> lngLatAltListList) {
 		return lngLatAltListList.stream()
 				.map(this::lgnLatAltListToLinearRing)
@@ -184,6 +235,11 @@ public interface AttributePropertyVOMapper {
 								}));
 	}
 
+	/**
+	 * Map a {@link org.geojson.GeoJsonObject} lngLatAlt to a positionDefinition
+	 * @param lngLatAlt geoJson to map
+	 * @return the positionDefinition
+	 */
 	default PositionDefinitionVO lgnLatAltToPositionDefinition(LngLatAlt lngLatAlt) {
 		PositionDefinitionVO positionDefinitionVO = new PositionDefinitionVO();
 		positionDefinitionVO.add(lngLatAlt.getLongitude());

@@ -11,6 +11,9 @@ import org.fiware.mintaka.domain.EntityTemporalSerializer;
 
 import javax.inject.Singleton;
 
+/**
+ * Base application as starting point
+ */
 @Factory
 public class Application {
 
@@ -18,6 +21,11 @@ public class Application {
 		Micronaut.run(Application.class, args);
 	}
 
+	/**
+	 * Replacement for the default {@link ObjectMapper} to serialize according to JSON-LD
+	 * @param ldContextCache cache for json-ld context
+	 * @return the objectmapper bean
+	 */
 	@Singleton
 	@Replaces(ObjectMapper.class)
 	public ObjectMapper objectMapper(LdContextCache ldContextCache) {

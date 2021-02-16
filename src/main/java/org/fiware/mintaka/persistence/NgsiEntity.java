@@ -6,6 +6,10 @@ import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import java.time.Instant;
 
+/**
+ * Database representation of a concrete Entity. Schema is defined by orion-ld
+ * {@see https://github.com/FIWARE/context.Orion-LD}
+ */
 @Data
 @Entity
 @Table(name = "entities")

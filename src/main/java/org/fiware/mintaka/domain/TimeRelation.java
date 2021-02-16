@@ -1,5 +1,8 @@
 package org.fiware.mintaka.domain;
 
+/**
+ * Internal representation of a timerelation
+ */
 public enum TimeRelation {
 
     BEFORE("before"),
@@ -8,7 +11,7 @@ public enum TimeRelation {
 
     private final String value;
 
-    private TimeRelation(java.lang.String value) {
+    TimeRelation(java.lang.String value) {
         this.value = value;
     }
 

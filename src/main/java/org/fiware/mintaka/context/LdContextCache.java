@@ -1,9 +1,6 @@
 package org.fiware.mintaka.context;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.jsonldjava.core.JsonLdConsts;
 import com.github.jsonldjava.core.JsonLdOptions;
 import com.github.jsonldjava.core.JsonLdProcessor;
@@ -12,6 +9,7 @@ import io.micronaut.cache.annotation.CacheConfig;
 import io.micronaut.cache.annotation.Cacheable;
 import io.micronaut.context.annotation.Context;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.fiware.mintaka.exception.AttributeExpansionException;
 import org.fiware.mintaka.exception.ContextRetrievalException;
 
@@ -27,6 +25,7 @@ import java.util.stream.Collectors;
 /**
  * Cache for ld context. Provides additional functionality to work with the context.
  */
+@Slf4j
 @Context
 @CacheConfig("contexts")
 @RequiredArgsConstructor
@@ -50,6 +49,7 @@ public class LdContextCache {
 
 	/**
 	 * Get context from the given url. Will be cached.
+	 *
 	 * @param url - url to get the context from
 	 * @return the context
 	 */
@@ -68,7 +68,7 @@ public class LdContextCache {
 	/**
 	 * Expand all given attributes with the given contexts.
 	 *
-	 * @param attributes - attributes to be expanded
+	 * @param attributes  - attributes to be expanded
 	 * @param contextUrls - urls of contexts to be used for expansion
 	 * @return list of expanded attribute-ids
 	 */
@@ -92,13 +92,17 @@ public class LdContextCache {
 
 	/**
 	 * Get the context from the given object. Should either be a (URL)String, a URL or a list of urls/urlstrings.
+	 *
 	 * @param contextURLs - either be a (URL)String, a URL or a list of urls/urlstrings.
 	 * @return the context
 	 */
 	public Object getContext(Object contextURLs) {
 		if (contextURLs instanceof List) {
-			Object compactedContext = ((List) contextURLs).stream().map(urlObject -> getContext(urlObject))
-					.collect(Collectors.reducing((c1, c2) -> JsonLdProcessor.compact(c1, c2, JSON_LD_OPTIONS)));
+			Object compactedContext = Map.of(JsonLdConsts.CONTEXT, ((List) contextURLs).stream()
+					.map(this::getContext)
+					.map(contextMap -> ((Map<String, Object>) contextMap).get(JsonLdConsts.CONTEXT))
+					.flatMap(map -> ((Map<String, Object>) map).entrySet().stream())
+					.collect(Collectors.toMap(e -> ((Map.Entry<String, Object>) e).getKey(), e -> ((Map.Entry<String, Object>) e).getValue(), (e1, e2) -> e2)));
 			if (compactedContext instanceof Optional) {
 				return ((Optional<?>) compactedContext).orElseThrow(() -> new ContextRetrievalException("Was not able to get compacted context."));
 			}
@@ -113,6 +117,7 @@ public class LdContextCache {
 
 	/**
 	 * Get the context from the given url
+	 *
 	 * @param urlString - string containing the url
 	 * @return the context
 	 */
@@ -127,6 +132,7 @@ public class LdContextCache {
 
 	/**
 	 * Extract the context urls from the link header. CORE_CONTEXT will be automatically added.
+	 *
 	 * @param headerString - content of the link header
 	 * @return list of context urls, will either be only the core context or the core-context + the header context
 	 */
