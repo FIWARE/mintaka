@@ -4,7 +4,10 @@ import com.github.jsonldjava.core.JsonLdConsts;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.env.PropertySource;
 import io.micronaut.http.HttpRequest;
+import io.micronaut.http.client.DefaultHttpClientConfiguration;
 import io.micronaut.http.client.HttpClient;
+import io.micronaut.http.client.HttpClientConfiguration;
+import io.micronaut.http.client.netty.DefaultHttpClient;
 import io.micronaut.runtime.server.EmbeddedServer;
 import lombok.extern.slf4j.Slf4j;
 import org.fiware.ngsi.api.EntitiesApiTestClient;
@@ -78,8 +81,9 @@ public class ComposeTest {
 		clock = mock(Clock.class);
 		when(clock.instant()).thenReturn(startTimeStamp);
 		createEntityHistory();
-
-		mintakaTestClient = HttpClient.create(new URL("http://" + embeddedServer.getHost() + ":" + embeddedServer.getPort()));
+		HttpClientConfiguration configuration = new DefaultHttpClientConfiguration();
+		configuration.setReadTimeout(Duration.ofSeconds(30));
+		mintakaTestClient = new DefaultHttpClient(new URL("http://" + embeddedServer.getHost() + ":" + embeddedServer.getPort()), configuration);
 	}
 
 	@DisplayName("Retrieve the full entity with out a timeframe definition in the default context.")
