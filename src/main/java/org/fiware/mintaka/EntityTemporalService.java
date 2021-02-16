@@ -57,7 +57,7 @@ public class EntityTemporalService {
 
 	}
 
-	private void addSubAttributesToAttributeInstance(String entityId, Map.Entry<String, Object> propertyEntry, int lastN, List<String> instancesWithSubattributes) {
+	private void addSubAttributesToAttributeInstance(String entityId, Map.Entry<String, Object> propertyEntry, Integer lastN, List<String> instancesWithSubattributes) {
 		if (propertyEntry.getValue() == null) {
 			log.debug("The received property entry {} does not have a value.", propertyEntry.getKey());
 			return;
@@ -107,7 +107,7 @@ public class EntityTemporalService {
 		return "";
 	}
 
-	private List<Map.Entry<String, Object>> getSubAttributesForInstance(String entityId, String attributeId, int lastN) {
+	private List<Map.Entry<String, Object>> getSubAttributesForInstance(String entityId, String attributeId, Integer lastN) {
 
 		Map<String, List<Instant>> createdAtMap = new HashMap<>();
 		return entityRepository.findSubAttributeInstancesForAttributeAndEntity(entityId, attributeId, lastN)
@@ -125,7 +125,7 @@ public class EntityTemporalService {
 
 	private Map.Entry<String, Object> getAttributeEntryWithCreatedAt(Map<String, List<Instant>> createdAtMap, AbstractAttribute attribute, boolean isSubAttribute) {
 		if (isSubAttribute) {
-			// TODO: go back to old solution when opmode is added to subAttributes table
+			// TODO: go back to old solution when opMode is added to subAttributes table
 			return attributeToMapEntry(attribute, attribute.getTs());
 
 		}

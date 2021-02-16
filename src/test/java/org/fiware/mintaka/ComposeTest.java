@@ -1,26 +1,28 @@
 package org.fiware.mintaka;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import io.micronaut.context.annotation.Factory;
-import io.micronaut.context.annotation.Replaces;
-import io.micronaut.http.HttpStatus;
-import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
+import com.github.jsonldjava.core.JsonLdConsts;
+import io.micronaut.context.ApplicationContext;
+import io.micronaut.context.env.PropertySource;
+import io.micronaut.http.HttpRequest;
+import io.micronaut.http.client.HttpClient;
+import io.micronaut.runtime.server.EmbeddedServer;
 import lombok.extern.slf4j.Slf4j;
 import org.fiware.ngsi.api.EntitiesApiTestClient;
-import org.fiware.ngsi.api.TemporalRetrievalApiTestClient;
 import org.fiware.ngsi.model.*;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.testcontainers.containers.DockerComposeContainer;
+import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
+import java.io.File;
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
+import java.security.SecureRandom;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
@@ -28,64 +30,110 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@MicronautTest
 @Slf4j
 public class ComposeTest {
 
-	@Inject
-	private TemporalRetrievalApiTestClient temporalRetrievalApiTestClient;
+	private static final URI ENTITY_ID = URI.create("urn:ngsi-ld:store:4" + UUID.randomUUID().toString());
+	private static final URI DATA_MODEL_CONTEXT = URI.create("https://fiware.github.io/data-models/context.jsonld");
+	private static final URI CORE_CONTEXT = URI.create("https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld");
+	private static final String ORION_LD_HOST = "orion-ld";
+	private static final String TIMESCALE_HOST = "orion-ld";
+	private static final int ORION_LD_PORT = 1026;
+	private static final int TIMESCALE_PORT = 5432;
+	public static final int NUMBER_OF_UPDATES = 100;
 
-	@Inject
-	private ObjectMapper objectMapper;
-
-	@Inject
 	private EntitiesApiTestClient entitiesApiTestClient;
 
-	private Instant currentTime = Instant.now();
+	private final Instant startTimeStamp = Instant.ofEpochMilli(0);
 	private Clock clock;
+	private static EmbeddedServer embeddedServer;
+	private static ApplicationContext applicationContext;
 
-	@BeforeEach
-	public void setup() {
-		clock = mock(Clock.class);
-		when(clock.instant()).thenReturn(currentTime);
+	private HttpClient mintakaTestClient;
+
+	@BeforeAll
+	public static void setupEnv() {
+		DockerComposeContainer dockerComposeContainer = new DockerComposeContainer(new File("src/test/resources/docker-compose/docker-compose-it.yml"))
+				.withExposedService("orion-ld", ORION_LD_PORT)
+				.withExposedService("timescale", TIMESCALE_PORT);
+
+		dockerComposeContainer.waitingFor(ORION_LD_HOST, new HttpWaitStrategy()
+				.withReadTimeout(Duration.of(1, ChronoUnit.MINUTES)).forPort(ORION_LD_PORT).forPath("/version")).start();
+		embeddedServer = ApplicationContext.run(EmbeddedServer.class, PropertySource.of(
+				"test", Map.of("datasource.default.host", dockerComposeContainer.getServiceHost(ORION_LD_HOST, ORION_LD_PORT),
+						"datasource.default.port", dockerComposeContainer.getServicePort(ORION_LD_HOST, ORION_LD_PORT)
+				)));
+
+		applicationContext = embeddedServer.getApplicationContext();
 	}
 
+	@BeforeEach
+	public void setup() throws MalformedURLException {
+		entitiesApiTestClient = applicationContext.getBean(EntitiesApiTestClient.class);
+
+		clock = mock(Clock.class);
+		when(clock.instant()).thenReturn(startTimeStamp);
+		createEntityHistory();
+
+		mintakaTestClient = HttpClient.create(new URL("http://" + embeddedServer.getHost() + ":" + embeddedServer.getPort()));
+	}
+
+	@DisplayName("Retrieve the full entity with out a timeframe definition in the default context.")
 	@Test
-	public void test() throws JsonProcessingException {
+	public void testGetEntityByIdWithoutTime() {
+		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(HttpRequest.GET("/temporal/entities/" + ENTITY_ID), Map.class);
+		assertNotNull(entityTemporalMap, "A temporal entity should have been returned.");
 
-		URI context = URI.create("https://fiware.github.io/data-models/context.jsonld");
+		assertEquals(entityTemporalMap.get(JsonLdConsts.CONTEXT), "https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld", "The core context should be present if nothing else is requested.");
+		assertEquals(entityTemporalMap.get("type"), "store", "The correct type of the entity should be retrieved.");
+		List.of("temperature", "open", "storeName", "relatedEntity", "lineString", "polygon", "multiPolygon", "multiLineString", "propertyWithSubProperty", "relatedEntity")
+				.stream()
+				.forEach(propertyName -> {
+					Object temporalProperty = entityTemporalMap.get(propertyName);
+					assertNotNull(temporalProperty, "All entities should have been retrieved.");
+					assertTrue(temporalProperty instanceof List, "A list of the properties should have been retrieved.");
+					List<Map<String, Object>> listRepresentation = (List) temporalProperty;
+					assertEquals(listRepresentation.size(), NUMBER_OF_UPDATES + 1, "All instances should have been returned(created + 100 updates).");
+					listRepresentation.stream().forEach(element -> {
+						Object createdAtObj = element.get("createdAt");
+						assertNotNull(createdAtObj, "CreatedAt should be present for all elements.");
+						assertTrue(createdAtObj instanceof Long, "CreatedAt should be a timestamp.");
+					});
+				});
+	}
 
-		URI entityId = URI.create("urn:ngsi-ld:store:4" + UUID.randomUUID().toString());
+	private void createEntityHistory() {
 
+		Instant currentTime = startTimeStamp;
 		EntityVO entityVO = new EntityVO()
-				.atContext(context)
-				.id(entityId)
+				.atContext(CORE_CONTEXT)
+				.id(ENTITY_ID)
 				.location(null)
 				.observationSpace(null)
 				.operationSpace(null)
 				.type("store");
 
 		entityVO.setAdditionalProperties(getAdditionalProperties());
-		assertEquals(entitiesApiTestClient.createEntity(entityVO).getStatus(), HttpStatus.CREATED, "The entity should have been created.");
 
-		for (int i = 0; i < 200; i++) {
+		entitiesApiTestClient.createEntity(entityVO);
+
+		for (int i = 0; i < NUMBER_OF_UPDATES; i++) {
 			currentTime = currentTime.plus(1, ChronoUnit.MINUTES);
 			when(clock.instant()).thenReturn(currentTime);
 			// evolve over time
-			EntityFragmentVO entityFragmentVO = new EntityFragmentVO().atContext(context)
+			EntityFragmentVO entityFragmentVO = new EntityFragmentVO().atContext(CORE_CONTEXT)
 					.location(null)
 					.observationSpace(null)
 					.operationSpace(null)
 					.type("store");
 			entityFragmentVO.setAdditionalProperties(getAdditionalProperties());
-			entitiesApiTestClient.updateEntityAttrs(entityId, entityFragmentVO);
+			entitiesApiTestClient.updateEntityAttrs(ENTITY_ID, entityFragmentVO);
 		}
 	}
-
 
 	private Map<String, Object> getAdditionalProperties() {
 		RelationshipVO relationshipVO = getNewRelationship()._object(URI.create("my:related:entity"));

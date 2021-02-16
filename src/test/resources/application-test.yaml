@@ -4,6 +4,9 @@ micronaut:
       entities:
         path: ngsi-ld/v1
         url: http://localhost:1026
+      temporalRetrieval:
+        path: /
+        url: http://localhost:8080
 
 
 test:

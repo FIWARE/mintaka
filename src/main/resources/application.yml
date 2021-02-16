@@ -19,10 +19,6 @@ datasources:
     username: orion
     password: orion
 
-jackson:
-  serialization:
-    indentOutput: true
-
 ---
 jpa:
   default:

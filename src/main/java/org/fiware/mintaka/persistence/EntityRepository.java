@@ -40,13 +40,14 @@ public class EntityRepository {
 
 	/**
 	 * Find all attributes of an entity in the define timeframe
-	 * @param entityId id to get attributes for
+	 *
+	 * @param entityId     id to get attributes for
 	 * @param timeRelation relation to be used in time query
-	 * @param timeAt reference timestamp
-	 * @param endTime endTime in case relation "between" is usd
-	 * @param attributes the attributes to be included, if null or empty return all
-	 * @param lastN number of instances to be retrieved, will retrieve the last instances
-	 * @param timeField timeproperty to be used for the timerelations
+	 * @param timeAt       reference timestamp
+	 * @param endTime      endTime in case relation "between" is usd
+	 * @param attributes   the attributes to be included, if null or empty return all
+	 * @param lastN        number of instances to be retrieved, will retrieve the last instances
+	 * @param timeField    timeproperty to be used for the timerelations
 	 * @return list of attribute instances
 	 */
 	public List<Attribute> findAttributeByEntityId(String entityId, TimeRelation timeRelation, Instant timeAt, Instant endTime, List<String> attributes, Integer lastN, String timeField) {
@@ -63,9 +64,10 @@ public class EntityRepository {
 
 	/**
 	 * Return all sub attribute instnaces for the given attribute instance
-	 * @param entityId entity the attributes and subattributes are connected to
+	 *
+	 * @param entityId            entity the attributes and subattributes are connected to
 	 * @param attributeInstanceId id of the concrete attribute
-	 * @param lastN number of instances to be retrieved, will retrieve the last instances
+	 * @param lastN               number of instances to be retrieved, will retrieve the last instances
 	 * @return list of subattribute instances
 	 */
 	public List<SubAttribute> findSubAttributeInstancesForAttributeAndEntity(String entityId, String attributeInstanceId, Integer lastN) {
@@ -89,11 +91,11 @@ public class EntityRepository {
 	/**
 	 * Find instances of a concrete attribute for an entity.
 	 *
-	 * @param entityId the entity to retrieve the entities for
-	 * @param attributeId id of the attribute to retrieve the instances for
+	 * @param entityId      the entity to retrieve the entities for
+	 * @param attributeId   id of the attribute to retrieve the instances for
 	 * @param timeQueryPart the part of the sql query that denotes the timeframe
-	 * @param timeField field to be used in the timequery
-	 * @param lastN number of instances to be retrieved, will retrieve the last instances
+	 * @param timeField     field to be used in the timequery
+	 * @param lastN         number of instances to be retrieved, will retrieve the last instances
 	 * @return list of attribute instances
 	 */
 	private List<Attribute> findAttributeInstancesForEntity(String entityId, String attributeId, String timeQueryPart, String timeField, Integer lastN) {
@@ -104,11 +106,13 @@ public class EntityRepository {
 								"where attribute.entityId=:entityId " +
 								"and attribute.id=:attributeId " +
 								"and attribute.opMode!='" + OpMode.Delete.name() + "' " +
-								"and " + timeQueryPart + " " +
+								timeQueryPart +
 								"order by attribute.ts desc", Attribute.class);
 		getAttributeInstancesQuery.setParameter("entityId", entityId);
 		getAttributeInstancesQuery.setParameter("attributeId", attributeId);
-		getAttributeInstancesQuery.setParameter("timeField", timeField);
+		if (!timeQueryPart.isEmpty()) {
+			getAttributeInstancesQuery.setParameter("timeField", timeField);
+		}
 		if (lastN != null && lastN > 0) {
 			getAttributeInstancesQuery.setMaxResults(lastN);
 		}
@@ -117,9 +121,10 @@ public class EntityRepository {
 
 	/**
 	 * Find all id's of attributes that exist for the entity in the given timeframe
-	 * @param entityId id of the entity to get the attributes for
+	 *
+	 * @param entityId      id of the entity to get the attributes for
 	 * @param timeQueryPart the part of the sql query that denotes the timeframe
-	 * @param timeField field to be used in the timequery
+	 * @param timeField     field to be used in the timequery
 	 * @return list of attribute ID's
 	 */
 	private List<String> findAllAttributesForEntity(String entityId, String timeQueryPart, String timeField) {
@@ -129,8 +134,10 @@ public class EntityRepository {
 								"from Attribute attribute " +
 								"where attribute.entityId=:entityId " +
 								"and attribute.opMode!='" + OpMode.Delete.name() + "' " +
-								"and " + timeQueryPart, String.class);
-		getAttributeIdsQuery.setParameter("timeField", timeField);
+								timeQueryPart, String.class);
+		if (!timeQueryPart.isEmpty()) {
+			getAttributeIdsQuery.setParameter("timeField", timeField);
+		}
 		getAttributeIdsQuery.setParameter("entityId", entityId);
 		return getAttributeIdsQuery.getResultList();
 	}
@@ -138,23 +145,24 @@ public class EntityRepository {
 
 	/**
 	 * Translate the time relation into a part of an sql query
+	 *
 	 * @param timeRelation relation to be used in time query
-	 * @param timeAt reference timestamp
-	 * @param endTime endTime in case relation "between" is usd
+	 * @param timeAt       reference timestamp
+	 * @param endTime      endTime in case relation "between" is usd
 	 * @return the time related part of the sql query
 	 */
 	private String getTimeQueryPart(TimeRelation timeRelation, Instant timeAt, Instant endTime) {
 		InvalidTimeRelationException invalidTimeRelationException = new InvalidTimeRelationException("Received an invalid time relation.");
-		if (timeRelation == null) {
-			throw invalidTimeRelationException;
+		if (timeRelation == null && timeAt == null && endTime == null) {
+			return "";
 		}
 		switch (timeRelation) {
 			case BETWEEN:
-				return String.format(":timeField < '%s' and :timeField > '%s'", endTime, timeAt);
+				return String.format("and :timeField < '%s' and :timeField > '%s' ", endTime, timeAt);
 			case BEFORE:
-				return String.format(":timeField < '%s'", timeAt);
+				return String.format("and :timeField < '%s' ", timeAt);
 			case AFTER:
-				return String.format(":timeField > '%s'", timeAt);
+				return String.format("and :timeField > '%s' ", timeAt);
 			default:
 				throw invalidTimeRelationException;
 		}
@@ -163,13 +171,13 @@ public class EntityRepository {
 	/**
 	 * Get the list of timestamps that have opMode "create" for the given attribute.
 	 *
-	 * @param attributeId id of the attribute to find the timestamps for
-	 * @param entityId id of the entity that are connected with the attribute
+	 * @param attributeId    id of the attribute to find the timestamps for
+	 * @param entityId       id of the entity that are connected with the attribute
 	 * @param isSubAttribute is the requestend attribute an attribute or a subattribute
 	 * @return the list of timestamps
 	 */
 	public List<Instant> getCreatedAtForAttribute(String attributeId, String entityId, boolean isSubAttribute) {
-		String tableName = isSubAttribute ? "Attribute" : "SubAttribute";
+		String tableName = isSubAttribute ? "SubAttribute" : "Attribute";
 
 		TypedQuery<Instant> instantTypedQuery = entityManager.
 				createQuery(
@@ -180,8 +188,7 @@ public class EntityRepository {
 		instantTypedQuery.setParameter("entityId", entityId);
 		instantTypedQuery.setParameter("attributeId", attributeId);
 
-		List<Instant> createdInstants = instantTypedQuery.getResultList();
-		return createdInstants;
+		return instantTypedQuery.getResultList();
 	}
 
 }
