@@ -18,6 +18,9 @@ public class Attribute extends AbstractAttribute{
     @Column(name = "opmode")
     private OpMode opMode;
 
+    @Column(name = "datasetid")
+    private String datasetId;
+
     @Column(name = "subproperties")
     private Boolean subProperties;
 }

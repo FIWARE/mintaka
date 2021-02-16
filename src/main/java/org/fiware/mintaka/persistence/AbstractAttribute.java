@@ -33,9 +33,6 @@ public abstract class AbstractAttribute {
 	@Column(name = "unitcode")
 	private String unitCode;
 
-	@Column(name = "datasetid")
-	private String datasetId;
-
 	@Enumerated(EnumType.STRING)
 	@Column(name = "valuetype")
 	private ValueType valueType;
