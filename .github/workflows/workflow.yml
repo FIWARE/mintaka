@@ -20,7 +20,7 @@ jobs:
         run: mvn clean test
 
   push:
-
+    needs: test
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
 
