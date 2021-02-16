@@ -2,14 +2,18 @@ version: "3.5"
 services:
   # Orion is the context broker
   orion:
-    image: fiware/orion-ld:0.6-PRE-45
+    image: fiware/orion-ld:0.6-PRE-55
     hostname: orion
     container_name: fiware-orion
+    # sometimes the initial startup fails due to a weird timescale behaviour
+    restart: always
     environment:
       - ORIONLD_TROE=TRUE
       - ORIONLD_TROE_USER=orion
       - ORIONLD_TROE_PWD=orion
       - ORIONLD_TROE_HOST=timescale
+      - ORIONLD_MONGO_HOST=mongo-db
+      -
     depends_on:
       - mongo-db
       - timescale
@@ -17,7 +21,7 @@ services:
       - default
     ports:
       - "1026:1026"
-    command: -dbhost mongo-db -logLevel DEBUG
+    command: -logLevel DEBUG
     healthcheck:
       test: curl --fail -s http://orion:1026/version || exit 1
       interval: 5s
@@ -42,6 +46,7 @@ services:
         host=`hostname --ip-address || echo '127.0.0.1'`;
         mongo --quiet $host/test --eval 'quit(db.runCommand({ ping: 1 }).ok ? 0 : 2)' && echo 0 || echo 1
       interval: 5s
+
   timescale:
     image: timescale/timescaledb-postgis:latest-pg12
     hostname: timescale
