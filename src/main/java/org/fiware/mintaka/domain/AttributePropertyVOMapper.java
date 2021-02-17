@@ -1,6 +1,7 @@
 package org.fiware.mintaka.domain;
 
 import org.fiware.mintaka.persistence.AbstractAttribute;
+import org.fiware.mintaka.persistence.Attribute;
 import org.fiware.mintaka.persistence.ValueType;
 import org.fiware.ngsi.model.*;
 import org.geojson.LngLatAlt;
@@ -45,6 +46,7 @@ public interface AttributePropertyVOMapper {
 
 	/**
 	 * Map the internal attribute to a relationship
+	 *
 	 * @param attribute attribute to map
 	 * @param createdAt timestamp the relationship was created at
 	 * @return the mapped relationship
@@ -61,13 +63,16 @@ public interface AttributePropertyVOMapper {
 				.modifiedAt(Date.from(attribute.getTs()));
 
 		Optional.ofNullable(attribute.getObservedAt()).ifPresent(oa -> relationshipVO.observedAt(Date.from(oa)));
-		Optional.ofNullable(attribute.getDatasetId()).ifPresent(di -> relationshipVO.datasetId(URI.create(di)));
+		if (attribute instanceof Attribute) {
+			Optional.ofNullable(((Attribute) attribute).getDatasetId()).ifPresent(di -> relationshipVO.datasetId(URI.create(di)));
+		}
 
 		return relationshipVO;
 	}
 
 	/**
 	 * Map the internal attribute to a geoProperty
+	 *
 	 * @param attribute attribute to map
 	 * @param createdAt timestamp the geoProperty was created at
 	 * @return the mapped geoProperty
@@ -83,8 +88,9 @@ public interface AttributePropertyVOMapper {
 				.modifiedAt(Date.from(attribute.getTs()));
 
 		Optional.ofNullable(attribute.getObservedAt()).ifPresent(oa -> geoPropertyVO.observedAt(Date.from(oa)));
-		Optional.ofNullable(attribute.getDatasetId()).ifPresent(di -> geoPropertyVO.datasetId(URI.create(di)));
-
+		if (attribute instanceof Attribute) {
+			Optional.ofNullable(((Attribute) attribute).getDatasetId()).ifPresent(di -> geoPropertyVO.datasetId(URI.create(di)));
+		}
 		switch (attribute.getValueType()) {
 			case GeoPoint:
 				geoPropertyVO
@@ -137,6 +143,7 @@ public interface AttributePropertyVOMapper {
 
 	/**
 	 * Map the internal attribute to a property
+	 *
 	 * @param attribute attribute to map
 	 * @param createdAt timestamp the property was created at
 	 * @return the mapped property
@@ -155,7 +162,9 @@ public interface AttributePropertyVOMapper {
 				.modifiedAt(Date.from(attribute.getTs()));
 
 		Optional.ofNullable(attribute.getObservedAt()).ifPresent(oa -> propertyVO.observedAt(Date.from(oa)));
-		Optional.ofNullable(attribute.getDatasetId()).ifPresent(di -> propertyVO.datasetId(URI.create(di)));
+		if (attribute instanceof Attribute) {
+			Optional.ofNullable(((Attribute) attribute).getDatasetId()).ifPresent(di -> propertyVO.datasetId(URI.create(di)));
+		}
 
 		switch (attribute.getValueType()) {
 			case Number:
@@ -183,6 +192,7 @@ public interface AttributePropertyVOMapper {
 
 	/**
 	 * Map a {@link org.geojson.GeoJsonObject} LngLat list to a linearRingDefinition
+	 *
 	 * @param lngLatAltList geoJson to map
 	 * @return the linearRingDefinition
 	 */
@@ -201,6 +211,7 @@ public interface AttributePropertyVOMapper {
 
 	/**
 	 * Map a {@link org.geojson.GeoJsonObject} LngLat list to a linearStringDefinition
+	 *
 	 * @param lngLatAltList geoJson to map
 	 * @return the linearStringDefinition
 	 */
@@ -219,6 +230,7 @@ public interface AttributePropertyVOMapper {
 
 	/**
 	 * Map a {@link org.geojson.GeoJsonObject} list of LngLat lists to a polygonDefinition
+	 *
 	 * @param lngLatAltListList geoJson to map
 	 * @return the polygonDefinition
 	 */
@@ -237,6 +249,7 @@ public interface AttributePropertyVOMapper {
 
 	/**
 	 * Map a {@link org.geojson.GeoJsonObject} lngLatAlt to a positionDefinition
+	 *
 	 * @param lngLatAlt geoJson to map
 	 * @return the positionDefinition
 	 */
