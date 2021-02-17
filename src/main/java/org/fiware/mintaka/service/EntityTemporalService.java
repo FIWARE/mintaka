@@ -1,4 +1,4 @@
-package org.fiware.mintaka;
+package org.fiware.mintaka.service;
 
 import com.sun.jdi.request.StepRequest;
 import io.micronaut.transaction.annotation.ReadOnly;
@@ -15,6 +15,8 @@ import org.fiware.ngsi.model.*;
 import javax.inject.Singleton;
 import java.net.URI;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -30,10 +32,10 @@ public class EntityTemporalService {
 	private final AttributePropertyVOMapper attributePropertyVOMapper;
 
 	@ReadOnly
-	public EntityTemporalVO getNgsiEntitiesWithTimerel(String entityId, String timeProperty, TimerelVO timeRel, Instant timeAt, Instant endTime, List<String> attrs, Integer lastN) {
+	public Optional<EntityTemporalVO> getNgsiEntitiesWithTimerel(String entityId, String timeProperty, TimerelVO timeRel, Instant timeAt, Instant endTime, List<String> attrs, Integer lastN) {
 		Optional<NgsiEntity> entity = entityRepository.findById(entityId);
 		if (entity.isEmpty()) {
-			return null;
+			return Optional.empty();
 		}
 		NgsiEntity ngsiEntity = entity.get();
 		List<Attribute> attributes = entityRepository.findAttributeByEntityId(entityId, apiDomainMapper.timeRelVoToTimeRelation(timeRel), timeAt, endTime, attrs, lastN, timeProperty);
@@ -53,7 +55,7 @@ public class EntityTemporalService {
 				.forEach(entry -> addEntryToTemporalAttributes(temporalAttributes, entry));
 
 		entityTemporalVO.setAdditionalProperties(temporalAttributes);
-		return entityTemporalVO;
+		return Optional.ofNullable(entityTemporalVO);
 
 	}
 
@@ -126,23 +128,23 @@ public class EntityTemporalService {
 	private Map.Entry<String, Object> getAttributeEntryWithCreatedAt(Map<String, List<Instant>> createdAtMap, AbstractAttribute attribute, boolean isSubAttribute) {
 		if (isSubAttribute) {
 			// TODO: go back to old solution when opMode is added to subAttributes table
-			return attributeToMapEntry(attribute, attribute.getTs());
+			return attributeToMapEntry(attribute, attribute.getTs().toInstant(ZoneOffset.UTC));
 
 		}
 		List<Instant> createdAtList = createdAtMap.computeIfAbsent(
 				attribute.getId(),
 				k -> entityRepository.getCreatedAtForAttribute(attribute.getId(), attribute.getEntityId(), isSubAttribute));
-		return attributeToMapEntry(attribute, findClosestBefore(createdAtList, attribute.getTs()));
+		return attributeToMapEntry(attribute, findClosestBefore(createdAtList, attribute.getTs().toInstant(ZoneOffset.UTC)));
 	}
 
 
 	// we expect the createdAtList to be sorted ascending. We dont sort here, because we retrieve it already sorted from the db
 	private Instant findClosestBefore(List<Instant> createdAtList, Instant attributeTs) {
 		Instant createdAt = Instant.ofEpochMilli(0);
-		for (Instant currentInstant : createdAtList) {
+		for (Instant currentDate : createdAtList) {
 			// we check if NOT after, because we want "before or equal
-			if (!currentInstant.isAfter(attributeTs)) {
-				createdAt = currentInstant;
+			if (!currentDate.isAfter(attributeTs)) {
+				createdAt = currentDate;
 			} else {
 				break;
 			}
@@ -151,14 +153,14 @@ public class EntityTemporalService {
 	}
 
 	private Map.Entry<String, Object> attributeToMapEntry(AbstractAttribute attribute, Instant createdAt) {
-		Date createdAtDate = Date.from(createdAt);
+
 		if (attributePropertyVOMapper.isRelationShip(attribute)) {
-			return Map.entry(attribute.getId(), attributePropertyVOMapper.attributeToRelationShip(attribute, createdAtDate));
+			return Map.entry(attribute.getId(), attributePropertyVOMapper.attributeToRelationShip(attribute, createdAt));
 		}
 		if (attributePropertyVOMapper.isGeoProperty(attribute)) {
-			return Map.entry(attribute.getId(), attributePropertyVOMapper.attributeToGeoProperty(attribute, createdAtDate));
+			return Map.entry(attribute.getId(), attributePropertyVOMapper.attributeToGeoProperty(attribute, createdAt));
 		}
-		return Map.entry(attribute.getId(), attributePropertyVOMapper.attributeToPropertyVO(attribute, createdAtDate));
+		return Map.entry(attribute.getId(), attributePropertyVOMapper.attributeToPropertyVO(attribute, createdAt));
 	}
 
 }

@@ -3,6 +3,7 @@ package org.fiware.mintaka;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.runtime.Micronaut;
@@ -23,6 +24,7 @@ public class Application {
 
 	/**
 	 * Replacement for the default {@link ObjectMapper} to serialize according to JSON-LD
+	 *
 	 * @param ldContextCache cache for json-ld context
 	 * @return the objectmapper bean
 	 */
@@ -31,9 +33,10 @@ public class Application {
 	public ObjectMapper objectMapper(LdContextCache ldContextCache) {
 		ObjectMapper objectMapper = new ObjectMapper();
 		SimpleModule entityTemporalModule = new SimpleModule();
+		objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+		objectMapper.registerModule(new JavaTimeModule());
 		entityTemporalModule.addSerializer(new EntityTemporalSerializer(ldContextCache));
 		objectMapper.registerModule(entityTemporalModule);
-		objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 		return objectMapper;
 	}
 }

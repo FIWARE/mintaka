@@ -8,7 +8,7 @@ import org.fiware.mintaka.exception.PersistenceRetrievalException;
 import javax.inject.Singleton;
 import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
-import java.time.Instant;
+import java.time.*;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -52,13 +52,13 @@ public class EntityRepository {
 	 */
 	public List<Attribute> findAttributeByEntityId(String entityId, TimeRelation timeRelation, Instant timeAt, Instant endTime, List<String> attributes, Integer lastN, String timeField) {
 
-		String timeQueryPart = getTimeQueryPart(timeRelation, timeAt, endTime);
+		String timeQueryPart = getTimeQueryPart(timeRelation, timeAt, endTime, timeField);
 		if (attributes == null || attributes.isEmpty()) {
 			attributes = findAllAttributesForEntity(entityId, timeQueryPart, timeField);
 		}
 
 		return attributes.stream()
-				.flatMap(attributeId -> findAttributeInstancesForEntity(entityId, attributeId, timeQueryPart, timeField, lastN).stream())
+				.flatMap(attributeId -> findAttributeInstancesForEntity(entityId, attributeId, timeQueryPart, lastN).stream())
 				.collect(Collectors.toList());
 	}
 
@@ -94,11 +94,10 @@ public class EntityRepository {
 	 * @param entityId      the entity to retrieve the entities for
 	 * @param attributeId   id of the attribute to retrieve the instances for
 	 * @param timeQueryPart the part of the sql query that denotes the timeframe
-	 * @param timeField     field to be used in the timequery
 	 * @param lastN         number of instances to be retrieved, will retrieve the last instances
 	 * @return list of attribute instances
 	 */
-	private List<Attribute> findAttributeInstancesForEntity(String entityId, String attributeId, String timeQueryPart, String timeField, Integer lastN) {
+	private List<Attribute> findAttributeInstancesForEntity(String entityId, String attributeId, String timeQueryPart, Integer lastN) {
 		TypedQuery<Attribute> getAttributeInstancesQuery =
 				entityManager.createQuery(
 						"Select attribute " +
@@ -110,9 +109,6 @@ public class EntityRepository {
 								"order by attribute.ts desc", Attribute.class);
 		getAttributeInstancesQuery.setParameter("entityId", entityId);
 		getAttributeInstancesQuery.setParameter("attributeId", attributeId);
-		if (!timeQueryPart.isEmpty()) {
-			getAttributeInstancesQuery.setParameter("timeField", timeField);
-		}
 		if (lastN != null && lastN > 0) {
 			getAttributeInstancesQuery.setMaxResults(lastN);
 		}
@@ -135,9 +131,6 @@ public class EntityRepository {
 								"where attribute.entityId=:entityId " +
 								"and attribute.opMode!='" + OpMode.Delete.name() + "' " +
 								timeQueryPart, String.class);
-		if (!timeQueryPart.isEmpty()) {
-			getAttributeIdsQuery.setParameter("timeField", timeField);
-		}
 		getAttributeIdsQuery.setParameter("entityId", entityId);
 		return getAttributeIdsQuery.getResultList();
 	}
@@ -151,18 +144,30 @@ public class EntityRepository {
 	 * @param endTime      endTime in case relation "between" is usd
 	 * @return the time related part of the sql query
 	 */
-	private String getTimeQueryPart(TimeRelation timeRelation, Instant timeAt, Instant endTime) {
+	private String getTimeQueryPart(TimeRelation timeRelation, Instant timeAt, Instant endTime, String timeField) {
 		InvalidTimeRelationException invalidTimeRelationException = new InvalidTimeRelationException("Received an invalid time relation.");
 		if (timeRelation == null && timeAt == null && endTime == null) {
 			return "";
 		}
+		String timeProperty = "";
+		if (timeField.equals("observedAt")) {
+			timeProperty += "attribute.observedAt";
+		} else if (timeField.equals("createdAt")) {
+			timeProperty += " attribute.opMode='" + OpMode.Create.name() + "' and attribute.ts";
+		} else if (timeField.equals("modifiedAt")) {
+			timeProperty += " attribute.opMode!='" + OpMode.Create.name() + "' and attribute.ts";
+		} else {
+			throw new PersistenceRetrievalException(String.format("Querying by %s is currently not supported.", timeField));
+		}
+
+		LocalDateTime timeAtLDT = LocalDateTime.ofInstant(timeAt, ZoneOffset.UTC);
 		switch (timeRelation) {
 			case BETWEEN:
-				return String.format("and :timeField < '%s' and :timeField > '%s' ", endTime, timeAt);
+				return String.format("and %s > '%s' and  %s < '%s' ", timeProperty, timeAtLDT, timeProperty, LocalDateTime.ofInstant(endTime, ZoneOffset.UTC));
 			case BEFORE:
-				return String.format("and :timeField < '%s' ", timeAt);
+				return String.format("and %s < '%s' ", timeProperty, timeAtLDT);
 			case AFTER:
-				return String.format("and :timeField > '%s' ", timeAt);
+				return String.format("and %s > '%s' ", timeProperty, timeAtLDT);
 			default:
 				throw invalidTimeRelationException;
 		}
@@ -179,16 +184,16 @@ public class EntityRepository {
 	public List<Instant> getCreatedAtForAttribute(String attributeId, String entityId, boolean isSubAttribute) {
 		String tableName = isSubAttribute ? "SubAttribute" : "Attribute";
 
-		TypedQuery<Instant> instantTypedQuery = entityManager.
+		TypedQuery<LocalDateTime> instantTypedQuery = entityManager.
 				createQuery(
 						"select attribute.ts " +
 								"from " + tableName + " attribute " +
 								"where attribute.entityId=:entityId and attribute.id=:attributeId and attribute.opMode='" + OpMode.Create.name() + "'" +
-								" order by attribute.ts asc", Instant.class);
+								" order by attribute.ts asc", LocalDateTime.class);
 		instantTypedQuery.setParameter("entityId", entityId);
 		instantTypedQuery.setParameter("attributeId", attributeId);
 
-		return instantTypedQuery.getResultList();
+		return instantTypedQuery.getResultList().stream().map(localDateTime -> localDateTime.toInstant(ZoneOffset.UTC)).collect(Collectors.toList());
 	}
 
 }

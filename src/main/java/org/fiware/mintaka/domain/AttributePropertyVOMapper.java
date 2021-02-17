@@ -8,7 +8,8 @@ import org.geojson.LngLatAlt;
 import org.mapstruct.Mapper;
 
 import java.net.URI;
-import java.util.Date;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -51,7 +52,7 @@ public interface AttributePropertyVOMapper {
 	 * @param createdAt timestamp the relationship was created at
 	 * @return the mapped relationship
 	 */
-	default RelationshipVO attributeToRelationShip(AbstractAttribute attribute, Date createdAt) {
+	default RelationshipVO attributeToRelationShip(AbstractAttribute attribute, Instant createdAt) {
 		if (!isRelationShip(attribute)) {
 			throw new IllegalArgumentException("Received attribute is not a relationship");
 		}
@@ -60,9 +61,9 @@ public interface AttributePropertyVOMapper {
 				.type(RelationshipVO.Type.RELATIONSHIP)
 				._object(URI.create(attribute.getText()))
 				.createdAt(createdAt)
-				.modifiedAt(Date.from(attribute.getTs()));
+				.modifiedAt(attribute.getTs().toInstant(ZoneOffset.UTC));
 
-		Optional.ofNullable(attribute.getObservedAt()).ifPresent(oa -> relationshipVO.observedAt(Date.from(oa)));
+		Optional.ofNullable(attribute.getObservedAt()).ifPresent(oa -> relationshipVO.observedAt(oa.toInstant(ZoneOffset.UTC)));
 		if (attribute instanceof Attribute) {
 			Optional.ofNullable(((Attribute) attribute).getDatasetId()).ifPresent(di -> relationshipVO.datasetId(URI.create(di)));
 		}
@@ -77,7 +78,7 @@ public interface AttributePropertyVOMapper {
 	 * @param createdAt timestamp the geoProperty was created at
 	 * @return the mapped geoProperty
 	 */
-	default GeoPropertyVO attributeToGeoProperty(AbstractAttribute attribute, Date createdAt) {
+	default GeoPropertyVO attributeToGeoProperty(AbstractAttribute attribute, Instant createdAt) {
 		if (!isGeoProperty(attribute)) {
 			throw new IllegalArgumentException("Received attribute is not a geoproperty.");
 		}
@@ -85,9 +86,9 @@ public interface AttributePropertyVOMapper {
 				.instanceId(URI.create(attribute.getInstanceId()))
 				.type(GeoPropertyVO.Type.GEOPROPERTY)
 				.createdAt(createdAt)
-				.modifiedAt(Date.from(attribute.getTs()));
+				.modifiedAt(attribute.getTs().toInstant(ZoneOffset.UTC));
 
-		Optional.ofNullable(attribute.getObservedAt()).ifPresent(oa -> geoPropertyVO.observedAt(Date.from(oa)));
+		Optional.ofNullable(attribute.getObservedAt()).ifPresent(oa -> geoPropertyVO.observedAt(oa.toInstant(ZoneOffset.UTC)));
 		if (attribute instanceof Attribute) {
 			Optional.ofNullable(((Attribute) attribute).getDatasetId()).ifPresent(di -> geoPropertyVO.datasetId(URI.create(di)));
 		}
@@ -148,7 +149,7 @@ public interface AttributePropertyVOMapper {
 	 * @param createdAt timestamp the property was created at
 	 * @return the mapped property
 	 */
-	default PropertyVO attributeToPropertyVO(AbstractAttribute attribute, Date createdAt) {
+	default PropertyVO attributeToPropertyVO(AbstractAttribute attribute, Instant createdAt) {
 		if (isGeoProperty(attribute)) {
 			throw new IllegalArgumentException("Received a geoproperty.");
 		}
@@ -159,9 +160,9 @@ public interface AttributePropertyVOMapper {
 				.instanceId(URI.create(attribute.getInstanceId()))
 				.type(PropertyVO.Type.PROPERTY)
 				.createdAt(createdAt)
-				.modifiedAt(Date.from(attribute.getTs()));
+				.modifiedAt(attribute.getTs().toInstant(ZoneOffset.UTC));
 
-		Optional.ofNullable(attribute.getObservedAt()).ifPresent(oa -> propertyVO.observedAt(Date.from(oa)));
+		Optional.ofNullable(attribute.getObservedAt()).ifPresent(oa -> propertyVO.observedAt(oa.toInstant(ZoneOffset.UTC)));
 		if (attribute instanceof Attribute) {
 			Optional.ofNullable(((Attribute) attribute).getDatasetId()).ifPresent(di -> propertyVO.datasetId(URI.create(di)));
 		}
@@ -180,7 +181,7 @@ public interface AttributePropertyVOMapper {
 				propertyVO.value(attribute.getCompound());
 				break;
 			case DateTime:
-				propertyVO.value(Date.from(attribute.getDatetime()));
+				propertyVO.value(attribute.getDatetime());
 				break;
 			case LanguageMap:
 				throw new UnsupportedOperationException("Language maps are currently not supported.");

@@ -3,7 +3,9 @@ package org.fiware.mintaka.domain;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.jsonldjava.core.JsonLdConsts;
 import com.github.jsonldjava.core.JsonLdOptions;
 import com.github.jsonldjava.core.JsonLdProcessor;
@@ -23,7 +25,13 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 
-	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+	private final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+	{
+		OBJECT_MAPPER.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+		OBJECT_MAPPER.registerModule(new JavaTimeModule());
+	}
+
 	private static final JsonLdOptions JSON_LD_OPTIONS = new JsonLdOptions();
 	private final LdContextCache ldContextCache;
 
@@ -52,14 +60,12 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 			compactedObject.put("@context", value.atContext());
 			// write the serialized object back to the generator
 			gen.writeRaw(JsonUtils.toPrettyString(compactedObject));
-		}
-		catch(IOException e){
+		} catch (IOException e) {
 			log.error("Was not able to deserialize object", e);
 			// bubble to fulfill interface
 			throw e;
 		}
 	}
-
 
 
 }

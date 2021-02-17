@@ -118,10 +118,11 @@
             <version>1.14</version>
         </dependency>
         <dependency>
-            <groupId>de.escalon.hypermedia</groupId>
-            <artifactId>hydra-jsonld</artifactId>
-            <version>0.4.2</version>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>2.12.1</version>
         </dependency>
+
         <!-- logging -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
@@ -143,6 +144,11 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -214,6 +220,9 @@
                                 <jacksonDatabindNullable>false</jacksonDatabindNullable>
                                 <supportsAdditionalPropertiesWithComposedSchema>true</supportsAdditionalPropertiesWithComposedSchema>
                             </configOptions>
+                            <typeMappings>
+                                <typeMapping>java.util.Date=java.time.Instant</typeMapping>
+                            </typeMappings>
                         </configuration>
                     </execution>
                 </executions>

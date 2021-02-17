@@ -6,7 +6,7 @@ import org.hibernate.annotations.Formula;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
-import java.time.Instant;
+import java.time.LocalDateTime;
 
 /**
  * Database representation of an attribute as parent for the concrete SubAttributes and Attributes. Schema is defined by orion-ld
@@ -28,7 +28,7 @@ public abstract class AbstractAttribute {
 	private String entityId;
 
 	@Column(name = "observedat")
-	private Instant observedAt;
+	private LocalDateTime observedAt;
 
 	@Column(name = "unitcode")
 	private String unitCode;
@@ -45,7 +45,7 @@ public abstract class AbstractAttribute {
 
 	private String text;
 
-	private Instant datetime;
+	private LocalDateTime datetime;
 
 	@Column(columnDefinition = "jsonb")
 	private String compound;
@@ -71,5 +71,5 @@ public abstract class AbstractAttribute {
 	private MultiLineString geoMultiLineString;
 
 	@NotNull
-	private Instant ts;
+	private LocalDateTime ts;
 }
