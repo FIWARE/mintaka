@@ -1,6 +1,8 @@
 package org.fiware.mintaka.persistence;
 
+import io.micronaut.data.model.query.QueryModel;
 import lombok.RequiredArgsConstructor;
+import org.checkerframework.checker.nullness.Opt;
 import org.fiware.mintaka.domain.TimeRelation;
 import org.fiware.mintaka.exception.InvalidTimeRelationException;
 import org.fiware.mintaka.exception.PersistenceRetrievalException;
@@ -28,14 +30,28 @@ public class EntityRepository {
 	 * @param entityId id of the entity to retrieve
 	 * @return optional entity
 	 */
-	public Optional<NgsiEntity> findById(String entityId) {
-		TypedQuery<NgsiEntity> getNgsiEntitiesQuery = entityManager.createQuery("Select entity from NgsiEntity entity where entity.id=:id", NgsiEntity.class);
-		getNgsiEntitiesQuery.setParameter("id", entityId);
-		List<NgsiEntity> ngsiEntityList = getNgsiEntitiesQuery.getResultList();
-		if (ngsiEntityList.size() > 1) {
-			throw new PersistenceRetrievalException(String.format("Retrieved multiple entities for id %s.", entityId));
+	public Optional<NgsiEntity> findById(String entityId, TimeRelation timeRelation, LocalDateTime timeAt, LocalDateTime endTime) {
+		String timeQueryPart = getTimeQueryPart(Optional.ofNullable(timeRelation).orElse(TimeRelation.BETWEEN),
+				Optional.ofNullable(timeAt).map(tA -> tA.toInstant(ZoneOffset.UTC)).orElse(null),
+				Optional.ofNullable(endTime).map(tE -> tE.toInstant(ZoneOffset.UTC)).orElse(null),
+				"ts", "entity");
+		String wherePart = "entity.id=:id";
+		if (!timeQueryPart.isEmpty()) {
+			// give me the last non-deleted instance inside the timeframe or the last instance(including deleted) before the frame.
+			wherePart = "(entity.id=:id " + timeQueryPart +
+					" and entity.opMode!='" + OpMode.Delete.name() + "')" +
+					String.format(" or (entity.id=:id and entity.ts <='%s')", timeAt);
 		}
-		return ngsiEntityList.stream().findFirst();
+
+		TypedQuery<NgsiEntity> getNgsiEntitiesQuery = entityManager.createQuery(
+				"Select entity from NgsiEntity entity where " +
+						wherePart +
+						" order by entity.ts desc", NgsiEntity.class);
+		getNgsiEntitiesQuery.setParameter("id", entityId);
+		getNgsiEntitiesQuery.setMaxResults(1);
+		List<NgsiEntity> ngsiEntityList = getNgsiEntitiesQuery.getResultList();
+		// only return the entity if its not deleted.
+		return ngsiEntityList.stream().findFirst().filter(ngsiEntity -> ngsiEntity.getOpMode() != OpMode.Delete);
 	}
 
 	/**
@@ -135,32 +151,30 @@ public class EntityRepository {
 		return getAttributeIdsQuery.getResultList();
 	}
 
-
-	/**
-	 * Translate the time relation into a part of an sql query
-	 *
-	 * @param timeRelation relation to be used in time query
-	 * @param timeAt       reference timestamp
-	 * @param endTime      endTime in case relation "between" is usd
-	 * @return the time related part of the sql query
-	 */
-	private String getTimeQueryPart(TimeRelation timeRelation, Instant timeAt, Instant endTime, String timeField) {
+	private String getTimeQueryPart(TimeRelation timeRelation, Instant timeAt, Instant endTime, String timeField, String entity) {
 		InvalidTimeRelationException invalidTimeRelationException = new InvalidTimeRelationException("Received an invalid time relation.");
+		if (entity == null) {
+			entity = "attribute";
+		}
+
 		if (timeRelation == null && timeAt == null && endTime == null) {
 			return "";
 		}
 		String timeProperty = "";
 		if (timeField.equals("observedAt")) {
-			timeProperty += "attribute.observedAt";
+			timeProperty += String.format("%s.observedAt", entity);
 		} else if (timeField.equals("createdAt")) {
-			timeProperty += " attribute.opMode='" + OpMode.Create.name() + "' and attribute.ts";
+			timeProperty += String.format(" %s.opMode='", entity) + OpMode.Create.name() + String.format("' and %s.ts", entity);
 		} else if (timeField.equals("modifiedAt")) {
-			timeProperty += " attribute.opMode!='" + OpMode.Create.name() + "' and attribute.ts";
+			timeProperty += String.format(" %s.opMode!='", entity) + OpMode.Create.name() + String.format("' and %s.ts", entity);
+		} else if (timeField.equals("ts")) {
+			timeProperty += String.format("%s.ts", entity);
 		} else {
 			throw new PersistenceRetrievalException(String.format("Querying by %s is currently not supported.", timeField));
 		}
 
 		LocalDateTime timeAtLDT = LocalDateTime.ofInstant(timeAt, ZoneOffset.UTC);
+
 		switch (timeRelation) {
 			case BETWEEN:
 				return String.format("and %s > '%s' and  %s < '%s' ", timeProperty, timeAtLDT, timeProperty, LocalDateTime.ofInstant(endTime, ZoneOffset.UTC));
@@ -171,6 +185,19 @@ public class EntityRepository {
 			default:
 				throw invalidTimeRelationException;
 		}
+	}
+
+
+	/**
+	 * Translate the time relation into a part of an sql query
+	 *
+	 * @param timeRelation relation to be used in time query
+	 * @param timeAt       reference timestamp
+	 * @param endTime      endTime in case relation "between" is usd
+	 * @return the time related part of the sql query
+	 */
+	private String getTimeQueryPart(TimeRelation timeRelation, Instant timeAt, Instant endTime, String timeField) {
+		return getTimeQueryPart(timeRelation, timeAt, endTime, timeField, null);
 	}
 
 	/**

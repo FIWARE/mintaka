@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.fiware.mintaka.domain.ApiDomainMapper;
 import org.fiware.mintaka.domain.AttributePropertyVOMapper;
+import org.fiware.mintaka.domain.TimeRelation;
 import org.fiware.mintaka.persistence.AbstractAttribute;
 import org.fiware.mintaka.persistence.Attribute;
 import org.fiware.mintaka.persistence.EntityRepository;
@@ -15,6 +16,7 @@ import org.fiware.ngsi.model.*;
 import javax.inject.Singleton;
 import java.net.URI;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
@@ -33,12 +35,8 @@ public class EntityTemporalService {
 
 	@ReadOnly
 	public Optional<EntityTemporalVO> getNgsiEntitiesWithTimerel(String entityId, String timeProperty, TimerelVO timeRel, Instant timeAt, Instant endTime, List<String> attrs, Integer lastN) {
-		Optional<NgsiEntity> entity = entityRepository.findById(entityId);
-		if (entity.isEmpty()) {
-			return Optional.empty();
-		}
-		NgsiEntity ngsiEntity = entity.get();
-		List<Attribute> attributes = entityRepository.findAttributeByEntityId(entityId, apiDomainMapper.timeRelVoToTimeRelation(timeRel), timeAt, endTime, attrs, lastN, timeProperty);
+		TimeRelation timeRelation = apiDomainMapper.timeRelVoToTimeRelation(timeRel);
+		List<Attribute> attributes = entityRepository.findAttributeByEntityId(entityId, timeRelation, timeAt, endTime, attrs, lastN, timeProperty);
 		List<String> attributesWithSubattributes = attributes.stream()
 				.filter(Attribute::getSubProperties)
 				.map(Attribute::getInstanceId)
@@ -47,12 +45,28 @@ public class EntityTemporalService {
 		Map<String, List<Instant>> createdAtMap = new HashMap<>();
 		Map<String, Object> temporalAttributes = new HashMap<>();
 
-		EntityTemporalVO entityTemporalVO = new EntityTemporalVO();
-		entityTemporalVO.type(ngsiEntity.getType()).id(URI.create(entityId));
+
+		List<LocalDateTime> attributeTimeStamps = new ArrayList<>();
+
 		attributes.stream()
+				.peek(attribute -> attributeTimeStamps.add(attribute.getTs()))
 				.map(attribute -> getAttributeEntryWithCreatedAt(createdAtMap, attribute, false))
 				.peek(attributeEntry -> addSubAttributesToAttributeInstance(entityId, attributeEntry, lastN, attributesWithSubattributes))
 				.forEach(entry -> addEntryToTemporalAttributes(temporalAttributes, entry));
+
+		if (attributeTimeStamps.isEmpty()) {
+			return Optional.empty();
+		}
+		// filter the entity in the timestamp we have attributes for.
+		Optional<NgsiEntity> entity = entityRepository.findById(entityId, timeRelation, attributeTimeStamps.get(0), attributeTimeStamps.get(attributeTimeStamps.size() - 1));
+		// sort them, to get the first and last timestamp
+		attributeTimeStamps.sort(Comparator.naturalOrder());
+		if (entity.isEmpty()) {
+			return Optional.empty();
+		}
+		NgsiEntity ngsiEntity = entity.get();
+		EntityTemporalVO entityTemporalVO = new EntityTemporalVO();
+		entityTemporalVO.type(ngsiEntity.getType()).id(URI.create(entityId));
 
 		entityTemporalVO.setAdditionalProperties(temporalAttributes);
 		return Optional.ofNullable(entityTemporalVO);

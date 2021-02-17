@@ -3066,6 +3066,12 @@
           },
           "type": {
             "$ref": "#/components/schemas/Name"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/createdAt"
+          },
+          "modifiedAt": {
+            "$ref": "#/components/schemas/modifiedAt"
           }
         },
         "additionalProperties": {

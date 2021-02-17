@@ -111,6 +111,39 @@ public class ComposeTest {
 		mintakaTestClient = new DefaultHttpClient(new URL("http://" + embeddedServer.getHost() + ":" + embeddedServer.getPort()), configuration);
 	}
 
+	@DisplayName("Retrieve not found for not existing entities")
+	@Test
+	public void testGetEntityByIdNotFound() {
+		try {
+			mintakaTestClient.toBlocking().retrieve(HttpRequest.GET("/temporal/entities/rn:ngsi-ld:store:not-found"), Map.class);
+		} catch (HttpClientResponseException e) {
+			if (!e.getStatus().equals(HttpStatus.NOT_FOUND)) {
+				fail("For non existing entities a 404 should be returned.");
+			}
+		}
+	}
+
+	@DisplayName("Retrieve entity without attributes if non-existent is requested.")
+	@Test
+	public void testGetEntityByIdWithNonExistingAttribute() {
+		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/" + ENTITY_ID);
+		getRequest.getParameters().add("attrs", "nonExisting");
+
+		assertEmptyEntityTemporal(mintakaTestClient.toBlocking().retrieve(getRequest, Map.class));
+
+	}
+
+	private void assertEmptyEntityTemporal(Map<String, Object> entityTemporalMap) {
+		assertDefaultStoreTemporalEntity(entityTemporalMap);
+		assertEquals(entityTemporalMap.size(), 3, "Only id, type and context should have been returned.");
+	}
+
+	@DisplayName("Request timeframe before that not exists")
+	@Test
+	public void  testGetEntityByIdBeforeExists() {
+
+	}
+
 	@DisplayName("Retrieve the full entity. No timeframe definition, default context.")
 	@Test
 	public void testGetEntityByIdWithoutTime() {
@@ -276,7 +309,71 @@ public class ComposeTest {
 		assertAttributesInMap(entityTemporalMap, attributesList, lastN, startTimeStamp.plus(NUMBER_OF_UPDATES - lastN + 1, ChronoUnit.MINUTES), startTimeStamp.plus(NUMBER_OF_UPDATES, ChronoUnit.MINUTES));
 	}
 
+	@DisplayName("Retrieve the last n instances before the timestamp, default context.")
+	@Test
+	public void testGetEntityBeforeTimestampWithLastN() {
+		assertAttributesBeforeWithLastN(FULL_ENTITY_ATTRIBUTES_LIST, 5);
+	}
+
+	@DisplayName("Retrieve the last n instances for the requested attribute before the timestamp, default context.")
+	@ParameterizedTest
+	@MethodSource("provideFullEntityAttributeStrings")
+	public void testGetEntityAttributesBeforeTimestampsWithLastN(String attributeName) {
+		assertAttributesBeforeWithLastN(List.of(attributeName), 5);
+	}
+
+	@DisplayName("Retrieve the last n instances with the requested attribute before the timestamp, default context.")
+	@ParameterizedTest
+	@MethodSource("provideCombinedAttributeStrings")
+	public void testGetEntityMultipleAttributesBeforeTimestampsWithLastN(List<String> subList) {
+		assertAttributesBeforeWithLastN(subList, 5);
+	}
+
+	@DisplayName("Retrieve the last n instances after the timestamp, default context.")
+	@Test
+	public void testGetEntityAfterTimestampWithLastN() {
+		assertAttributesAfterWithLastN(FULL_ENTITY_ATTRIBUTES_LIST, 5);
+	}
+
+	@DisplayName("Retrieve the last n instances for the requested attribute after the timestamp, default context.")
+	@ParameterizedTest
+	@MethodSource("provideFullEntityAttributeStrings")
+	public void testGetEntityAttributesAfterTimestampsWithLastN(String attributeName) {
+		assertAttributesAfterWithLastN(List.of(attributeName), 5);
+	}
+
+	@DisplayName("Retrieve the last n instances with the requested attribute after the timestamp, default context.")
+	@ParameterizedTest
+	@MethodSource("provideCombinedAttributeStrings")
+	public void testGetEntityMultipleAttributesAfterTimestampsWithLastN(List<String> subList) {
+		assertAttributesAfterWithLastN(subList, 5);
+	}
+
+	@DisplayName("Retrieve the last n instances between the timestamps, default context.")
+	@Test
+	public void testGetEntityBetweenTimestampWithLastN() {
+		assertAttributesBetweenWithLastN(FULL_ENTITY_ATTRIBUTES_LIST, 5);
+	}
+
+	@DisplayName("Retrieve the last n instances for the requested attribute between the timestamps, default context.")
+	@ParameterizedTest
+	@MethodSource("provideFullEntityAttributeStrings")
+	public void testGetEntityAttributesBetweenTimestampsWithLastN(String attributeName) {
+		assertAttributesBetweenWithLastN(List.of(attributeName), 5);
+	}
+
+	@DisplayName("Retrieve the last n instances with the requested attribute between the timestamps, default context.")
+	@ParameterizedTest
+	@MethodSource("provideCombinedAttributeStrings")
+	public void testGetEntityMultipleAttributesBetweenTimestampsWithLastN(List<String> subList) {
+		assertAttributesBetweenWithLastN(subList, 5);
+	}
+
 	private void assertAttributesBetween(List<String> attributesList) {
+		assertAttributesBetweenWithLastN(attributesList, null);
+	}
+
+	private void assertAttributesBetweenWithLastN(List<String> attributesList, Integer lastN) {
 		String timerelation = "between";
 		String startTime = "1970-01-01T00:30:00Z";
 		String endTime = "1970-01-01T00:45:00Z";
@@ -293,17 +390,32 @@ public class ComposeTest {
 			getRequest.getParameters().add("attrs", attributesParam);
 		}
 
+		// start time should be the first after the requested.
+		Instant expectedStart = startTimeStamp.plus(31, ChronoUnit.MINUTES);
+
+		if (lastN != null) {
+			getRequest.getParameters()
+					.add("lastN", String.valueOf(lastN));
+			expectedStart = startTimeStamp.plus(45 - lastN, ChronoUnit.MINUTES);
+		}
+
+		Integer expectedInstances = lastN != null ? lastN : 14;
+
 		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
 		assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
 		assertAttributesInMap(
 				entityTemporalMap,
 				attributesList,
-				14,
-				startTimeStamp.plus(31, ChronoUnit.MINUTES),
+				expectedInstances,
+				expectedStart,
 				startTimeStamp.plus(44, ChronoUnit.MINUTES));
 	}
 
 	private void assertAttributesBefore(List<String> attributesList) {
+		assertAttributesBeforeWithLastN(attributesList, null);
+	}
+
+	private void assertAttributesBeforeWithLastN(List<String> attributesList, Integer lastN) {
 		String timerelation = "before";
 		String time = "1970-01-01T00:30:00Z";
 
@@ -313,21 +425,36 @@ public class ComposeTest {
 		getRequest.getParameters()
 				.add("timerel", timerelation)
 				.add("time", time);
+
 		if (attributesList != FULL_ENTITY_ATTRIBUTES_LIST) {
 			getRequest.getParameters().add("attrs", attributesParam);
 		}
+
+		Instant expectedStart = startTimeStamp;
+
+		if (lastN != null) {
+			getRequest.getParameters()
+					.add("lastN", String.valueOf(lastN));
+			expectedStart = expectedStart.plus(30 - lastN, ChronoUnit.MINUTES);
+		}
+
+		Integer expectedInstances = lastN != null ? lastN : 30;
 
 		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
 		assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the requested attribute should have been returned.");
 		assertAttributesInMap(
 				entityTemporalMap,
 				attributesList,
-				30,
-				startTimeStamp,
+				expectedInstances,
+				expectedStart,
 				startTimeStamp.plus(29, ChronoUnit.MINUTES));
 	}
 
 	private void assertAttributesAfter(List<String> attributesList) {
+		assertAttributesAfterWithLastN(attributesList, null);
+	}
+
+	private void assertAttributesAfterWithLastN(List<String> attributesList, Integer lastN) {
 		String timerelation = "after";
 		String time = "1970-01-01T00:30:00Z";
 
@@ -341,13 +468,24 @@ public class ComposeTest {
 			getRequest.getParameters().add("attrs", attributesParam);
 		}
 
+		// 1 less then updates, because exclusive after
+		Instant expectedStart = startTimeStamp.plus(NUMBER_OF_UPDATES - 89, ChronoUnit.MINUTES);
+
+		if (lastN != null) {
+			getRequest.getParameters()
+					.add("lastN", String.valueOf(lastN));
+			// +1, because the last existing update is included
+			expectedStart = startTimeStamp.plus(NUMBER_OF_UPDATES - lastN + 1, ChronoUnit.MINUTES);
+		}
+		Integer expectedInstances = lastN != null ? lastN : 90;
+
 		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
 		assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
 		assertAttributesInMap(
 				entityTemporalMap,
 				attributesList,
-				NUMBER_OF_UPDATES - 30,
-				startTimeStamp.plus(31, ChronoUnit.MINUTES),
+				expectedInstances,
+				expectedStart,
 				startTimeStamp.plus(NUMBER_OF_UPDATES, ChronoUnit.MINUTES));
 	}
 

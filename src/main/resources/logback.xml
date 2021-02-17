@@ -9,7 +9,7 @@
         </encoder>
     </appender>
 
-    <root level="error">
+    <root level="WARN">
         <appender-ref ref="STDOUT" />
     </root>
 
