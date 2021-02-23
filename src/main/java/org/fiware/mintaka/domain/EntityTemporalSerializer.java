@@ -12,22 +12,16 @@ import com.github.jsonldjava.core.JsonLdProcessor;
 import com.github.jsonldjava.utils.JsonUtils;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.context.ServerRequestContext;
-import io.micronaut.runtime.http.scope.RequestScope;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.nullness.Opt;
 import org.fiware.mintaka.context.LdContextCache;
 import org.fiware.ngsi.model.EntityTemporalVO;
 
 import javax.inject.Singleton;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
-
-import static com.github.jsonldjava.core.JsonLdOptions.JSON_LD_1_1;
 
 /**
  * Serializer for {@link EntityTemporalVO} to a json-ld string.

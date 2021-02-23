@@ -1,18 +1,19 @@
 package org.fiware.mintaka.rest;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.annotation.Controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.fiware.mintaka.context.LdContextCache;
-import org.fiware.mintaka.domain.*;
-import org.fiware.mintaka.exception.InvalidTimeRelationException;
+import org.fiware.mintaka.domain.ApiDomainMapper;
+import org.fiware.mintaka.domain.GeoQuery;
+import org.fiware.mintaka.domain.TimeQuery;
 import org.fiware.mintaka.service.EntityTemporalService;
 import org.fiware.ngsi.api.TemporalRetrievalApi;
-import org.fiware.ngsi.model.*;
-import org.geojson.GeoJsonObject;
+import org.fiware.ngsi.model.EntityTemporalListVO;
+import org.fiware.ngsi.model.EntityTemporalVO;
+import org.fiware.ngsi.model.GeometryEnumVO;
+import org.fiware.ngsi.model.TimerelVO;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
@@ -24,7 +25,6 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * Implementation of the NGSI-LD temporal retrieval api
@@ -56,8 +56,7 @@ public class TemporalApiController implements TemporalRetrievalApi {
 		TimeQuery timeQuery = new TimeQuery(apiDomainMapper.timeRelVoToTimeRelation(timerel), time, endTime, getTimeRelevantProperty(timeproperty));
 
 
-		EntityTemporalListVO entityTemporalVOS = new EntityTemporalListVO();
-		entityTemporalVOS.addAll(entityTemporalService.getEntitiesWithQuery(
+		List<EntityTemporalVO> entityTemporalVOS = entityTemporalService.getEntitiesWithQuery(
 				Optional.ofNullable(idPattern),
 				getExpandedTypes(contextUrls, type),
 				getExpandedAttributes(contextUrls, attrs),
@@ -66,9 +65,12 @@ public class TemporalApiController implements TemporalRetrievalApi {
 				timeQuery,
 				lastN,
 				isSysAttrs(options),
-				isTemporalValuesOptionSet(options)
-		));
-		return HttpResponse.ok(entityTemporalVOS);
+				isTemporalValuesOptionSet(options));
+		entityTemporalVOS.forEach(entityTemporalVO -> addContextToEntityTemporalVO(entityTemporalVO, contextUrls));
+
+		EntityTemporalListVO entityTemporalListVO = new EntityTemporalListVO();
+		entityTemporalListVO.addAll(entityTemporalVOS);
+		return HttpResponse.ok(entityTemporalListVO);
 	}
 
 	@Override
@@ -87,14 +89,17 @@ public class TemporalApiController implements TemporalRetrievalApi {
 		if (entityTemporalVOOptional.isEmpty()) {
 			return HttpResponse.notFound();
 		} else {
-			EntityTemporalVO entityTemporalVO = entityTemporalVOOptional.get();
-			if (contextUrls.size() > 1) {
-				entityTemporalVO.atContext(contextUrls);
-			} else {
-				entityTemporalVO.atContext(contextUrls.get(0));
-			}
-			return HttpResponse.ok(entityTemporalVO);
+			return HttpResponse.ok(addContextToEntityTemporalVO(entityTemporalVOOptional.get(), contextUrls));
 		}
+	}
+
+	private EntityTemporalVO addContextToEntityTemporalVO(EntityTemporalVO entityTemporalVO, List<URL> contextUrls) {
+		if (contextUrls.size() > 1) {
+			entityTemporalVO.atContext(contextUrls);
+		} else {
+			entityTemporalVO.atContext(contextUrls.get(0));
+		}
+		return entityTemporalVO;
 	}
 
 	private List<String> getExpandedAttributes(List<URL> contextUrls, String attrs) {

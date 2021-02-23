@@ -22,6 +22,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.testcontainers.containers.DockerComposeContainer;
 import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
+import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import org.testcontainers.shaded.com.google.common.collect.Lists;
 
 import java.io.File;
@@ -70,6 +71,8 @@ public class ComposeTest {
 	private Clock clock;
 	private static EmbeddedServer embeddedServer;
 	private static ApplicationContext applicationContext;
+
+	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 	private HttpClient mintakaTestClient;
 	private EntitiesApiTestClient entitiesApiTestClient;
@@ -136,7 +139,7 @@ public class ComposeTest {
 		assertNotFound(getRequest, "If the requested attribute does not exist, a 404 should be returned.");
 	}
 
-	@Disabled
+	@DisplayName("Intial test for running a temporal query including geo querying.")
 	@Test
 	public void testTempQuery() {
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
@@ -149,7 +152,9 @@ public class ComposeTest {
 				.add("timerel", "between")
 				.add("time", "1970-01-01T00:01:00Z")
 				.add("endTime", "1970-01-01T00:13:00Z");
-		mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
+		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
+
+		assertEquals(2, entryList.size(), "Both matching entities should have been returned.");
 	}
 
 
@@ -671,25 +676,25 @@ public class ComposeTest {
 			longi++;
 			currentTime = currentTime.plus(1, ChronoUnit.MINUTES);
 			when(clock.instant()).thenReturn(currentTime);
-			updateLatLong(entityId, lat, longi, entityVO);
+			updateLatLong(entityId, lat, longi);
 		}
 		for (int i = 200; i < 300; i++) {
 			lat--;
 			longi--;
 			currentTime = currentTime.plus(1, ChronoUnit.MINUTES);
 			when(clock.instant()).thenReturn(currentTime);
-			updateLatLong(entityId, lat, longi, entityVO);
+			updateLatLong(entityId, lat, longi);
 		}
 		for (int i = 300; i < 400; i++) {
 			lat--;
 			longi--;
 			currentTime = currentTime.plus(1, ChronoUnit.MINUTES);
 			when(clock.instant()).thenReturn(currentTime);
-			updateLatLong(entityId, lat, longi, entityVO);
+			updateLatLong(entityId, lat, longi);
 		}
 	}
 
-	private void updateLatLong(URI entityId, double lat, double longi, EntityVO entityVO) {
+	private void updateLatLong(URI entityId, double lat, double longi) {
 		PointVO pointVO;
 		GeoPropertyVO pointProperty;
 		PropertyVO temperatureProperty;
@@ -706,7 +711,7 @@ public class ComposeTest {
 				.operationSpace(null)
 				.type("store");
 		temperatureProperty = getNewPropety().value(Math.random());
-		entityVO.setAdditionalProperties(Map.of("temperature", temperatureProperty));
+		entityFragmentVO.setAdditionalProperties(Map.of("temperature", temperatureProperty));
 		entitiesApiTestClient.updateEntityAttrs(entityId, entityFragmentVO);
 	}
 
