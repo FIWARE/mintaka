@@ -2,15 +2,23 @@ package org.fiware.mintaka.persistence;
 
 import io.micronaut.data.model.query.QueryModel;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.Opt;
+import org.fiware.mintaka.domain.EntityIdTempResults;
+import org.fiware.mintaka.domain.GeoQuery;
+import org.fiware.mintaka.domain.TimeQuery;
 import org.fiware.mintaka.domain.TimeRelation;
 import org.fiware.mintaka.exception.InvalidTimeRelationException;
 import org.fiware.mintaka.exception.PersistenceRetrievalException;
 
 import javax.inject.Singleton;
 import javax.persistence.EntityManager;
+import javax.persistence.Query;
 import javax.persistence.TypedQuery;
+import java.net.URI;
+import java.sql.Timestamp;
 import java.time.*;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -18,6 +26,7 @@ import java.util.stream.Collectors;
 /**
  * Repository implementation for retrieving temporal entity representations from the database
  */
+@Slf4j
 @Singleton
 @RequiredArgsConstructor
 public class EntityRepository {
@@ -30,17 +39,14 @@ public class EntityRepository {
 	 * @param entityId id of the entity to retrieve
 	 * @return optional entity
 	 */
-	public Optional<NgsiEntity> findById(String entityId, TimeRelation timeRelation, LocalDateTime timeAt, LocalDateTime endTime) {
-		String timeQueryPart = getTimeQueryPart(Optional.ofNullable(timeRelation).orElse(TimeRelation.BETWEEN),
-				Optional.ofNullable(timeAt).map(tA -> tA.toInstant(ZoneOffset.UTC)).orElse(null),
-				Optional.ofNullable(endTime).map(tE -> tE.toInstant(ZoneOffset.UTC)).orElse(null),
-				"ts", "entity");
+	public Optional<NgsiEntity> findById(String entityId, TimeQuery timeQuery) {
+		String timeQueryPart = timeQuery.getSqlRepresentation("entity");
 		String wherePart = "entity.id=:id";
 		if (!timeQueryPart.isEmpty()) {
 			// give me the last non-deleted instance inside the timeframe or the last instance(including deleted) before the frame.
 			wherePart = "(entity.id=:id " + timeQueryPart +
 					" and entity.opMode!='" + OpMode.Delete.name() + "')" +
-					String.format(" or (entity.id=:id and entity.ts <='%s')", timeAt);
+					String.format(" or (entity.id=:id and entity.ts <='%s')", timeQuery.getTimeAt());
 		}
 
 		TypedQuery<NgsiEntity> getNgsiEntitiesQuery = entityManager.createQuery(
@@ -57,25 +63,96 @@ public class EntityRepository {
 	/**
 	 * Find all attributes of an entity in the define timeframe
 	 *
-	 * @param entityId     id to get attributes for
-	 * @param timeRelation relation to be used in time query
-	 * @param timeAt       reference timestamp
-	 * @param endTime      endTime in case relation "between" is usd
-	 * @param attributes   the attributes to be included, if null or empty return all
-	 * @param lastN        number of instances to be retrieved, will retrieve the last instances
-	 * @param timeField    timeproperty to be used for the timerelations
+	 * @param entityId   id to get attributes for
+	 * @param timeQuery  time related query
+	 * @param attributes the attributes to be included, if null or empty return all
+	 * @param lastN      number of instances to be retrieved, will retrieve the last instances
 	 * @return list of attribute instances
 	 */
-	public List<Attribute> findAttributeByEntityId(String entityId, TimeRelation timeRelation, Instant timeAt, Instant endTime, List<String> attributes, Integer lastN, String timeField) {
+	public List<Attribute> findAttributeByEntityId(String entityId, TimeQuery timeQuery, List<String> attributes, Integer lastN) {
 
-		String timeQueryPart = getTimeQueryPart(timeRelation, timeAt, endTime, timeField);
+		String timeQueryPart = timeQuery.getSqlRepresentation();
 		if (attributes == null || attributes.isEmpty()) {
-			attributes = findAllAttributesForEntity(entityId, timeQueryPart, timeField);
+			attributes = findAllAttributesForEntity(entityId, timeQueryPart);
 		}
 
+		// we need to do single queries in order to fullfil the "lastN" parameter.
 		return attributes.stream()
 				.flatMap(attributeId -> findAttributeInstancesForEntity(entityId, attributeId, timeQueryPart, lastN).stream())
 				.collect(Collectors.toList());
+	}
+
+	public List<EntityIdTempResults> findEntityIdsByQuery(Optional<String> idPattern, List<String> types, TimeQuery timeQuery, Optional<GeoQuery> geoQuery) {
+		String timeQueryPart = timeQuery.getSqlRepresentation();
+
+		// The query:
+		// find all entityIds that match the pattern, type and are not deleted
+		// then get all attributes with the geoProperties attribute id and the result of its geoquery in the requested timeframe
+		// then sort by entity-id and timestamp and combine consecutive rows with distinct query results into single rows
+
+		String idSubSelect = "SELECT DISTINCT entity.id FROM entities entity WHERE entity.opMode != '" + OpMode.Delete.name() + "' ";
+		if (!types.isEmpty()) {
+
+			idSubSelect += " AND entity.type in (" + types.stream().map(type -> String.format("'%s'", type)).collect(Collectors.joining(",")) + ")";
+		}
+
+		if (idPattern.isPresent()) {
+			idSubSelect += " AND entity.id ~ '" + idPattern.get() + "' ";
+		}
+
+		log.debug("Subselect: {}", idSubSelect);
+
+		String innerJoin = "SELECT ";
+		if (geoQuery.isPresent()) {
+			innerJoin += geoQuery.get().getSqlRepresentation() + " as geoResult";
+		}
+		//TODO: at query result
+		//if(query.isPresent()){
+		//innerJoin += query.get().getSqlRepresentation() + "as queryResult";
+		//}
+		innerJoin += ",attribute." + timeQuery.getTimeProperty() + ",attribute.instanceId,attribute.entityId " +
+				"FROM attributes attribute WHERE attribute.entityId in (" + idSubSelect + ") ";
+		if (geoQuery.isPresent()) {
+			innerJoin += "and attribute.id='" + geoQuery.get().getGeoProperty() + "' ";
+		}
+
+		innerJoin += timeQueryPart + ") " +
+				"sub USING (instanceId)";
+		log.debug("InnerJoin: {}", innerJoin);
+
+		String outerJoin = "SELECT attribute2.instanceId, sub.geoResult as geoResult, LAG(sub.geoResult, 1) OVER (ORDER BY sub.entityId,sub." + timeQuery.getTimeProperty() + ") as lag FROM attributes attribute2 " +
+				"JOIN (" + innerJoin;
+
+		String finalJoin = "SELECT sub_lag.geoResult, attributeOut." + timeQuery.getTimeProperty() + ", attributeOut.entityId, ROW_NUMBER() OVER(order by attributeOut.entityId, attributeOut." + timeQuery.getTimeProperty() + ") as rn, attributeOut.instanceId FROM attributes attributeOut " +
+				"JOIN(" + outerJoin + ") sub_lag USING (instanceId) WHERE lag!=geoResult";
+		log.debug("Final join: {}", finalJoin);
+
+		String fullSelect = "SELECT finalJoin.geoResult, finalJoin.entityId as entity_id, LAG(finalJoin." + timeQuery.getTimeProperty() + ") OVER (ORDER BY finalJoin.rn) as start, finalJoin." + timeQuery.getTimeProperty() + " as end FROM attributes a "
+				+ "JOIN(" + finalJoin + ") finalJoin USING (instanceId)";
+
+		Query getIdsAndTimeRangeQuery = entityManager.createNativeQuery(fullSelect);
+
+		List<Object[]> queryResultList = getIdsAndTimeRangeQuery.getResultList();
+
+		return queryResultList.stream()
+				.map(queryResult -> Arrays.asList(queryResult))
+				.filter(queryResult -> queryResult.size() == 4)
+				//false denotes the line combining the first true-timestamp and the first false-timestamp, e.g. the rows that contain our timeframes.
+				.filter(queryResult -> !(Boolean) queryResult.get(0))
+				.map(queryResult -> mapQueryResultToPojo(queryResult))
+				.collect(Collectors.toList());
+	}
+
+	private EntityIdTempResults mapQueryResultToPojo(List<Object> queryResult) {
+		if (!(queryResult.get(1) instanceof String)) {
+			throw new PersistenceRetrievalException(String.format("The query-result contains a non-string id: %s", queryResult.get(1)));
+		}
+		if (!(queryResult.get(2) instanceof Timestamp) || !(queryResult.get(3) instanceof Timestamp)) {
+			throw new PersistenceRetrievalException(String.format("The query-result contains a non-timestamp time. Start: %s, End: %s", queryResult.get(2), queryResult.get(3)));
+		}
+		Instant startTime = ((Timestamp) queryResult.get(2)).toLocalDateTime().toInstant(ZoneOffset.UTC);
+		Instant endTime = ((Timestamp) queryResult.get(3)).toLocalDateTime().toInstant(ZoneOffset.UTC);
+		return new EntityIdTempResults((String) queryResult.get(1), startTime, endTime);
 	}
 
 	/**
@@ -102,6 +179,18 @@ public class EntityRepository {
 			getSubAttributeInstancesQuery.setMaxResults(lastN);
 		}
 		return getSubAttributeInstancesQuery.getResultList();
+	}
+
+	public List<String> findAttributesByEntityIds(List<String> entityIds, String timeQueryPart) {
+		TypedQuery<String> getAttributeIdsQuery =
+				entityManager.createQuery(
+						"Select distinct attribute.id " +
+								"from Attribute attribute " +
+								"where attribute.entityId in :entityIds " +
+								"and attribute.opMode!='" + OpMode.Delete.name() + "' " +
+								timeQueryPart, String.class);
+		getAttributeIdsQuery.setParameter("entityIds", entityIds);
+		return getAttributeIdsQuery.getResultList();
 	}
 
 	/**
@@ -131,15 +220,32 @@ public class EntityRepository {
 		return getAttributeInstancesQuery.getResultList();
 	}
 
+	private List<Attribute> findAttributeInstancesForEntities(List<String> entityIds, String attributeId, String timeQueryPart, Integer lastN) {
+		TypedQuery<Attribute> getAttributeInstancesQuery =
+				entityManager.createQuery(
+						"Select attribute " +
+								"from Attribute attribute " +
+								"where attribute.entityId in :entityIds " +
+								"and attribute.id=:attributeId " +
+								"and attribute.opMode!='" + OpMode.Delete.name() + "' " +
+								timeQueryPart +
+								"order by attribute.ts desc", Attribute.class);
+		getAttributeInstancesQuery.setParameter("entityIds", entityIds);
+		getAttributeInstancesQuery.setParameter("attributeId", attributeId);
+		if (lastN != null && lastN > 0) {
+			getAttributeInstancesQuery.setMaxResults(lastN);
+		}
+		return getAttributeInstancesQuery.getResultList();
+	}
+
 	/**
 	 * Find all id's of attributes that exist for the entity in the given timeframe
 	 *
 	 * @param entityId      id of the entity to get the attributes for
 	 * @param timeQueryPart the part of the sql query that denotes the timeframe
-	 * @param timeField     field to be used in the timequery
 	 * @return list of attribute ID's
 	 */
-	private List<String> findAllAttributesForEntity(String entityId, String timeQueryPart, String timeField) {
+	private List<String> findAllAttributesForEntity(String entityId, String timeQueryPart) {
 		TypedQuery<String> getAttributeIdsQuery =
 				entityManager.createQuery(
 						"Select distinct attribute.id " +
@@ -151,53 +257,16 @@ public class EntityRepository {
 		return getAttributeIdsQuery.getResultList();
 	}
 
-	private String getTimeQueryPart(TimeRelation timeRelation, Instant timeAt, Instant endTime, String timeField, String entity) {
-		InvalidTimeRelationException invalidTimeRelationException = new InvalidTimeRelationException("Received an invalid time relation.");
-		if (entity == null) {
-			entity = "attribute";
-		}
-
-		if (timeRelation == null && timeAt == null && endTime == null) {
-			return "";
-		}
-		String timeProperty = "";
-		if (timeField.equals("observedAt")) {
-			timeProperty += String.format("%s.observedAt", entity);
-		} else if (timeField.equals("createdAt")) {
-			timeProperty += String.format(" %s.opMode='", entity) + OpMode.Create.name() + String.format("' and %s.ts", entity);
-		} else if (timeField.equals("modifiedAt")) {
-			timeProperty += String.format(" %s.opMode!='", entity) + OpMode.Create.name() + String.format("' and %s.ts", entity);
-		} else if (timeField.equals("ts")) {
-			timeProperty += String.format("%s.ts", entity);
-		} else {
-			throw new PersistenceRetrievalException(String.format("Querying by %s is currently not supported.", timeField));
-		}
-
-		LocalDateTime timeAtLDT = LocalDateTime.ofInstant(timeAt, ZoneOffset.UTC);
-
-		switch (timeRelation) {
-			case BETWEEN:
-				return String.format("and %s > '%s' and  %s < '%s' ", timeProperty, timeAtLDT, timeProperty, LocalDateTime.ofInstant(endTime, ZoneOffset.UTC));
-			case BEFORE:
-				return String.format("and %s < '%s' ", timeProperty, timeAtLDT);
-			case AFTER:
-				return String.format("and %s > '%s' ", timeProperty, timeAtLDT);
-			default:
-				throw invalidTimeRelationException;
-		}
-	}
-
-
-	/**
-	 * Translate the time relation into a part of an sql query
-	 *
-	 * @param timeRelation relation to be used in time query
-	 * @param timeAt       reference timestamp
-	 * @param endTime      endTime in case relation "between" is usd
-	 * @return the time related part of the sql query
-	 */
-	private String getTimeQueryPart(TimeRelation timeRelation, Instant timeAt, Instant endTime, String timeField) {
-		return getTimeQueryPart(timeRelation, timeAt, endTime, timeField, null);
+	private List<String> findAllAttributesForEntities(List<String> entityIds, String timeQueryPart, GeoQuery geoQuery) {
+		TypedQuery<String> getAttributeIdsQuery =
+				entityManager.createQuery(
+						"Select distinct attribute.id " +
+								"from Attribute attribute " +
+								"where attribute.entityId in :entityIds " +
+								"and attribute.opMode!='" + OpMode.Delete.name() + "' " +
+								timeQueryPart, String.class);
+		getAttributeIdsQuery.setParameter("entityIds", entityIds);
+		return getAttributeIdsQuery.getResultList();
 	}
 
 	/**

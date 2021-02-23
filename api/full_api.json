@@ -1883,7 +1883,8 @@
         "in": "query",
         "required": false,
         "schema": {
-          "$ref": "#/components/schemas/coordinates"
+          "type": "string",
+          "minLength": 1
         }
       },
       "geoproperty": {

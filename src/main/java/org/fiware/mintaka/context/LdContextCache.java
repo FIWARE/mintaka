@@ -10,7 +10,7 @@ import io.micronaut.cache.annotation.Cacheable;
 import io.micronaut.context.annotation.Context;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.fiware.mintaka.exception.AttributeExpansionException;
+import org.fiware.mintaka.exception.StringExpansionException;
 import org.fiware.mintaka.exception.ContextRetrievalException;
 
 import java.io.IOException;
@@ -68,26 +68,38 @@ public class LdContextCache {
 	/**
 	 * Expand all given attributes with the given contexts.
 	 *
-	 * @param attributes  - attributes to be expanded
-	 * @param contextUrls - urls of contexts to be used for expansion
+	 * @param stringsToExpand - strings to be expanded
+	 * @param contextUrls     - urls of contexts to be used for expansion
 	 * @return list of expanded attribute-ids
 	 */
-	public List<String> expandAttributes(List<String> attributes, List<URL> contextUrls) {
+	public List<String> expandStrings(List<String> stringsToExpand, List<URL> contextUrls) {
 		Map contextMap = (Map) getContext(contextUrls);
 
-		return attributes.stream()
-				.map(this::getJsonLdAttribute)
-				.map(jsonLdAttribute -> {
-					try {
-						Map jsonLdObject = (Map) JsonUtils.fromString(jsonLdAttribute);
-						jsonLdObject.put(JsonLdConsts.CONTEXT, contextMap.get(JsonLdConsts.CONTEXT));
-						return jsonLdObject;
-					} catch (IOException e) {
-						throw new AttributeExpansionException(String.format("Was not able expand %s.", jsonLdAttribute), e);
-					}
-				})
-				.map(this::getIdFromJsonLDObject)
+		return stringsToExpand.stream()
+				.map(stringToExpand -> expandString(stringToExpand, contextMap))
 				.collect(Collectors.toList());
+	}
+
+	/**
+	 * Expand the given string with the provided contexts.
+	 *
+	 * @param stringToExpand - string to be expanded
+	 * @param contextUrls    - urls of contexts to be used for expansion
+	 * @return the expanded attribute-id
+	 */
+	public String expandString(String stringToExpand, List<URL> contextUrls) {
+		return expandString(stringToExpand, (Map) getContext(contextUrls));
+	}
+
+	private String expandString(String stringToExpand, Map contextMap) {
+		String jsonLdString = getJsonLdString(stringToExpand);
+		try {
+			Map jsonLdObject = (Map) JsonUtils.fromString(jsonLdString);
+			jsonLdObject.put(JsonLdConsts.CONTEXT, contextMap.get(JsonLdConsts.CONTEXT));
+			return getIdFromJsonLDObject(jsonLdObject);
+		} catch (IOException e) {
+			throw new StringExpansionException(String.format("Was not able expand %s.", jsonLdString), e);
+		}
 	}
 
 	/**
@@ -161,17 +173,17 @@ public class LdContextCache {
 		Map<String, Object> expandedObject = (Map<String, Object>) JsonLdProcessor.expand(jsonLdObject)
 				.stream()
 				.findFirst()
-				.orElseThrow(() -> new AttributeExpansionException(String.format("Was not able to get an expanded object for %s.", jsonLdObject)));
+				.orElseThrow(() -> new StringExpansionException(String.format("Was not able to get an expanded object for %s.", jsonLdObject)));
 		Set<String> expandedKeys = expandedObject.keySet();
 		if (expandedKeys.size() != 1) {
-			throw new AttributeExpansionException(String.format("Was not able to correctly expand key. Got multiple keys: %s", expandedKeys));
+			throw new StringExpansionException(String.format("Was not able to correctly expand key. Got multiple keys: %s", expandedKeys));
 		}
 		return expandedKeys.iterator().next();
 	}
 
 	// create a json object for json-ld api to be used for extending the key.
-	private String getJsonLdAttribute(String attribute) {
-		return String.format("{\"%s\":\"\"}", attribute);
+	private String getJsonLdString(String string) {
+		return String.format("{\"%s\":\"\"}", string);
 	}
 
 }

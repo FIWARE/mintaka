@@ -52,16 +52,23 @@ public interface AttributePropertyVOMapper {
 	 * @param createdAt timestamp the relationship was created at
 	 * @return the mapped relationship
 	 */
-	default RelationshipVO attributeToRelationShip(AbstractAttribute attribute, Instant createdAt) {
+	default RelationshipVO attributeToRelationShip(AbstractAttribute attribute, Instant createdAt, boolean modifiedAt) {
 		if (!isRelationShip(attribute)) {
 			throw new IllegalArgumentException("Received attribute is not a relationship");
 		}
 		RelationshipVO relationshipVO = new RelationshipVO()
-				.instanceId(URI.create(attribute.getInstanceId()))
 				.type(RelationshipVO.Type.RELATIONSHIP)
-				._object(URI.create(attribute.getText()))
-				.createdAt(createdAt)
-				.modifiedAt(attribute.getTs().toInstant(ZoneOffset.UTC));
+				.instanceId(URI.create(attribute.getInstanceId()))
+				._object(URI.create(attribute.getText()));
+
+		if (modifiedAt) {
+			relationshipVO.modifiedAt(attribute.getTs().toInstant(ZoneOffset.UTC));
+		}
+
+		if (createdAt != null) {
+			relationshipVO.createdAt(createdAt);
+		}
+
 
 		Optional.ofNullable(attribute.getObservedAt()).ifPresent(oa -> relationshipVO.observedAt(oa.toInstant(ZoneOffset.UTC)));
 		if (attribute instanceof Attribute) {
@@ -78,15 +85,21 @@ public interface AttributePropertyVOMapper {
 	 * @param createdAt timestamp the geoProperty was created at
 	 * @return the mapped geoProperty
 	 */
-	default GeoPropertyVO attributeToGeoProperty(AbstractAttribute attribute, Instant createdAt) {
+	default GeoPropertyVO attributeToGeoProperty(AbstractAttribute attribute, Instant createdAt, boolean modifiedAt) {
 		if (!isGeoProperty(attribute)) {
 			throw new IllegalArgumentException("Received attribute is not a geoproperty.");
 		}
 		GeoPropertyVO geoPropertyVO = new GeoPropertyVO()
 				.instanceId(URI.create(attribute.getInstanceId()))
-				.type(GeoPropertyVO.Type.GEOPROPERTY)
-				.createdAt(createdAt)
-				.modifiedAt(attribute.getTs().toInstant(ZoneOffset.UTC));
+				.type(GeoPropertyVO.Type.GEOPROPERTY);
+
+		if (modifiedAt) {
+			geoPropertyVO.modifiedAt(attribute.getTs().toInstant(ZoneOffset.UTC));
+		}
+
+		if (createdAt != null) {
+			geoPropertyVO.createdAt(createdAt);
+		}
 
 		Optional.ofNullable(attribute.getObservedAt()).ifPresent(oa -> geoPropertyVO.observedAt(oa.toInstant(ZoneOffset.UTC)));
 		if (attribute instanceof Attribute) {
@@ -149,7 +162,7 @@ public interface AttributePropertyVOMapper {
 	 * @param createdAt timestamp the property was created at
 	 * @return the mapped property
 	 */
-	default PropertyVO attributeToPropertyVO(AbstractAttribute attribute, Instant createdAt) {
+	default PropertyVO attributeToPropertyVO(AbstractAttribute attribute, Instant createdAt, boolean modifiedAt) {
 		if (isGeoProperty(attribute)) {
 			throw new IllegalArgumentException("Received a geoproperty.");
 		}
@@ -158,9 +171,15 @@ public interface AttributePropertyVOMapper {
 		}
 		PropertyVO propertyVO = new PropertyVO()
 				.instanceId(URI.create(attribute.getInstanceId()))
-				.type(PropertyVO.Type.PROPERTY)
-				.createdAt(createdAt)
-				.modifiedAt(attribute.getTs().toInstant(ZoneOffset.UTC));
+				.type(PropertyVO.Type.PROPERTY);
+
+		if (modifiedAt) {
+			propertyVO.modifiedAt(attribute.getTs().toInstant(ZoneOffset.UTC));
+		}
+
+		if (createdAt != null) {
+			propertyVO.createdAt(createdAt);
+		}
 
 		Optional.ofNullable(attribute.getObservedAt()).ifPresent(oa -> propertyVO.observedAt(oa.toInstant(ZoneOffset.UTC)));
 		if (attribute instanceof Attribute) {

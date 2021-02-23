@@ -6,8 +6,6 @@ micronaut:
     contexts:
       # allow 100 contexts to be cached
       maximum-size: 100
-      # renew the context in cache every 2 hours
-      expire-after-write: 2h
 
 ---
 datasources:
