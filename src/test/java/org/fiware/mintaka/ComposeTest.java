@@ -3,7 +3,6 @@ package org.fiware.mintaka;
 import com.github.jsonldjava.core.JsonLdConsts;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.env.PropertySource;
-import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.MutableHttpRequest;
@@ -22,6 +21,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.testcontainers.containers.DockerComposeContainer;
 import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
+import org.testcontainers.shaded.com.fasterxml.jackson.core.JsonProcessingException;
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import org.testcontainers.shaded.com.google.common.collect.Lists;
 
@@ -141,17 +141,20 @@ public class ComposeTest {
 
 	@DisplayName("Intial test for running a temporal query including geo querying.")
 	@Test
-	public void testTempQuery() {
+	public void testTempQuery() throws JsonProcessingException {
+
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
 		getRequest.getParameters()
 				.add("idPattern", ".*")
 				.add("type", "store")
 				.add("georel", "near;maxDistance==300000")
-				.add("geometry", "Point")
-				.add("coordinates", "[5,5,0]")
+//				.add("geometry", "Point")
+//				.add("coordinates", "[120,120,0]")
+				.add("geometry", "LineString")
+				.add("coordinates", "[[5,5],[7,7]]")
 				.add("timerel", "between")
 				.add("time", "1970-01-01T00:01:00Z")
-				.add("endTime", "1970-01-01T00:13:00Z");
+				.add("endTime", "1970-01-01T07:30:00Z");
 		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
 
 		assertEquals(2, entryList.size(), "Both matching entities should have been returned.");

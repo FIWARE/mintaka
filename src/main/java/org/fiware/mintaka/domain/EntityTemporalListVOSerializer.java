@@ -27,11 +27,17 @@ public class EntityTemporalListVOSerializer extends JsonSerializer<EntityTempora
 	@Override
 	public void serialize(EntityTemporalListVO entityTemporalListVO, JsonGenerator gen, SerializerProvider serializers) throws IOException {
 		JsonSerializer entityTemporalSerializer = serializers.findValueSerializer(EntityTemporalVO.class);
+		if (entityTemporalListVO.isEmpty()) {
+			// return an empty array
+			gen.writeStartArray();
+			gen.writeEndArray();
+			return;
+		}
 		int lastPos = entityTemporalListVO.size() - 1;
 		gen.writeStartArray(entityTemporalListVO, entityTemporalListVO.size());
 		for (int i = 0; i < lastPos; i++) {
-				entityTemporalSerializer.serialize(entityTemporalListVO.get(i), gen, serializers);
-				gen.writeRaw(", ");
+			entityTemporalSerializer.serialize(entityTemporalListVO.get(i), gen, serializers);
+			gen.writeRaw(", ");
 		}
 		entityTemporalSerializer.serialize(entityTemporalListVO.get(lastPos), gen, serializers);
 		gen.writeEndArray();

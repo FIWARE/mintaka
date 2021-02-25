@@ -228,6 +228,7 @@
                                 <useGenericResponse>true</useGenericResponse>
                                 <useReferencedSchemaAsDefault>true</useReferencedSchemaAsDefault>
                                 <useLombokGenerated>true</useLombokGenerated>
+                                <introspected>true</introspected>
                                 <jacksonDatabindNullable>false</jacksonDatabindNullable>
                                 <supportsAdditionalPropertiesWithComposedSchema>true</supportsAdditionalPropertiesWithComposedSchema>
                             </configOptions>

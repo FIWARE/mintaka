@@ -7,12 +7,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.fiware.mintaka.context.LdContextCache;
 import org.fiware.mintaka.domain.ApiDomainMapper;
 import org.fiware.mintaka.domain.GeoQuery;
+import org.fiware.mintaka.domain.Geometry;
 import org.fiware.mintaka.domain.TimeQuery;
 import org.fiware.mintaka.service.EntityTemporalService;
 import org.fiware.ngsi.api.TemporalRetrievalApi;
 import org.fiware.ngsi.model.EntityTemporalListVO;
 import org.fiware.ngsi.model.EntityTemporalVO;
-import org.fiware.ngsi.model.GeometryEnumVO;
 import org.fiware.ngsi.model.TimerelVO;
 
 import javax.annotation.Nullable;
@@ -46,7 +46,7 @@ public class TemporalApiController implements TemporalRetrievalApi {
 	private final ApiDomainMapper apiDomainMapper;
 
 	@Override
-	public HttpResponse<EntityTemporalListVO> queryTemporalEntities(@Nullable String link, @Nullable URI id, @Nullable String idPattern, @Nullable @Size(min = 1) String type, @Nullable @Size(min = 1) String attrs, @Nullable @Size(min = 1) String q, @Nullable String georel, @Nullable GeometryEnumVO geometry, @Nullable String coordinates, @Nullable @Size(min = 1) String geoproperty, @Nullable TimerelVO timerel, @Nullable @Pattern(regexp = "^((\\d|[a-zA-Z]|_)+(:(\\d|[a-zA-Z]|_)+)?(#\\d+)?)$") @Size(min = 1) String timeproperty, @Nullable Instant time, @Nullable Instant endTime, @Nullable @Size(min = 1) String csf, @Nullable @Min(1) Integer limit, @Nullable String options, @Nullable @Min(1) Integer lastN) {
+	public HttpResponse<EntityTemporalListVO> queryTemporalEntities(@Nullable String link, @Nullable URI id, @Nullable String idPattern, @Nullable @Size(min = 1) String type, @Nullable @Size(min = 1) String attrs, @Nullable @Size(min = 1) String q, @Nullable String georel, @Nullable String geometry, @Nullable String coordinates, @Nullable @Size(min = 1) String geoproperty, @Nullable TimerelVO timerel, @Nullable @Pattern(regexp = "^((\\d|[a-zA-Z]|_)+(:(\\d|[a-zA-Z]|_)+)?(#\\d+)?)$") @Size(min = 1) String timeproperty, @Nullable Instant time, @Nullable Instant endTime, @Nullable @Size(min = 1) String csf, @Nullable @Min(1) Integer limit, @Nullable String options, @Nullable @Min(1) Integer lastN) {
 
 		List<URL> contextUrls = LdContextCache.getContextURLsFromLinkHeader(link);
 		String expandedGeoProperty = Optional.ofNullable(geoproperty)
@@ -139,7 +139,7 @@ public class TemporalApiController implements TemporalRetrievalApi {
 		return Arrays.asList(options.split(COMMA_SEPERATOR)).contains(TEMPORAL_VALUES_OPTION);
 	}
 
-	private Optional<GeoQuery> getGeometryQuery(String georel, GeometryEnumVO geometry, String coordinates, String geoproperty) {
+	private Optional<GeoQuery> getGeometryQuery(String georel, String geometry, String coordinates, String geoproperty) {
 		if (georel == null && coordinates == null && geometry == null) {
 			return Optional.empty();
 		}
@@ -149,6 +149,6 @@ public class TemporalApiController implements TemporalRetrievalApi {
 					String.format("When querying for geoRelations, all 3 parameters(georel: %s, coordinates: %s, geometry: %s) need to be present.", georel, coordinates, geometry));
 		}
 
-		return Optional.of(new GeoQuery(georel, apiDomainMapper.geometryEnumVoToGeometry(geometry), coordinates, geoproperty));
+		return Optional.of(new GeoQuery(georel, Geometry.byName(geometry), coordinates, geoproperty));
 	}
 }

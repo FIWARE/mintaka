@@ -21,6 +21,7 @@ import java.time.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -85,6 +86,7 @@ public class EntityRepository {
 	public List<EntityIdTempResults> findEntityIdsByQuery(Optional<String> idPattern, List<String> types, TimeQuery timeQuery, Optional<GeoQuery> geoQuery) {
 		String timeQueryPart = timeQuery.getSqlRepresentation();
 
+		// TODO: UPDATE DOC
 		// The query:
 		// find all entityIds that match the pattern, type and are not deleted
 		// then get all attributes with the geoProperties attribute id and the result of its geoquery in the requested timeframe
@@ -102,43 +104,54 @@ public class EntityRepository {
 
 		log.debug("Subselect: {}", idSubSelect);
 
-		String innerJoin = "SELECT ";
+
+		String selectTempTable = "SELECT ";
 		if (geoQuery.isPresent()) {
-			innerJoin += geoQuery.get().getSqlRepresentation() + " as geoResult";
+			selectTempTable += geoQuery.get().getSqlRepresentation() + " as geoResult";
+		} else {
+			selectTempTable += " true as geoResult";
 		}
 		//TODO: at query result
 		//if(query.isPresent()){
 		//innerJoin += query.get().getSqlRepresentation() + "as queryResult";
 		//}
-		innerJoin += ",attribute." + timeQuery.getTimeProperty() + ",attribute.instanceId,attribute.entityId " +
+		selectTempTable += ",attribute." + timeQuery.getTimeProperty() + " as time, attribute.entityId " +
 				"FROM attributes attribute WHERE attribute.entityId in (" + idSubSelect + ") ";
 		if (geoQuery.isPresent()) {
-			innerJoin += "and attribute.id='" + geoQuery.get().getGeoProperty() + "' ";
+			selectTempTable += "and attribute.id='" + geoQuery.get().getGeoProperty() + "' ";
 		}
 
-		innerJoin += timeQueryPart + ") " +
-				"sub USING (instanceId)";
-		log.debug("InnerJoin: {}", innerJoin);
 
-		String outerJoin = "SELECT attribute2.instanceId, sub.geoResult as geoResult, LAG(sub.geoResult, 1) OVER (ORDER BY sub.entityId,sub." + timeQuery.getTimeProperty() + ") as lag FROM attributes attribute2 " +
-				"JOIN (" + innerJoin;
+		selectTempTable += timeQueryPart + " order by attribute.entityId, attribute." + timeQuery.getTimeProperty();
+		log.debug("Select temp table: {}", selectTempTable);
 
-		String finalJoin = "SELECT sub_lag.geoResult, attributeOut." + timeQuery.getTimeProperty() + ", attributeOut.entityId, ROW_NUMBER() OVER(order by attributeOut.entityId, attributeOut." + timeQuery.getTimeProperty() + ") as rn, attributeOut.instanceId FROM attributes attributeOut " +
-				"JOIN(" + outerJoin + ") sub_lag USING (instanceId) WHERE lag!=geoResult";
-		log.debug("Final join: {}", finalJoin);
+		// a usual result set will look similar to:
+		// id1, false, t0 - set1
+		// id1, true, t1 - set2
+		// id1, true, t2 - set2
+		// id1, false, t3 - set3
+		// id1, false, t4 - set3
+		// id2, true, t0 - set4
+		// id2, true, t1 - set4
+		// id2, false, t2 - set5
+		// id2, false, t3 - set5
+		// the changed order assures that the entities of the same set are moved by the same distance and therefore get the same setId.
+		String tempWithSetId = "SELECT *, (ROW_NUMBER() OVER (ORDER BY temp.entityId, temp.time)) - (ROW_NUMBER() OVER (ORDER BY temp.entityId, temp.geoResult, temp.time)) as setId FROM  (" + selectTempTable + ") AS temp";
 
-		String fullSelect = "SELECT finalJoin.geoResult, finalJoin.entityId as entity_id, LAG(finalJoin." + timeQuery.getTimeProperty() + ") OVER (ORDER BY finalJoin.rn) as start, finalJoin." + timeQuery.getTimeProperty() + " as end FROM attributes a "
-				+ "JOIN(" + finalJoin + ") finalJoin USING (instanceId)";
 
-		Query getIdsAndTimeRangeQuery = entityManager.createNativeQuery(fullSelect);
+		String selectOnTemp = "SELECT t1.georesult, t1.entityId,MIN(t1.time) AS startTime, MAX(t1.time) AS endTime FROM (" + tempWithSetId + ") AS t1 GROUP BY t1.georesult,t1.entityId,t1.setId";
+
+		log.debug("Final query: {}", selectOnTemp);
+		Query getIdsAndTimeRangeQuery = entityManager.createNativeQuery(selectOnTemp);
+
 
 		List<Object[]> queryResultList = getIdsAndTimeRangeQuery.getResultList();
 
 		return queryResultList.stream()
 				.map(queryResult -> Arrays.asList(queryResult))
 				.filter(queryResult -> queryResult.size() == 4)
-				//false denotes the line combining the first true-timestamp and the first false-timestamp, e.g. the rows that contain our timeframes.
-				.filter(queryResult -> !(Boolean) queryResult.get(0))
+				//true means query hit
+				.filter(queryResult -> queryResult.get(0) !=null && (Boolean) queryResult.get(0))
 				.map(queryResult -> mapQueryResultToPojo(queryResult))
 				.collect(Collectors.toList());
 	}

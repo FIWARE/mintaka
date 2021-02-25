@@ -11,6 +11,7 @@ public class GeoQuery {
 
 	private static final String SQL_AND_OPERATOR = " AND ";
 	private static final String NGSI_LD_GEO_EQUALS = "==";
+	private static final List<String> GEO_DB_FIELDS = Arrays.stream(Geometry.values()).map(Geometry::getDbFieldName).collect(Collectors.toList());
 
 	private final String geoRel;
 	private final Geometry geometry;
@@ -53,7 +54,9 @@ public class GeoQuery {
 			case DISJOINT:
 			case OVERLAPS:
 			case INTERSECT:
-				return geoOperation.getPostgisFunction() + "(" + geomString + ", attribute." + geometry.getDbFieldName() + ")";
+//				return geoOperation.getPostgisFunction() + "(" + geomString + ", attribute." + geometry.getDbFieldName() + ")";
+				return
+						"(" + GEO_DB_FIELDS.stream().map(field -> geoOperation.getPostgisFunction() + "(" + geomString + ", attribute." + field + ")").collect(Collectors.joining(" OR ")) + ")";
 			default:
 				throw new IllegalArgumentException(String.format("Received an unsupported geoOperation: %s. Full query: %s", operation, geoRel));
 		}
@@ -62,16 +65,27 @@ public class GeoQuery {
 	private String getNearOperation(GeoOperation geoOperation, GeoModifier modifier, Long value) {
 		switch (modifier) {
 			case MAX_DISTANCE:
-				return geoOperation.getPostgisFunction() + "(" + geomString + ", attribute." + geometry.getDbFieldName() + "," + value + ")";
+//				return geoOperation.getPostgisFunction() + "(" + geomString + ", attribute." + geometry.getDbFieldName() + "," + value + ")";
+				return "(" + GEO_DB_FIELDS.stream().map(field -> geoOperation.getPostgisFunction() + "(" + geomString + ", attribute." + field + "," + value + ")").collect(Collectors.joining(" OR ")) + ")";
 			case MIN_DISTANCE:
-				return "NOT " + geoOperation.getPostgisFunction() + "(" + geomString + ", attribute." + geometry.getDbFieldName() + "," + value + ")";
+//				return "NOT " + geoOperation.getPostgisFunction() + "(" + geomString + ", attribute." + geometry.getDbFieldName() + "," + value + ")";
+				return "(" + GEO_DB_FIELDS.stream().map(field -> geoOperation.getPostgisFunction() + "NOT (" + geomString + ", attribute." + field + "," + value + ")").collect(Collectors.joining(" OR ")) + ")";
 			default:
 				throw new IllegalArgumentException(String.format("Received an unsupported modifier. Full query: %s.", geoRel));
 		}
 	}
 
 	private String getStGeomString(Geometry geometry, String coordinates) {
-		return "ST_GeomFromGeoJSON('{\"type\": \"" + geometry.name() + "\", \"coordinates\":" + coordinates + "}')";
+		switch (geometry) {
+			case POINT:
+			case MULTIPOLYGON:
+			case POLYGON:
+			case MULTILINESTRING:
+			case LINESTRING:
+				return "ST_SetSRID(ST_GeomFromGeoJSON('{\"type\": \"" + geometry.name() + "\", \"coordinates\":" + coordinates + "}'), 4326)";
+			default:
+				throw new IllegalArgumentException(String.format("Received an unsupported geometry: %s", geometry));
+		}
 	}
 
 }

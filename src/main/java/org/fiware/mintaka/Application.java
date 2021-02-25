@@ -1,5 +1,6 @@
 package org.fiware.mintaka;
 
+import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -38,6 +39,7 @@ public class Application {
 		entityTemporalModule.addSerializer(entityTemporalSerializer);
 		entityTemporalModule.addSerializer(entityTemporalListVOSerializer);
 		objectMapper.registerModule(entityTemporalModule);
+		objectMapper.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS);
 		return objectMapper;
 	}
 

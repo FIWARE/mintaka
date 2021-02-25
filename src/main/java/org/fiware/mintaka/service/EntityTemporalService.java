@@ -3,6 +3,7 @@ package org.fiware.mintaka.service;
 import io.micronaut.transaction.annotation.ReadOnly;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.Opt;
 import org.fiware.mintaka.domain.*;
 import org.fiware.mintaka.persistence.AbstractAttribute;
 import org.fiware.mintaka.persistence.Attribute;
@@ -62,12 +63,23 @@ public class EntityTemporalService {
 	}
 
 	private EntityTemporalVO mergeEntityTemporals(EntityTemporalVO entityTemporalVO1, EntityTemporalVO entityTemporalVO2) {
-		entityTemporalVO1.getLocation().addAll(entityTemporalVO2.getLocation());
-		entityTemporalVO1.getOperationSpace().addAll(entityTemporalVO2.getOperationSpace());
-		entityTemporalVO1.getObservationSpace().addAll(entityTemporalVO2.getObservationSpace());
-		entityTemporalVO2.getAdditionalProperties()
-				.forEach((key, value) -> entityTemporalVO1.getAdditionalProperties()
-						.merge(key, value, (v1, v2) -> ((List) v1).addAll((List) v2)));
+		Optional.ofNullable(entityTemporalVO1.getLocation())
+				.ifPresentOrElse(location -> location.addAll(entityTemporalVO2.getLocation()), () -> entityTemporalVO1.setLocation(entityTemporalVO2.getLocation()));
+		Optional.ofNullable(entityTemporalVO1.getOperationSpace())
+				.ifPresentOrElse(operationSpace -> operationSpace.addAll(entityTemporalVO2.getOperationSpace()), () -> entityTemporalVO1.setOperationSpace(entityTemporalVO2.getOperationSpace()));
+		Optional.ofNullable(entityTemporalVO1.getObservationSpace())
+				.ifPresentOrElse(observationSpace -> observationSpace.addAll(entityTemporalVO2.getObservationSpace()), () -> entityTemporalVO1.setObservationSpace(entityTemporalVO2.getObservationSpace()));
+
+		if (entityTemporalVO1.getAdditionalProperties() == null) {
+			entityTemporalVO1.setAdditionalProperties(entityTemporalVO2.getAdditionalProperties());
+		} else {
+			entityTemporalVO2.getAdditionalProperties()
+					.forEach((key, value) -> entityTemporalVO1.getAdditionalProperties()
+							.merge(key, value, (v1, v2) -> {
+								((List) v1).addAll((List) v2);
+								return v1;
+							}));
+		}
 		// we use the earliest createdAt, since we assume the entity exists for the whole timeframe. Its undefined by the api when an entity was deleted and recreated inside one timeframe.
 		if (entityTemporalVO1.createdAt() != null && entityTemporalVO2.createdAt() != null) {
 			entityTemporalVO1.createdAt(entityTemporalVO1.createdAt().isBefore(entityTemporalVO2.createdAt()) ? entityTemporalVO1.createdAt() : entityTemporalVO2.createdAt());

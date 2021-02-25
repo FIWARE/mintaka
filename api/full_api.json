@@ -2088,15 +2088,7 @@
         "type": "string"
       },
       "geometryEnum": {
-        "type": "string",
-        "enum": [
-          "Point",
-          "MultiPoint",
-          "LineString",
-          "MultiLineString",
-          "MultiPolygon",
-          "Polygon"
-        ]
+        "type": "string"
       },
       "geometryType": {
         "type": "string"
