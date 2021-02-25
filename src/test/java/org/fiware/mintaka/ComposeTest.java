@@ -145,6 +145,7 @@ public class ComposeTest {
 
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
 		getRequest.getParameters()
+				.add("options", "temporalValues")
 				.add("idPattern", ".*")
 				.add("type", "store")
 				.add("georel", "near;maxDistance==300000")

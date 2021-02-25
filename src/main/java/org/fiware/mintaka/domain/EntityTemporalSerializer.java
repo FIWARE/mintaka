@@ -1,26 +1,33 @@
 package org.fiware.mintaka.domain;
 
+import com.apicatalog.jsonld.JsonLd;
+import com.apicatalog.jsonld.JsonLdError;
+import com.apicatalog.jsonld.document.Document;
+import com.apicatalog.jsonld.document.JsonDocument;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.github.jsonldjava.core.JsonLdConsts;
 import com.github.jsonldjava.core.JsonLdOptions;
-import com.github.jsonldjava.core.JsonLdProcessor;
-import com.github.jsonldjava.utils.JsonUtils;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.context.ServerRequestContext;
+import jakarta.json.Json;
+import jakarta.json.JsonArrayBuilder;
+import jakarta.json.JsonObjectBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.fiware.mintaka.context.LdContextCache;
 import org.fiware.ngsi.model.EntityTemporalVO;
 
 import javax.inject.Singleton;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URL;
 import java.util.Arrays;
-import java.util.Map;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -60,28 +67,38 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 	public void serialize(EntityTemporalVO value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
 
 		try {
-			Map<String, Object> mapRepresentation;
+			String jsonString;
 			// decide about the representation type.
 			if (isTemporalValuesOptionSet()) {
 				TemporalValuesEntity tve = temporalValuesMapper.entityTemporalToTemporalValuesEntity(value, getRequestedTimeProperty());
-				mapRepresentation = OBJECT_MAPPER.convertValue(tve, Map.class);
+				jsonString = OBJECT_MAPPER.writeValueAsString(tve);
 			} else {
-				mapRepresentation = OBJECT_MAPPER.convertValue(value, Map.class);
+				jsonString = OBJECT_MAPPER.writeValueAsString(value);
 			}
-			// extract the referenced context from the cache
-			Object context = ldContextCache.getContext(value.atContext());
-			// compact the expanded object with the present context
-			Map<String, Object> compactedObject = JsonLdProcessor.compact(mapRepresentation, context, JSON_LD_OPTIONS);
-			// remove the full context
-			compactedObject.remove(JsonLdConsts.CONTEXT);
-			// add context references
-			compactedObject.put("@context", value.atContext());
-			// write the serialized object back to the generator
-			gen.writeRaw(JsonUtils.toPrettyString(compactedObject));
+			Document context = ldContextCache.getContextDocument(value.atContext());
+			// create an builder for the compacted object
+			JsonObjectBuilder compactedJsonBuilder = Json.createObjectBuilder(
+					JsonLd.compact(
+							JsonDocument.of(new ByteArrayInputStream(jsonString.getBytes())),
+							context).get());
+			// add the context as URL instead of fully embed it.
+			if (value.atContext() instanceof URL) {
+				compactedJsonBuilder.add("@context", value.atContext().toString());
+			} else if (value.atContext() instanceof List) {
+				JsonArrayBuilder contextArrayBuilder = Json.createArrayBuilder();
+				((List<URL>) value.atContext()).forEach(contextItem -> contextArrayBuilder.add(contextItem.toString()));
+				compactedJsonBuilder.add("@context", contextArrayBuilder);
+			} else {
+				throw new IllegalArgumentException(String.format("Context is invalid: %s", value.atContext()));
+			}
+			// build and write the serialized object back to the generator
+			gen.writeRaw(compactedJsonBuilder.build().toString());
 		} catch (IOException e) {
 			log.error("Was not able to deserialize object", e);
 			// bubble to fulfill interface
 			throw e;
+		} catch (JsonLdError jsonLdError) {
+			jsonLdError.printStackTrace();
 		}
 	}
 

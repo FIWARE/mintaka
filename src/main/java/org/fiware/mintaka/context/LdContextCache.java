@@ -1,5 +1,9 @@
 package org.fiware.mintaka.context;
 
+import com.apicatalog.jsonld.JsonLdError;
+import com.apicatalog.jsonld.document.Document;
+import com.apicatalog.jsonld.document.JsonDocument;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.jsonldjava.core.JsonLdConsts;
 import com.github.jsonldjava.core.JsonLdOptions;
@@ -13,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.fiware.mintaka.exception.StringExpansionException;
 import org.fiware.mintaka.exception.ContextRetrievalException;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -103,12 +108,27 @@ public class LdContextCache {
 	}
 
 	/**
-	 * Get the context from the given object. Should either be a (URL)String, a URL or a list of urls/urlstrings.
+	 * Retrieve the context as a JsonDocument
 	 *
 	 * @param contextURLs - either be a (URL)String, a URL or a list of urls/urlstrings.
 	 * @return the context
 	 */
-	public Object getContext(Object contextURLs) {
+	public Document getContextDocument(Object contextURLs) {
+		try {
+			return JsonDocument.of(new ByteArrayInputStream(OBJECT_MAPPER.writeValueAsString(getContext(contextURLs)).getBytes()));
+		} catch (JsonLdError | JsonProcessingException e) {
+			throw new IllegalArgumentException(String.format("No valid context available via %s", contextURLs), e);
+		}
+	}
+
+	/**
+	 * Get the context from the given object. Should either be a (URL)String, a URL or a list of urls/urlstrings.
+	 * We use the Json-ld-java lib for retrieval, since the titanium lib is not able to combine context objects.
+	 *
+	 * @param contextURLs - either be a (URL)String, a URL or a list of urls/urlstrings.
+	 * @return the context
+	 */
+	private Object getContext(Object contextURLs) {
 		if (contextURLs instanceof List) {
 			Object compactedContext = Map.of(JsonLdConsts.CONTEXT, ((List) contextURLs).stream()
 					.map(this::getContext)
@@ -133,7 +153,7 @@ public class LdContextCache {
 	 * @param urlString - string containing the url
 	 * @return the context
 	 */
-	public Object getContextFromURL(String urlString) {
+	private Object getContextFromURL(String urlString) {
 		try {
 			return getContextFromURL(new URL(urlString));
 		} catch (MalformedURLException e) {
