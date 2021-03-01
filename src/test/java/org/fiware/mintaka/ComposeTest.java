@@ -48,6 +48,7 @@ import static org.mockito.Mockito.*;
 @Slf4j
 public abstract class ComposeTest {
 
+	protected static final AtomicBoolean SETUP = new AtomicBoolean(false);
 	protected static final AtomicBoolean INITIALIZED = new AtomicBoolean(false);
 	protected static final ExecutorService PARALLEL_INITIALIZER_SERVICE = Executors.newCachedThreadPool();
 
@@ -63,6 +64,14 @@ public abstract class ComposeTest {
 	//2 hours of updates
 	public static final int NUMBER_OF_UPDATES = 120;
 
+	private static final DockerComposeContainer DOCKER_COMPOSE_CONTAINER = new DockerComposeContainer(new File("src/test/resources/docker-compose/docker-compose-it.yml"))
+			.withExposedService("orion-ld", ORION_LD_PORT)
+			.withExposedService("timescale", TIMESCALE_PORT);
+
+	{
+		DOCKER_COMPOSE_CONTAINER.waitingFor(ORION_LD_HOST, new HttpWaitStrategy()
+				.withReadTimeout(Duration.of(1, ChronoUnit.MINUTES)).forPort(ORION_LD_PORT).forPath("/version"));
+	}
 
 	protected static final Instant START_TIME_STAMP = Instant.ofEpochMilli(0);
 	protected Clock clock;
@@ -86,18 +95,16 @@ public abstract class ComposeTest {
 
 	@BeforeAll
 	public static void setupEnv() {
-		DockerComposeContainer dockerComposeContainer = new DockerComposeContainer(new File("src/test/resources/docker-compose/docker-compose-it.yml"))
-				.withExposedService("orion-ld", ORION_LD_PORT)
-				.withExposedService("timescale", TIMESCALE_PORT);
-
-		dockerComposeContainer.waitingFor(ORION_LD_HOST, new HttpWaitStrategy()
-				.withReadTimeout(Duration.of(1, ChronoUnit.MINUTES)).forPort(ORION_LD_PORT).forPath("/version")).start();
+		if (!SETUP.getAndSet(true)) {
+			DOCKER_COMPOSE_CONTAINER.start();
+		}
 		embeddedServer = ApplicationContext.run(EmbeddedServer.class, PropertySource.of(
-				"test", Map.of("datasource.default.host", dockerComposeContainer.getServiceHost(ORION_LD_HOST, ORION_LD_PORT),
-						"datasource.default.port", dockerComposeContainer.getServicePort(ORION_LD_HOST, ORION_LD_PORT)
+				"test", Map.of("datasource.default.host", DOCKER_COMPOSE_CONTAINER.getServiceHost(ORION_LD_HOST, ORION_LD_PORT),
+						"datasource.default.port", DOCKER_COMPOSE_CONTAINER.getServicePort(ORION_LD_HOST, ORION_LD_PORT)
 				)));
 
 		applicationContext = embeddedServer.getApplicationContext();
+
 	}
 
 	@BeforeEach
@@ -109,11 +116,12 @@ public abstract class ComposeTest {
 			List<Future> futureList = new ArrayList<>();
 			futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createMovingEntity(URI.create("urn:ngsi-ld:car:moving-car-2"))));
 			futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createMovingEntity(URI.create("urn:ngsi-ld:car:moving-car"))));
-//			futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createEntityHistory(ENTITY_ID, START_TIME_STAMP)));
-//			futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createEntityHistoryWithDeletion()));
-//			futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createEntityHistory(CREATED_AFTER_ENTITY_ID, START_TIME_STAMP.plus(1, ChronoUnit.YEARS))));
+			futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createEntityHistory(ENTITY_ID, START_TIME_STAMP)));
+			futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createEntityHistoryWithDeletion()));
+			futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createEntityHistory(CREATED_AFTER_ENTITY_ID, START_TIME_STAMP.plus(1, ChronoUnit.YEARS))));
 			await().atMost(5, TimeUnit.MINUTES).until(() -> !futureList.stream().anyMatch(f -> !f.isDone()));
 		}
+
 
 		HttpClientConfiguration configuration = new DefaultHttpClientConfiguration();
 		//high timeout is required, because github-action runners are not that powerful
@@ -347,37 +355,46 @@ public abstract class ComposeTest {
 				.type("car");
 		PropertyVO temperatureProperty = getNewPropety().value(25);
 		PropertyVO radioProperty = getNewPropety().value(true);
-		entityVO.setAdditionalProperties(Map.of("radio", radioProperty, "temperature", temperatureProperty));
+		PropertyVO driverProperty = getNewPropety().value("Stefan");
+		entityVO.setAdditionalProperties(Map.of("radio", radioProperty, "temperature", temperatureProperty, "driver", driverProperty));
 		entitiesApiTestClient.createEntity(entityVO);
 
-		for (int i = 0; i < 200; i++) {
+		for (int i = 0; i < 100; i++) {
 			lat++;
 			longi++;
 			currentTime = currentTime.plus(1, ChronoUnit.MINUTES);
 			when(clock.instant()).thenReturn(currentTime);
-			updateLatLong(entityId, lat, longi, Optional.of(25), Optional.of(true));
+			updateLatLong(entityId, lat, longi, Optional.of(25), Optional.of(true), Optional.of("Stefan"));
+		}
+		for (int i = 100; i < 200; i++) {
+			lat++;
+			longi++;
+			currentTime = currentTime.plus(1, ChronoUnit.MINUTES);
+			when(clock.instant()).thenReturn(currentTime);
+			updateLatLong(entityId, lat, longi, Optional.of(25), Optional.of(true), Optional.of("Mira"));
 		}
 		for (int i = 200; i < 300; i++) {
 			lat--;
 			longi--;
 			currentTime = currentTime.plus(1, ChronoUnit.MINUTES);
 			when(clock.instant()).thenReturn(currentTime);
-			updateLatLong(entityId, lat, longi, Optional.of(20), Optional.of(false));
+			updateLatLong(entityId, lat, longi, Optional.of(20), Optional.of(false), Optional.of("Franzi"));
 		}
 		for (int i = 300; i < 400; i++) {
 			lat--;
 			longi--;
 			currentTime = currentTime.plus(1, ChronoUnit.MINUTES);
 			when(clock.instant()).thenReturn(currentTime);
-			updateLatLong(entityId, lat, longi, Optional.of(15), Optional.of(true));
+			updateLatLong(entityId, lat, longi, Optional.of(15), Optional.of(true), Optional.empty());
 		}
 	}
 
-	protected void updateLatLong(URI entityId, double lat, double longi, Optional<Integer> optionalTemp, Optional<Boolean> optionalRadio) {
+	protected void updateLatLong(URI entityId, double lat, double longi, Optional<Integer> optionalTemp, Optional<Boolean> optionalRadio, Optional<String> optionalDriver) {
 		PointVO pointVO;
 		GeoPropertyVO pointProperty;
 		PropertyVO temperatureProperty;
 		PropertyVO radioProperty;
+		PropertyVO driverProperty;
 		pointVO = new PointVO();
 		pointVO.type(PointVO.Type.POINT);
 		pointVO.coordinates().add(lat);
@@ -391,8 +408,10 @@ public abstract class ComposeTest {
 				.operationSpace(null)
 				.type("store");
 		temperatureProperty = getNewPropety().value(optionalTemp.orElseGet(() -> (int) (Math.random() * 10)));
-		radioProperty = getNewPropety().value(optionalRadio.orElseGet(() -> true));
-		entityFragmentVO.setAdditionalProperties(Map.of("temperature", temperatureProperty, "radio", radioProperty));
+		radioProperty = getNewPropety().value(optionalRadio.orElse(true));
+		driverProperty = getNewPropety().value(optionalDriver.orElse("unknown"));
+
+		entityFragmentVO.setAdditionalProperties(Map.of("temperature", temperatureProperty, "radio", radioProperty, "driver", driverProperty));
 		entitiesApiTestClient.updateEntityAttrs(entityId, entityFragmentVO);
 	}
 

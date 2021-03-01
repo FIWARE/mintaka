@@ -275,7 +275,7 @@ public class EntityRepository {
 				if (tableA.isPresent() && operator.isPresent()) {
 					switch (operator.get()) {
 						case OR:
-							throw new UnsupportedOperationException("OR is not yet implemented.");
+							return selectOrTerm(tableA.get(), createSelectionCriteriaFromQueryTerm(idPattern, types, timeQuery, subTerm));
 						case AND:
 							return selectAndTerm(tableA.get(), createSelectionCriteriaFromQueryTerm(idPattern, types, timeQuery, subTerm));
 						default:
@@ -380,19 +380,31 @@ public class EntityRepository {
 	}
 
 	private String selectOrTerm(String tableA, String tableB) {
-		String selectAnd = "SELECT a.result, a.entityId, (a.startTime,b.startTime), MAX(endTime) FROM (" + tableA + ") as a, (" + tableB + ") as b WHERE " +
-				"(a.entityId=b.entityId " +
+		// select all overlapping frames an merge them
+		String selectOverlapping = "SELECT a.result as result, a.entityId as entityId, LEAST(a.startTime,b.startTime) as startTime, GREATEST(a.endTime, b.endTime) as endTime FROM (" + tableA + ") as a, (" + tableB + ") as b WHERE " +
+				"a.entityId=b.entityId " +
 				"AND ((a.startTime between b.startTime and b.endTime) " +
 				"OR (a.endTime between b.startTime and b.endTime) " +
-				"OR (b.start between a.startTime and a.endTime) " +
-				"OR (b.endTime between a.startTime and a.endTime))) " +
-				"OR (a.entityId=b.entityId " +
-				"AND (NOT (a.startTime between b.startTime and b.endTime) " +
-				"AND NOT (a.endTime between b.startTime and b.endTime) " +
-				"AND NOT (b.startTime between a.startTime and a.endTime) " +
-				"AND NOT (b.endTime between a.startTime and a.endTime))";
-		log.debug("Select and: {}", selectAnd);
-		return selectAnd;
+				"OR (b.startTime between a.startTime and a.endTime) " +
+				"OR (b.endTime between a.startTime and a.endTime)) ";
+
+		String selectNonOverlappingA = "SELECT a.result, a.entityId, a.startTime, a.endTime  FROM (" + tableA + ") as a, (" + tableB + ") as b WHERE " +
+				"a.entityId=b.entityId " +
+				"AND NOT ((a.startTime between b.startTime and b.endTime) " +
+				"OR (a.endTime between b.startTime and b.endTime) " +
+				"OR (b.startTime between a.startTime and a.endTime) " +
+				"OR (b.endTime between a.startTime and a.endTime)) ";
+
+		String selectNonOverlappingB = "SELECT b.result, b.entityId, b.startTime, b.endTime  FROM (" + tableA + ") as a, (" + tableB + ") as b WHERE " +
+				"a.entityId=b.entityId " +
+				"AND NOT ((a.startTime between b.startTime and b.endTime) " +
+				"OR (a.endTime between b.startTime and b.endTime) " +
+				"OR (b.startTime between a.startTime and a.endTime) " +
+				"OR (b.endTime between a.startTime and a.endTime)) ";
+
+		String selectBoth = "(" + selectOverlapping + ") UNION (" + selectNonOverlappingA + ") UNION (" + selectNonOverlappingB + ")";
+		log.debug("Select and: {}", selectBoth);
+		return selectBoth;
 	}
 
 }
