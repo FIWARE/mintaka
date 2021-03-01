@@ -71,7 +71,7 @@ public abstract class ComposeTest {
 	{
 		synchronized (SETUP) {
 			DOCKER_COMPOSE_CONTAINER.waitingFor(ORION_LD_HOST, new HttpWaitStrategy()
-					.withReadTimeout(Duration.of(1, ChronoUnit.MINUTES)).forPort(ORION_LD_PORT).forPath("/version"));
+					.withReadTimeout(Duration.of(5, ChronoUnit.MINUTES)).forPort(ORION_LD_PORT).forPath("/version"));
 		}
 	}
 
