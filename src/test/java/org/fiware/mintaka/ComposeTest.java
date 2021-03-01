@@ -69,8 +69,10 @@ public abstract class ComposeTest {
 			.withExposedService("timescale", TIMESCALE_PORT);
 
 	{
-		DOCKER_COMPOSE_CONTAINER.waitingFor(ORION_LD_HOST, new HttpWaitStrategy()
-				.withReadTimeout(Duration.of(1, ChronoUnit.MINUTES)).forPort(ORION_LD_PORT).forPath("/version"));
+		synchronized (SETUP) {
+			DOCKER_COMPOSE_CONTAINER.waitingFor(ORION_LD_HOST, new HttpWaitStrategy()
+					.withReadTimeout(Duration.of(1, ChronoUnit.MINUTES)).forPort(ORION_LD_PORT).forPath("/version"));
+		}
 	}
 
 	protected static final Instant START_TIME_STAMP = Instant.ofEpochMilli(0);
@@ -95,9 +97,12 @@ public abstract class ComposeTest {
 
 	@BeforeAll
 	public static void setupEnv() {
-		if (!SETUP.getAndSet(true)) {
-			DOCKER_COMPOSE_CONTAINER.start();
+		synchronized (SETUP) {
+			if (!SETUP.getAndSet(true)) {
+				DOCKER_COMPOSE_CONTAINER.start();
+			}
 		}
+
 		embeddedServer = ApplicationContext.run(EmbeddedServer.class, PropertySource.of(
 				"test", Map.of("datasource.default.host", DOCKER_COMPOSE_CONTAINER.getServiceHost(ORION_LD_HOST, ORION_LD_PORT),
 						"datasource.default.port", DOCKER_COMPOSE_CONTAINER.getServicePort(ORION_LD_HOST, ORION_LD_PORT)
@@ -112,14 +117,16 @@ public abstract class ComposeTest {
 		entitiesApiTestClient = applicationContext.getBean(EntitiesApiTestClient.class);
 		clock = mock(Clock.class);
 
-		if (!INITIALIZED.getAndSet(true)) {
-			List<Future> futureList = new ArrayList<>();
-			futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createMovingEntity(URI.create("urn:ngsi-ld:car:moving-car-2"))));
-			futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createMovingEntity(URI.create("urn:ngsi-ld:car:moving-car"))));
-			futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createEntityHistory(ENTITY_ID, START_TIME_STAMP)));
-			futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createEntityHistoryWithDeletion()));
-			futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createEntityHistory(CREATED_AFTER_ENTITY_ID, START_TIME_STAMP.plus(1, ChronoUnit.YEARS))));
-			await().atMost(5, TimeUnit.MINUTES).until(() -> !futureList.stream().anyMatch(f -> !f.isDone()));
+		synchronized (INITIALIZED) {
+			if (!INITIALIZED.getAndSet(true)) {
+				List<Future> futureList = new ArrayList<>();
+				futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createMovingEntity(URI.create("urn:ngsi-ld:car:moving-car-2"))));
+				futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createMovingEntity(URI.create("urn:ngsi-ld:car:moving-car"))));
+				futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createEntityHistory(ENTITY_ID, START_TIME_STAMP)));
+				futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createEntityHistoryWithDeletion()));
+				futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createEntityHistory(CREATED_AFTER_ENTITY_ID, START_TIME_STAMP.plus(1, ChronoUnit.YEARS))));
+				await().atMost(5, TimeUnit.MINUTES).until(() -> !futureList.stream().anyMatch(f -> !f.isDone()));
+			}
 		}
 
 

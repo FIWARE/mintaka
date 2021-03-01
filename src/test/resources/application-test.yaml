@@ -8,6 +8,9 @@ micronaut:
         path: /
         url: http://localhost:8080
 
+loggers:
+  level:
+    root: ERROR
 
 test:
   clientId: entities
