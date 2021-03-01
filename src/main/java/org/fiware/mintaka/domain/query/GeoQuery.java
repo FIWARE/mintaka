@@ -1,4 +1,4 @@
-package org.fiware.mintaka.domain;
+package org.fiware.mintaka.domain.query;
 
 import com.google.common.collect.Lists;
 import lombok.Getter;
@@ -20,15 +20,13 @@ public class GeoQuery {
 	private final String geoProperty;
 
 	public GeoQuery(String geoRel, Geometry geometry, String coordinates, String geoProperty) {
-
 		this.geoRel = geoRel;
 		this.geometry = geometry;
 		this.geomString = getStGeomString(geometry, coordinates);
 		this.geoProperty = geoProperty;
 	}
 
-
-	public String getSqlRepresentation() {
+	public String toSQLQuery() {
 		List<String> geoOperations =
 				Lists.partition(Arrays.asList(geoRel.split(";")), 2)
 						.stream()

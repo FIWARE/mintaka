@@ -3,8 +3,11 @@ package org.fiware.mintaka.service;
 import io.micronaut.transaction.annotation.ReadOnly;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.nullness.Opt;
-import org.fiware.mintaka.domain.*;
+import org.fiware.mintaka.domain.AttributePropertyVOMapper;
+import org.fiware.mintaka.domain.TimeQuery;
+import org.fiware.mintaka.domain.TimeRelation;
+import org.fiware.mintaka.domain.query.GeoQuery;
+import org.fiware.mintaka.domain.query.QueryTerm;
 import org.fiware.mintaka.persistence.AbstractAttribute;
 import org.fiware.mintaka.persistence.Attribute;
 import org.fiware.mintaka.persistence.EntityRepository;
@@ -31,7 +34,6 @@ public class EntityTemporalService {
 	private static final String MODIFIED_AT_PROPERTY = "modifiedAt";
 
 	private final EntityRepository entityRepository;
-	private final ApiDomainMapper apiDomainMapper;
 	private final AttributePropertyVOMapper attributePropertyVOMapper;
 
 	@ReadOnly
@@ -39,7 +41,7 @@ public class EntityTemporalService {
 			Optional<String> namePattern,
 			List<String> expandedTypes,
 			List<String> expandedAttributes,
-			Optional<String> query,
+			Optional<QueryTerm> query,
 			Optional<GeoQuery> geoQuery,
 			TimeQuery timeQuery,
 			Integer lastN,
@@ -47,12 +49,12 @@ public class EntityTemporalService {
 			boolean temporalRepresentation) {
 
 
-		return new ArrayList<EntityTemporalVO>(
-				entityRepository.findEntityIdsByQuery(namePattern, expandedTypes, timeQuery, geoQuery)
+		return new ArrayList<>(
+				entityRepository.findEntityIdsAndTimeframesByQuery(namePattern, expandedTypes, timeQuery, geoQuery, query)
 						.stream()
 						.map(tempResult -> getNgsiEntitiesWithTimerel(
 								tempResult.getEntiyId(),
-								new TimeQuery(TimeRelation.BETWEEN, tempResult.getStartTime(), tempResult.getEndTime(), timeQuery.getTimeProperty()),
+								new TimeQuery(TimeRelation.BETWEEN, tempResult.getStartTime(), tempResult.getEndTime(), timeQuery.getTimeProperty(), true),
 								expandedAttributes,
 								lastN,
 								sysAttrs,

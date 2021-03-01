@@ -15,13 +15,11 @@ import io.micronaut.runtime.server.EmbeddedServer;
 import lombok.extern.slf4j.Slf4j;
 import org.fiware.ngsi.api.EntitiesApiTestClient;
 import org.fiware.ngsi.model.*;
-import org.junit.jupiter.api.*;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.testcontainers.containers.DockerComposeContainer;
 import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
-import org.testcontainers.shaded.com.fasterxml.jackson.core.JsonProcessingException;
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import org.testcontainers.shaded.com.google.common.collect.Lists;
 
@@ -45,37 +43,36 @@ import java.util.stream.Stream;
 
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @Slf4j
-public class ComposeTest {
+public abstract class ComposeTest {
 
-	private static final AtomicBoolean INITIALIZED = new AtomicBoolean(false);
-	private static final ExecutorService PARALLEL_INITIALIZER_SERVICE = Executors.newCachedThreadPool();
+	protected static final AtomicBoolean INITIALIZED = new AtomicBoolean(false);
+	protected static final ExecutorService PARALLEL_INITIALIZER_SERVICE = Executors.newCachedThreadPool();
 
-	private static final URI ENTITY_ID = URI.create("urn:ngsi-ld:store:" + UUID.randomUUID().toString());
-	private static final URI DELETED_ENTITY_ID = URI.create("urn:ngsi-ld:store:deleted-" + UUID.randomUUID().toString());
-	private static final URI CREATED_AFTER_ENTITY_ID = URI.create("urn:ngsi-ld:store:after-" + UUID.randomUUID().toString());
-	private static final URI DATA_MODEL_CONTEXT = URI.create("https://fiware.github.io/data-models/context.jsonld");
-	private static final URI CORE_CONTEXT = URI.create("https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld");
-	private static final String ORION_LD_HOST = "orion-ld";
-	private static final String TIMESCALE_HOST = "orion-ld";
-	private static final int ORION_LD_PORT = 1026;
-	private static final int TIMESCALE_PORT = 5432;
+	protected static final URI ENTITY_ID = URI.create("urn:ngsi-ld:store:" + UUID.randomUUID().toString());
+	protected static final URI DELETED_ENTITY_ID = URI.create("urn:ngsi-ld:store:deleted-" + UUID.randomUUID().toString());
+	protected static final URI CREATED_AFTER_ENTITY_ID = URI.create("urn:ngsi-ld:store:after-" + UUID.randomUUID().toString());
+	protected static final URI DATA_MODEL_CONTEXT = URI.create("https://fiware.github.io/data-models/context.jsonld");
+	protected static final URI CORE_CONTEXT = URI.create("https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld");
+	protected static final String ORION_LD_HOST = "orion-ld";
+	protected static final String TIMESCALE_HOST = "orion-ld";
+	protected static final int ORION_LD_PORT = 1026;
+	protected static final int TIMESCALE_PORT = 5432;
 	//2 hours of updates
 	public static final int NUMBER_OF_UPDATES = 120;
 
 
-	private static final Instant START_TIME_STAMP = Instant.ofEpochMilli(0);
-	private Clock clock;
-	private static EmbeddedServer embeddedServer;
-	private static ApplicationContext applicationContext;
+	protected static final Instant START_TIME_STAMP = Instant.ofEpochMilli(0);
+	protected Clock clock;
+	protected static EmbeddedServer embeddedServer;
+	protected static ApplicationContext applicationContext;
 
-	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+	protected static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-	private HttpClient mintakaTestClient;
-	private EntitiesApiTestClient entitiesApiTestClient;
+	protected HttpClient mintakaTestClient;
+	protected EntitiesApiTestClient entitiesApiTestClient;
 	public static final List<String> FULL_ENTITY_ATTRIBUTES_LIST = List.of(
 			"temperature",
 			"open",
@@ -110,11 +107,11 @@ public class ComposeTest {
 
 		if (!INITIALIZED.getAndSet(true)) {
 			List<Future> futureList = new ArrayList<>();
-			futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createMovingEntity(URI.create("urn:ngsi-ld:store:moving-store2"))));
-			futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createMovingEntity(URI.create("urn:ngsi-ld:store:moving-store"))));
-			futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createEntityHistory(ENTITY_ID, START_TIME_STAMP)));
-			futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createEntityHistoryWithDeletion()));
-			futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createEntityHistory(CREATED_AFTER_ENTITY_ID, START_TIME_STAMP.plus(1, ChronoUnit.YEARS))));
+			futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createMovingEntity(URI.create("urn:ngsi-ld:car:moving-car-2"))));
+			futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createMovingEntity(URI.create("urn:ngsi-ld:car:moving-car"))));
+//			futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createEntityHistory(ENTITY_ID, START_TIME_STAMP)));
+//			futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createEntityHistoryWithDeletion()));
+//			futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createEntityHistory(CREATED_AFTER_ENTITY_ID, START_TIME_STAMP.plus(1, ChronoUnit.YEARS))));
 			await().atMost(5, TimeUnit.MINUTES).until(() -> !futureList.stream().anyMatch(f -> !f.isDone()));
 		}
 
@@ -124,330 +121,7 @@ public class ComposeTest {
 		mintakaTestClient = new DefaultHttpClient(new URL("http://" + embeddedServer.getHost() + ":" + embeddedServer.getPort()), configuration);
 	}
 
-	@DisplayName("Retrieve not found for not existing entities")
-	@Test
-	public void testGetEntityByIdNotFound() {
-		assertNotFound(HttpRequest.GET("/temporal/entities/rn:ngsi-ld:store:not-found"), "For non existing entities a 404 should be returned.");
-	}
 
-	@DisplayName("Retrieve entity without attributes if non-existent is requested.")
-	@Test
-	public void testGetEntityByIdWithNonExistingAttribute() {
-		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/" + ENTITY_ID);
-		getRequest.getParameters().add("attrs", "nonExisting");
-
-		assertNotFound(getRequest, "If the requested attribute does not exist, a 404 should be returned.");
-	}
-
-	@DisplayName("Intial test for running a temporal query including geo querying.")
-	@Test
-	public void testTempQuery() throws JsonProcessingException {
-
-		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
-		getRequest.getParameters()
-				.add("options", "temporalValues")
-				.add("idPattern", ".*")
-				.add("type", "store")
-				.add("georel", "near;maxDistance==300000")
-//				.add("geometry", "Point")
-//				.add("coordinates", "[120,120,0]")
-				.add("geometry", "LineString")
-				.add("coordinates", "[[5,5],[7,7]]")
-				.add("timerel", "between")
-				.add("time", "1970-01-01T00:01:00Z")
-				.add("endTime", "1970-01-01T07:30:00Z");
-		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
-
-		assertEquals(2, entryList.size(), "Both matching entities should have been returned.");
-	}
-
-
-	@DisplayName("Retrieve deleted entity should lead to 404.")
-	@Test
-	public void testGetDeletedEntityById() {
-		assertNotFound(HttpRequest.GET("/temporal/entities/" + DELETED_ENTITY_ID), "A deleted entity should not be retrieved.");
-	}
-
-	@DisplayName("Retrieve deleted entity with timerel after deletion should lead to 404.")
-	@Test
-	public void testGetDeletedEntityByIdAfterDeletion() {
-		MutableHttpRequest request = HttpRequest.GET("/temporal/entities/" + DELETED_ENTITY_ID);
-		request.getParameters().add("timerel", "after")
-				.add("time", "1970-01-02T00:00:00Z");
-		assertNotFound(request, "A deleted entity should not be retrieved.");
-	}
-
-	@DisplayName("Retrieve entity with timerel before creation should lead to 404.")
-	@Test
-	public void testGetEntityByIdBeforeCreation() {
-		MutableHttpRequest request = HttpRequest.GET("/temporal/entities/" + CREATED_AFTER_ENTITY_ID);
-		request.getParameters().add("timerel", "before")
-				.add("time", "1970-01-02T00:00:00Z");
-		assertNotFound(request, "An entity should not be retrieved before its creation.");
-	}
-
-	@DisplayName("Retrieve deleted entity with between timeframe after deletion should lead to 404.")
-	@Test
-	public void testGetDeletedEntityByIdAfterDeletionWithBetween() {
-		MutableHttpRequest request = HttpRequest.GET("/temporal/entities/" + DELETED_ENTITY_ID);
-		request.getParameters().add("timerel", "between")
-				.add("time", "1970-01-01T10:00:00Z")
-				.add("endTime", "1970-01-02T00:00:00Z");
-		assertNotFound(request, "A deleted entity should not be retrieved.");
-	}
-
-	@DisplayName("Retrieve entity with between timeframe before creation should lead to 404.")
-	@Test
-	public void testGetEntityByIdBeforeCreationWithBetween() {
-		MutableHttpRequest request = HttpRequest.GET("/temporal/entities/" + DELETED_ENTITY_ID);
-		request.getParameters().add("timerel", "between")
-				.add("time", "1970-01-01T10:00:00Z")
-				.add("endTime", "1970-01-02T00:00:00Z");
-		assertNotFound(request, "An entity should not be retrieved before its creation.");
-	}
-
-	@DisplayName("Retrieve the full entity. No timeframe definition, default context.")
-	@ParameterizedTest
-	@MethodSource("provideEntityIds")
-	public void testGetEntityByIdWithoutTime(URI entityId) {
-		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(HttpRequest.GET("/temporal/entities/" + entityId), Map.class);
-		assertDefaultStoreTemporalEntity(entityId, entityTemporalMap);
-
-		assertEquals(FULL_ENTITY_ATTRIBUTES_LIST.size() + 3, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
-
-		assertAttributesInMap(entityTemporalMap, FULL_ENTITY_ATTRIBUTES_LIST, NUMBER_OF_UPDATES + 1, START_TIME_STAMP, START_TIME_STAMP.plus(NUMBER_OF_UPDATES, ChronoUnit.MINUTES));
-	}
-
-	@DisplayName("Retrieve the full entity in temporalValues representation. No timeframe definition, default context.")
-	@ParameterizedTest
-	@MethodSource("provideEntityIds")
-	@Disabled("Temporal representation is currently invalid json-ld, needs to be fixed first.")
-	public void testGetEntityByIdWithoutTimeTemporalValues(URI entityId) {
-		MutableHttpRequest request = HttpRequest.GET("/temporal/entities/" + entityId);
-		request.getParameters().add("options", "temporalValues");
-		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(request, Map.class);
-		assertDefaultStoreTemporalEntity(entityId, entityTemporalMap);
-
-		assertEquals(FULL_ENTITY_ATTRIBUTES_LIST.size() + 3, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
-
-		assertAttributesInMap(entityTemporalMap, FULL_ENTITY_ATTRIBUTES_LIST, NUMBER_OF_UPDATES + 1, START_TIME_STAMP, START_TIME_STAMP.plus(NUMBER_OF_UPDATES, ChronoUnit.MINUTES));
-	}
-
-	@DisplayName("Retrieve the entity with only the requested attribute. No timeframe definition, default context.")
-	@ParameterizedTest
-	@MethodSource("provideFullEntityAttributeStrings")
-	public void testGetEntityWithSingleAttributeByIdWithoutTime(String propertyToRetrieve, URI entityID) {
-
-		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/" + entityID);
-		getRequest.getParameters().add("attrs", propertyToRetrieve);
-
-		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
-		assertDefaultStoreTemporalEntity(entityID, entityTemporalMap);
-		assertEquals(entityTemporalMap.size(), 4, "Only id, type, context and the open attribute should have been returned.");
-		List<Map<String, Object>> listRepresentation = retrieveListRepresentationForProperty(propertyToRetrieve, entityTemporalMap);
-
-		assertFalse(listRepresentation.isEmpty(), "There should be some updates for the requested property.");
-		assertEquals(listRepresentation.size(), NUMBER_OF_UPDATES + 1, "All instances should have been returned(created + 100 updates).");
-
-		assertInstanceInTimeFrame(listRepresentation, NUMBER_OF_UPDATES + 1, START_TIME_STAMP, START_TIME_STAMP.plus(NUMBER_OF_UPDATES, ChronoUnit.MINUTES));
-	}
-
-	@DisplayName("Retrieve the entity with multiple requested attributes. No timeframe definition, default context.")
-	@ParameterizedTest
-	@MethodSource("provideCombinedAttributeStrings")
-	public void testGetEntityWithMultipleAttributesByIdWithoutTime(List<String> attributesList, URI entityId) {
-		String propertyToRetrieve = String.join(",", attributesList);
-
-		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/" + entityId);
-		getRequest.getParameters().add("attrs", propertyToRetrieve);
-
-		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
-		assertDefaultStoreTemporalEntity(entityId, entityTemporalMap);
-		assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
-		assertAttributesInMap(entityTemporalMap, attributesList, NUMBER_OF_UPDATES + 1, START_TIME_STAMP, START_TIME_STAMP.plus(NUMBER_OF_UPDATES, ChronoUnit.MINUTES));
-	}
-
-
-	// between
-	@DisplayName("Retrieve the full entity between the timestamps, default context.")
-	@ParameterizedTest
-	@MethodSource("provideEntityIds")
-	public void testGetEntityBetweenTimestamps(URI entityId) {
-		assertAttributesBetween(FULL_ENTITY_ATTRIBUTES_LIST, entityId);
-	}
-
-	@DisplayName("Retrieve the entity with the requested attribute between the timestamps, default context.")
-	@ParameterizedTest
-	@MethodSource("provideFullEntityAttributeStrings")
-	public void testGetEntityAttributesBetweenTimestamps(String attributeName, URI entityId) {
-		assertAttributesBetween(List.of(attributeName), entityId);
-	}
-
-	@DisplayName("Retrieve the entity with the requested attributes between the timestamps, default context.")
-	@ParameterizedTest
-	@MethodSource("provideCombinedAttributeStrings")
-	public void testGetEntityMultipleAttributesBetweenTimestamps(List<String> subList, URI entityId) {
-		assertAttributesBetween(subList, entityId);
-	}
-
-
-	// before
-	@DisplayName("Retrieve the full entity before the timestamp, default context.")
-	@Test
-	public void testGetEntityBeforeTimestamp() {
-		assertAttributesBefore(FULL_ENTITY_ATTRIBUTES_LIST);
-	}
-
-	@DisplayName("Retrieve the entity with the requested attribute before the timestamp, default context.")
-	@ParameterizedTest
-	@MethodSource("provideFullEntityAttributeStrings")
-	public void testGetEntityAttributesBeforeTimestamps(String attributeName) {
-		assertAttributesBefore(List.of(attributeName));
-	}
-
-	@DisplayName("Retrieve the entity with the requested attribute before the timestamp, default context.")
-	@ParameterizedTest
-	@MethodSource("provideCombinedAttributeStrings")
-	public void testGetEntityMultipleAttributesBeforeTimestamps(List<String> subList) {
-		assertAttributesBefore(subList);
-	}
-
-
-	// after
-	@DisplayName("Retrieve the full entity after the timestamp, default context.")
-	@Test
-	public void testGetEntityAfterTimestamp() {
-		assertAttributesAfter(FULL_ENTITY_ATTRIBUTES_LIST);
-	}
-
-	@DisplayName("Retrieve the entity with the requested attribute after the timestamp, default context.")
-	@ParameterizedTest
-	@MethodSource("provideFullEntityAttributeStrings")
-	public void testGetEntityAttributesAfterTimestamps(String attributeName) {
-		assertAttributesAfter(List.of(attributeName));
-	}
-
-	@DisplayName("Retrieve the entity with the requested attribute after the timestamp, default context.")
-	@ParameterizedTest
-	@MethodSource("provideCombinedAttributeStrings")
-	public void testGetEntityMultipleAttributesAfterTimestamps(List<String> subList) {
-		assertAttributesAfter(subList);
-	}
-
-
-	// lastN
-	@DisplayName("Retrieve the last n full instances. default context.")
-	@Test
-	public void testGetEntityLastNWithoutTime() {
-		int lastN = 5;
-
-		MutableHttpRequest request = HttpRequest.GET("/temporal/entities/" + ENTITY_ID);
-		request.getParameters().add("lastN", String.valueOf(lastN));
-		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(request, Map.class);
-		assertDefaultStoreTemporalEntity(ENTITY_ID, entityTemporalMap);
-
-		assertEquals(FULL_ENTITY_ATTRIBUTES_LIST.size() + 3, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
-
-		// NUMBER_OF_UPDATES - lastN + 1 - go 5 steps back but include the 5th last.
-		assertAttributesInMap(entityTemporalMap, FULL_ENTITY_ATTRIBUTES_LIST, lastN, START_TIME_STAMP.plus(NUMBER_OF_UPDATES - lastN + 1, ChronoUnit.MINUTES), START_TIME_STAMP.plus(NUMBER_OF_UPDATES, ChronoUnit.MINUTES));
-	}
-
-	@DisplayName("Retrieve the last n instances with only the requested attribute . No timeframe definition, default context.")
-	@ParameterizedTest
-	@MethodSource("provideFullEntityAttributeStrings")
-	public void testGetEntityWithSingleAttributeByIdWithoutTimeAndLastN(String propertyToRetrieve) {
-		int lastN = 5;
-
-		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/" + ENTITY_ID);
-		getRequest.getParameters().add("attrs", propertyToRetrieve).add("lastN", String.valueOf(lastN));
-
-		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
-		assertDefaultStoreTemporalEntity(ENTITY_ID, entityTemporalMap);
-		assertEquals(entityTemporalMap.size(), 4, "Only id, type, context and the open attribute should have been returned.");
-		List<Map<String, Object>> listRepresentation = retrieveListRepresentationForProperty(propertyToRetrieve, entityTemporalMap);
-
-		assertFalse(listRepresentation.isEmpty(), "There should be some updates for the requested property.");
-		assertEquals(listRepresentation.size(), lastN, "All instances should have been returned(created + 100 updates).");
-
-		assertInstanceInTimeFrame(listRepresentation, lastN, START_TIME_STAMP.plus(NUMBER_OF_UPDATES - lastN + 1, ChronoUnit.MINUTES), START_TIME_STAMP.plus(NUMBER_OF_UPDATES, ChronoUnit.MINUTES));
-	}
-
-	@DisplayName("Retrieve the last n instances with multiple requested attributes. No timeframe definition, default context.")
-	@ParameterizedTest
-	@MethodSource("provideCombinedAttributeStrings")
-	public void testGetEntityWithMultipleAttributesByIdWithoutTimeAndLastN(List<String> attributesList) {
-		int lastN = 5;
-		String propertyToRetrieve = String.join(",", attributesList);
-
-		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/" + ENTITY_ID);
-		getRequest.getParameters().add("attrs", propertyToRetrieve).add("lastN", String.valueOf(lastN));
-
-		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
-		assertDefaultStoreTemporalEntity(ENTITY_ID, entityTemporalMap);
-		assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
-		assertAttributesInMap(entityTemporalMap, attributesList, lastN, START_TIME_STAMP.plus(NUMBER_OF_UPDATES - lastN + 1, ChronoUnit.MINUTES), START_TIME_STAMP.plus(NUMBER_OF_UPDATES, ChronoUnit.MINUTES));
-	}
-
-	@DisplayName("Retrieve the last n instances before the timestamp, default context.")
-	@Test
-	public void testGetEntityBeforeTimestampWithLastN() {
-		assertAttributesBeforeWithLastN(FULL_ENTITY_ATTRIBUTES_LIST, 5);
-	}
-
-	@DisplayName("Retrieve the last n instances for the requested attribute before the timestamp, default context.")
-	@ParameterizedTest
-	@MethodSource("provideFullEntityAttributeStrings")
-	public void testGetEntityAttributesBeforeTimestampsWithLastN(String attributeName) {
-		assertAttributesBeforeWithLastN(List.of(attributeName), 5);
-	}
-
-	@DisplayName("Retrieve the last n instances with the requested attribute before the timestamp, default context.")
-	@ParameterizedTest
-	@MethodSource("provideCombinedAttributeStrings")
-	public void testGetEntityMultipleAttributesBeforeTimestampsWithLastN(List<String> subList) {
-		assertAttributesBeforeWithLastN(subList, 5);
-	}
-
-	@DisplayName("Retrieve the last n instances after the timestamp, default context.")
-	@Test
-	public void testGetEntityAfterTimestampWithLastN() {
-		assertAttributesAfterWithLastN(FULL_ENTITY_ATTRIBUTES_LIST, 5);
-	}
-
-	@DisplayName("Retrieve the last n instances for the requested attribute after the timestamp, default context.")
-	@ParameterizedTest
-	@MethodSource("provideFullEntityAttributeStrings")
-	public void testGetEntityAttributesAfterTimestampsWithLastN(String attributeName) {
-		assertAttributesAfterWithLastN(List.of(attributeName), 5);
-	}
-
-	@DisplayName("Retrieve the last n instances with the requested attribute after the timestamp, default context.")
-	@ParameterizedTest
-	@MethodSource("provideCombinedAttributeStrings")
-	public void testGetEntityMultipleAttributesAfterTimestampsWithLastN(List<String> subList) {
-		assertAttributesAfterWithLastN(subList, 5);
-	}
-
-	@DisplayName("Retrieve the last n instances between the timestamps, default context.")
-	@ParameterizedTest
-	@MethodSource("provideEntityIds")
-	public void testGetEntityBetweenTimestampWithLastN(URI entityId) {
-		assertAttributesBetweenWithLastN(FULL_ENTITY_ATTRIBUTES_LIST, 5, entityId);
-	}
-
-	@DisplayName("Retrieve the last n instances for the requested attribute between the timestamps, default context.")
-	@ParameterizedTest
-	@MethodSource("provideFullEntityAttributeStrings")
-	public void testGetEntityAttributesBetweenTimestampsWithLastN(String attributeName, URI entityId) {
-		assertAttributesBetweenWithLastN(List.of(attributeName), 5, entityId);
-	}
-
-	@DisplayName("Retrieve the last n instances with the requested attribute between the timestamps, default context.")
-	@ParameterizedTest
-	@MethodSource("provideCombinedAttributeStrings")
-	public void testGetEntityMultipleAttributesBetweenTimestampsWithLastN(List<String> subList, URI entityId) {
-		assertAttributesBetweenWithLastN(subList, 5, entityId);
-	}
 
 	/*
 	 *  TEST SUPPORT
@@ -455,29 +129,29 @@ public class ComposeTest {
 
 	// provider methods
 
-	private static Stream<Arguments> provideFullEntityAttributeStrings() {
+	protected static Stream<Arguments> provideFullEntityAttributeStrings() {
 		return FULL_ENTITY_ATTRIBUTES_LIST
 				.stream()
 				.flatMap(attribute -> Stream.of(Arguments.of(attribute, ENTITY_ID), Arguments.of(attribute, DELETED_ENTITY_ID)));
 	}
 
-	private static Stream<Arguments> provideCombinedAttributeStrings() {
+	protected static Stream<Arguments> provideCombinedAttributeStrings() {
 		return Lists.partition(FULL_ENTITY_ATTRIBUTES_LIST, 3)
 				.stream()
 				.flatMap(attribute -> Stream.of(Arguments.of(attribute, ENTITY_ID), Arguments.of(attribute, DELETED_ENTITY_ID)));
 	}
 
-	private static Stream<Arguments> provideEntityIds() {
+	protected static Stream<Arguments> provideEntityIds() {
 		return Stream.of(Arguments.of(ENTITY_ID), Arguments.of(DELETED_ENTITY_ID));
 	}
 
 	// assertions
 
-	private void assertAttributesBetween(List<String> attributesList, URI entityId) {
+	protected void assertAttributesBetween(List<String> attributesList, URI entityId) {
 		assertAttributesBetweenWithLastN(attributesList, null, entityId);
 	}
 
-	private void assertAttributesBetweenWithLastN(List<String> attributesList, Integer lastN, URI entityId) {
+	protected void assertAttributesBetweenWithLastN(List<String> attributesList, Integer lastN, URI entityId) {
 		String timerelation = "between";
 		String startTime = "1970-01-01T00:30:00Z";
 		String endTime = "1970-01-01T00:45:00Z";
@@ -515,11 +189,11 @@ public class ComposeTest {
 				START_TIME_STAMP.plus(44, ChronoUnit.MINUTES));
 	}
 
-	private void assertAttributesBefore(List<String> attributesList) {
+	protected void assertAttributesBefore(List<String> attributesList) {
 		assertAttributesBeforeWithLastN(attributesList, null);
 	}
 
-	private void assertAttributesBeforeWithLastN(List<String> attributesList, Integer lastN) {
+	protected void assertAttributesBeforeWithLastN(List<String> attributesList, Integer lastN) {
 		String timerelation = "before";
 		String time = "1970-01-01T00:30:00Z";
 
@@ -554,11 +228,11 @@ public class ComposeTest {
 				START_TIME_STAMP.plus(29, ChronoUnit.MINUTES));
 	}
 
-	private void assertAttributesAfter(List<String> attributesList) {
+	protected void assertAttributesAfter(List<String> attributesList) {
 		assertAttributesAfterWithLastN(attributesList, null);
 	}
 
-	private void assertAttributesAfterWithLastN(List<String> attributesList, Integer lastN) {
+	protected void assertAttributesAfterWithLastN(List<String> attributesList, Integer lastN) {
 		String timerelation = "after";
 		String time = "1970-01-01T00:30:00Z";
 
@@ -593,7 +267,7 @@ public class ComposeTest {
 				START_TIME_STAMP.plus(NUMBER_OF_UPDATES, ChronoUnit.MINUTES));
 	}
 
-	private void assertAttributesInMap(Map<String, Object> entityTemporalMap, List<String> attributesList, Integer expectedInstances, Instant startTimeStamp, Instant endTimeStamp) {
+	protected void assertAttributesInMap(Map<String, Object> entityTemporalMap, List<String> attributesList, Integer expectedInstances, Instant startTimeStamp, Instant endTimeStamp) {
 		attributesList
 				.stream()
 				.forEach(propertyName -> {
@@ -607,7 +281,7 @@ public class ComposeTest {
 	}
 
 
-	private void assertInstanceInTimeFrame(List<Map<String, Object>> attributeInstanceList, Integer expectedInstancs, Instant startTimeStamp, Instant endTimeStamp) {
+	protected void assertInstanceInTimeFrame(List<Map<String, Object>> attributeInstanceList, Integer expectedInstancs, Instant startTimeStamp, Instant endTimeStamp) {
 		List<Instant> observedAtList = attributeInstanceList
 				.stream()
 				.map(ai -> (String) ai.get("observedAt"))
@@ -620,7 +294,7 @@ public class ComposeTest {
 
 	}
 
-	private void assertDefaultStoreTemporalEntity(URI entityId, Map<String, Object> entityTemporalMap) {
+	protected void assertDefaultStoreTemporalEntity(URI entityId, Map<String, Object> entityTemporalMap) {
 		assertNotNull(entityTemporalMap, "A temporal entity should have been returned.");
 
 		assertEquals(entityTemporalMap.get(JsonLdConsts.CONTEXT),
@@ -630,7 +304,7 @@ public class ComposeTest {
 		assertEquals(entityTemporalMap.get("id"), entityId.toString(), "The requested entity should have been retrieved.");
 	}
 
-	private void assertNotFound(HttpRequest request, String msg) {
+	protected void assertNotFound(HttpRequest request, String msg) {
 		try {
 			mintakaTestClient.toBlocking().retrieve(request, Map.class);
 		} catch (HttpClientResponseException e) {
@@ -642,7 +316,7 @@ public class ComposeTest {
 
 	// helper
 
-	private List<Map<String, Object>> retrieveListRepresentationForProperty(String property, Map<String, Object> entityTemporalMap) {
+	protected List<Map<String, Object>> retrieveListRepresentationForProperty(String property, Map<String, Object> entityTemporalMap) {
 		Object temporalProperty = entityTemporalMap.get(property);
 		assertNotNull(temporalProperty, "All entities should have been retrieved.");
 		assertTrue(temporalProperty instanceof List, "A list of the properties should have been retrieved.");
@@ -651,7 +325,7 @@ public class ComposeTest {
 
 
 	// create
-	private void createMovingEntity(URI entityId) {
+	protected void createMovingEntity(URI entityId) {
 		when(clock.instant()).thenReturn(START_TIME_STAMP);
 
 		double lat = 0;
@@ -670,9 +344,10 @@ public class ComposeTest {
 				.location(pointProperty)
 				.observationSpace(null)
 				.operationSpace(null)
-				.type("store");
-		PropertyVO temperatureProperty = getNewPropety().value(Math.random());
-		entityVO.setAdditionalProperties(Map.of("temperature", temperatureProperty));
+				.type("car");
+		PropertyVO temperatureProperty = getNewPropety().value(25);
+		PropertyVO radioProperty = getNewPropety().value(true);
+		entityVO.setAdditionalProperties(Map.of("radio", radioProperty, "temperature", temperatureProperty));
 		entitiesApiTestClient.createEntity(entityVO);
 
 		for (int i = 0; i < 200; i++) {
@@ -680,28 +355,29 @@ public class ComposeTest {
 			longi++;
 			currentTime = currentTime.plus(1, ChronoUnit.MINUTES);
 			when(clock.instant()).thenReturn(currentTime);
-			updateLatLong(entityId, lat, longi);
+			updateLatLong(entityId, lat, longi, Optional.of(25), Optional.of(true));
 		}
 		for (int i = 200; i < 300; i++) {
 			lat--;
 			longi--;
 			currentTime = currentTime.plus(1, ChronoUnit.MINUTES);
 			when(clock.instant()).thenReturn(currentTime);
-			updateLatLong(entityId, lat, longi);
+			updateLatLong(entityId, lat, longi, Optional.of(20), Optional.of(false));
 		}
 		for (int i = 300; i < 400; i++) {
 			lat--;
 			longi--;
 			currentTime = currentTime.plus(1, ChronoUnit.MINUTES);
 			when(clock.instant()).thenReturn(currentTime);
-			updateLatLong(entityId, lat, longi);
+			updateLatLong(entityId, lat, longi, Optional.of(15), Optional.of(true));
 		}
 	}
 
-	private void updateLatLong(URI entityId, double lat, double longi) {
+	protected void updateLatLong(URI entityId, double lat, double longi, Optional<Integer> optionalTemp, Optional<Boolean> optionalRadio) {
 		PointVO pointVO;
 		GeoPropertyVO pointProperty;
 		PropertyVO temperatureProperty;
+		PropertyVO radioProperty;
 		pointVO = new PointVO();
 		pointVO.type(PointVO.Type.POINT);
 		pointVO.coordinates().add(lat);
@@ -714,18 +390,19 @@ public class ComposeTest {
 				.observationSpace(null)
 				.operationSpace(null)
 				.type("store");
-		temperatureProperty = getNewPropety().value(Math.random());
-		entityFragmentVO.setAdditionalProperties(Map.of("temperature", temperatureProperty));
+		temperatureProperty = getNewPropety().value(optionalTemp.orElseGet(() -> (int) (Math.random() * 10)));
+		radioProperty = getNewPropety().value(optionalRadio.orElseGet(() -> true));
+		entityFragmentVO.setAdditionalProperties(Map.of("temperature", temperatureProperty, "radio", radioProperty));
 		entitiesApiTestClient.updateEntityAttrs(entityId, entityFragmentVO);
 	}
 
 
-	private void createEntityHistoryWithDeletion() {
+	protected void createEntityHistoryWithDeletion() {
 		createEntityHistory(DELETED_ENTITY_ID, START_TIME_STAMP);
 		entitiesApiTestClient.removeEntityById(DELETED_ENTITY_ID, null);
 	}
 
-	private void createEntityHistory(URI entityId, Instant startTimeStamp) {
+	protected void createEntityHistory(URI entityId, Instant startTimeStamp) {
 		when(clock.instant()).thenReturn(startTimeStamp);
 
 		Instant currentTime = startTimeStamp;
@@ -763,7 +440,7 @@ public class ComposeTest {
 		}
 	}
 
-	private Map<String, Object> getAdditionalProperties() {
+	protected Map<String, Object> getAdditionalProperties() {
 		RelationshipVO relationshipVO = getNewRelationship()._object(URI.create("my:related:entity"));
 
 
@@ -823,32 +500,32 @@ public class ComposeTest {
 				"relatedEntity", relationshipVO);
 	}
 
-	private GeoPropertyVO getNewGeoProperty() {
+	protected GeoPropertyVO getNewGeoProperty() {
 		return new GeoPropertyVO().type(GeoPropertyVO.Type.GEOPROPERTY).observedAt(clock.instant());
 	}
 
-	private PropertyVO getNewPropety() {
+	protected PropertyVO getNewPropety() {
 		return new PropertyVO().type(PropertyVO.Type.PROPERTY).observedAt(clock.instant());
 	}
 
-	private RelationshipVO getNewRelationship() {
+	protected RelationshipVO getNewRelationship() {
 		return new RelationshipVO().type(RelationshipVO.Type.RELATIONSHIP).observedAt(clock.instant());
 	}
 
-	private LinearRingDefinitionVO getLinearRingDef(List<PositionDefinitionVO> positionDefinitionVOS) {
+	protected LinearRingDefinitionVO getLinearRingDef(List<PositionDefinitionVO> positionDefinitionVOS) {
 		LinearRingDefinitionVO linearRingDefinitionVO = new LinearRingDefinitionVO();
 		linearRingDefinitionVO.addAll(positionDefinitionVOS);
 		return linearRingDefinitionVO;
 	}
 
-	private PositionDefinitionVO getPositionDef(double lng, double lat) {
+	protected PositionDefinitionVO getPositionDef(double lng, double lat) {
 		PositionDefinitionVO positionDefinitionVO = new PositionDefinitionVO();
 		positionDefinitionVO.add(lng);
 		positionDefinitionVO.add(lat);
 		return positionDefinitionVO;
 	}
 
-	private MultiPolygonVO getMultiPolygon() {
+	protected MultiPolygonVO getMultiPolygon() {
 		PolygonDefinitionVO p1 = new PolygonDefinitionVO();
 		p1.add(
 				getLinearRingDef(
@@ -885,7 +562,7 @@ public class ComposeTest {
 		return multiPolygonVO;
 	}
 
-	private MultiLineStringVO getMultiLineString() {
+	protected MultiLineStringVO getMultiLineString() {
 		LineStringDefinitionVO l1 = new LineStringDefinitionVO();
 		l1.addAll(
 				List.of(

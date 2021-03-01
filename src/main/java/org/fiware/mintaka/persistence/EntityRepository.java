@@ -1,27 +1,23 @@
 package org.fiware.mintaka.persistence;
 
-import io.micronaut.data.model.query.QueryModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.nullness.Opt;
 import org.fiware.mintaka.domain.EntityIdTempResults;
-import org.fiware.mintaka.domain.GeoQuery;
 import org.fiware.mintaka.domain.TimeQuery;
-import org.fiware.mintaka.domain.TimeRelation;
-import org.fiware.mintaka.exception.InvalidTimeRelationException;
+import org.fiware.mintaka.domain.query.*;
 import org.fiware.mintaka.exception.PersistenceRetrievalException;
 
 import javax.inject.Singleton;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
-import java.net.URI;
 import java.sql.Timestamp;
-import java.time.*;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -83,82 +79,47 @@ public class EntityRepository {
 				.collect(Collectors.toList());
 	}
 
-	public List<EntityIdTempResults> findEntityIdsByQuery(Optional<String> idPattern, List<String> types, TimeQuery timeQuery, Optional<GeoQuery> geoQuery) {
-		String timeQueryPart = timeQuery.getSqlRepresentation();
+	public List<EntityIdTempResults> findEntityIdsAndTimeframesByQuery(Optional<String> idPattern, List<String> types, TimeQuery timeQuery, Optional<GeoQuery> geoQuery, Optional<QueryTerm> queryTerm) {
+		Optional<String> querySelectString = Optional.empty();
+		Optional<String> geoSelectString = Optional.empty();
 
-		// TODO: UPDATE DOC
-		// The query:
-		// find all entityIds that match the pattern, type and are not deleted
-		// then get all attributes with the geoProperties attribute id and the result of its geoquery in the requested timeframe
-		// then sort by entity-id and timestamp and combine consecutive rows with distinct query results into single rows
-
-		String idSubSelect = "SELECT DISTINCT entity.id FROM entities entity WHERE entity.opMode != '" + OpMode.Delete.name() + "' ";
-		if (!types.isEmpty()) {
-
-			idSubSelect += " AND entity.type in (" + types.stream().map(type -> String.format("'%s'", type)).collect(Collectors.joining(",")) + ")";
+		if (queryTerm.isPresent()) {
+			querySelectString = Optional.of(createSelectionCriteriaFromQueryTerm(idPattern, types, timeQuery, queryTerm.get()));
 		}
-
-		if (idPattern.isPresent()) {
-			idSubSelect += " AND entity.id ~ '" + idPattern.get() + "' ";
-		}
-
-		log.debug("Subselect: {}", idSubSelect);
-
-
-		String selectTempTable = "SELECT ";
 		if (geoQuery.isPresent()) {
-			selectTempTable += geoQuery.get().getSqlRepresentation() + " as geoResult";
+			geoSelectString = Optional.of((createSelectionCriteria(idPattern, types, timeQuery, geoQuery, Optional.empty())));
+		}
+
+		String finalSelect = "";
+		if (querySelectString.isPresent() && geoSelectString.isPresent()) {
+			// query for geography and ngsi-attributes
+			finalSelect = selectAndTerm(querySelectString.get(), geoSelectString.get());
+		} else if (querySelectString.isPresent()) {
+			// query only with ngsi query
+			finalSelect = querySelectString.get();
+		} else if (geoSelectString.isPresent()) {
+			// query only with geography
+			finalSelect = geoSelectString.get();
 		} else {
-			selectTempTable += " true as geoResult";
+			finalSelect = createSelectionCriteria(idPattern, types, timeQuery, Optional.empty(), Optional.empty());
 		}
-		//TODO: at query result
-		//if(query.isPresent()){
-		//innerJoin += query.get().getSqlRepresentation() + "as queryResult";
-		//}
-		selectTempTable += ",attribute." + timeQuery.getTimeProperty() + " as time, attribute.entityId " +
-				"FROM attributes attribute WHERE attribute.entityId in (" + idSubSelect + ") ";
-		if (geoQuery.isPresent()) {
-			selectTempTable += "and attribute.id='" + geoQuery.get().getGeoProperty() + "' ";
-		}
-
-
-		selectTempTable += timeQueryPart + " order by attribute.entityId, attribute." + timeQuery.getTimeProperty();
-		log.debug("Select temp table: {}", selectTempTable);
-
-		// a usual result set will look similar to:
-		// id1, false, t0 - set1
-		// id1, true, t1 - set2
-		// id1, true, t2 - set2
-		// id1, false, t3 - set3
-		// id1, false, t4 - set3
-		// id2, true, t0 - set4
-		// id2, true, t1 - set4
-		// id2, false, t2 - set5
-		// id2, false, t3 - set5
-		// the changed order assures that the entities of the same set are moved by the same distance and therefore get the same setId.
-		String tempWithSetId = "SELECT *, (ROW_NUMBER() OVER (ORDER BY temp.entityId, temp.time)) - (ROW_NUMBER() OVER (ORDER BY temp.entityId, temp.geoResult, temp.time)) as setId FROM  (" + selectTempTable + ") AS temp";
-
-
-		String selectOnTemp = "SELECT t1.georesult, t1.entityId,MIN(t1.time) AS startTime, MAX(t1.time) AS endTime FROM (" + tempWithSetId + ") AS t1 GROUP BY t1.georesult,t1.entityId,t1.setId";
-
-		log.debug("Final query: {}", selectOnTemp);
-		Query getIdsAndTimeRangeQuery = entityManager.createNativeQuery(selectOnTemp);
+		log.debug("Final select:  {}", finalSelect);
+		Query getIdsAndTimeRangeQuery = entityManager.createNativeQuery(finalSelect);
 
 
 		List<Object[]> queryResultList = getIdsAndTimeRangeQuery.getResultList();
 
 		return queryResultList.stream()
-				.map(queryResult -> Arrays.asList(queryResult))
+				.map(Arrays::asList)
 				.filter(queryResult -> queryResult.size() == 4)
-				//true means query hit
-				.filter(queryResult -> queryResult.get(0) !=null && (Boolean) queryResult.get(0))
-				.map(queryResult -> mapQueryResultToPojo(queryResult))
+				.filter(queryResult -> (Boolean) queryResult.get(0))
+				.map(this::mapQueryResultToPojo)
 				.collect(Collectors.toList());
 	}
 
 	private EntityIdTempResults mapQueryResultToPojo(List<Object> queryResult) {
 		if (!(queryResult.get(1) instanceof String)) {
-			throw new PersistenceRetrievalException(String.format("The query-result contains a non-string id: %s", queryResult.get(1)));
+			throw new PersistenceRetrievalException(String.format("The query-result contains a non-string id: %s", queryResult.get(0)));
 		}
 		if (!(queryResult.get(2) instanceof Timestamp) || !(queryResult.get(3) instanceof Timestamp)) {
 			throw new PersistenceRetrievalException(String.format("The query-result contains a non-timestamp time. Start: %s, End: %s", queryResult.get(2), queryResult.get(3)));
@@ -303,6 +264,135 @@ public class EntityRepository {
 		instantTypedQuery.setParameter("attributeId", attributeId);
 
 		return instantTypedQuery.getResultList().stream().map(localDateTime -> localDateTime.toInstant(ZoneOffset.UTC)).collect(Collectors.toList());
+	}
+
+	private String createSelectionCriteriaFromQueryTerm(Optional<String> idPattern, List<String> types, TimeQuery timeQuery, QueryTerm queryTerm) {
+		if (queryTerm instanceof LogicalTerm) {
+			Optional<String> tableA = Optional.empty();
+			Optional<LogicalOperator> operator = Optional.empty();
+			LogicalTerm logicalTerm = (LogicalTerm) queryTerm;
+			for (QueryTerm subTerm : logicalTerm.getSubTerms()) {
+				if (tableA.isPresent() && operator.isPresent()) {
+					switch (operator.get()) {
+						case OR:
+							throw new UnsupportedOperationException("OR is not yet implemented.");
+						case AND:
+							return selectAndTerm(tableA.get(), createSelectionCriteriaFromQueryTerm(idPattern, types, timeQuery, subTerm));
+						default:
+							throw new IllegalArgumentException(String.format("Cannot build criteria for operator %s.", operator.get()));
+					}
+				}
+				if (subTerm instanceof ComparisonTerm && tableA.isEmpty()) {
+					tableA = Optional.of(createSelectionCriteria(idPattern, types, timeQuery, Optional.empty(), Optional.of((ComparisonTerm) subTerm)));
+					continue;
+				}
+				if (subTerm instanceof LogicalConnectionTerm) {
+					operator = Optional.of(((LogicalConnectionTerm) subTerm).getOperator());
+					continue;
+				}
+				if (subTerm instanceof LogicalTerm && tableA.isEmpty()) {
+					tableA = Optional.of(createSelectionCriteriaFromQueryTerm(idPattern, types, timeQuery, subTerm));
+					continue;
+				}
+			}
+
+		} else if (queryTerm instanceof ComparisonTerm) {
+			return createSelectionCriteria(idPattern, types, timeQuery, Optional.empty(), Optional.of(((ComparisonTerm) queryTerm)));
+		}
+		throw new IllegalArgumentException(String.format("Cannot build criteria from given term: %s", queryTerm));
+
+	}
+
+	private String createSelectionCriteria(Optional<String> idPattern, List<String> types, TimeQuery timeQuery, Optional<GeoQuery> geoQuery, Optional<ComparisonTerm> comparisonTerm) {
+		String timeQueryPart = timeQuery.getSqlRepresentation();
+
+		// TODO: UPDATE DOC
+		// The query:
+		// find all entityIds that match the pattern, type and are not deleted
+		// then get all attributes with the geoProperties attribute id and the result of its geoquery in the requested timeframe
+		// then sort by entity-id and timestamp and combine consecutive rows with distinct query results into single rows
+
+		String idSubSelect = "(SELECT DISTINCT entity.id FROM entities entity WHERE entity.opMode != '" + OpMode.Delete.name() + "' ";
+		if (!types.isEmpty()) {
+			idSubSelect += " AND entity.type in (" + types.stream().map(type -> String.format("'%s'", type)).collect(Collectors.joining(",")) + ")";
+		}
+
+		if (idPattern.isPresent()) {
+			idSubSelect += " AND entity.id ~ '" + idPattern.get() + "' ";
+		}
+		idSubSelect += ")";
+		log.debug("Subselect: {}", idSubSelect);
+
+
+		String selectTempTable = "SELECT ";
+		if (geoQuery.isPresent()) {
+			selectTempTable += geoQuery.get().toSQLQuery() + " as result";
+		} else if (comparisonTerm.isPresent()) {
+			selectTempTable += comparisonTerm.get().toSQLQuery() + " as result";
+		} else {
+			selectTempTable += " true as result";
+		}
+		//TODO: at query result
+		//if(query.isPresent()){
+		//innerJoin += query.get().getSqlRepresentation() + "as queryResult";
+		//}
+		selectTempTable += ",attribute." + timeQuery.getTimeProperty() + " as time, attribute.entityId " +
+				"FROM attributes attribute WHERE attribute.entityId in (" + idSubSelect + ") ";
+		if (comparisonTerm.isPresent()) {
+			selectTempTable += "and attribute.id='" + comparisonTerm.get().getAttributePath() + "' ";
+		}
+		if (geoQuery.isPresent()) {
+			selectTempTable += "and attribute.id='" + geoQuery.get().getGeoProperty() + "' ";
+		}
+
+
+		selectTempTable += timeQueryPart + " order by attribute.entityId, attribute." + timeQuery.getTimeProperty();
+		log.debug("Select temp table: {}", selectTempTable);
+
+		// a usual result set will look similar to:
+		// id1, false, t0 - set1
+		// id1, true, t1 - set2
+		// id1, true, t2 - set2
+		// id1, false, t3 - set3
+		// id1, false, t4 - set3
+		// id2, true, t0 - set4
+		// id2, true, t1 - set4
+		// id2, false, t2 - set5
+		// id2, false, t3 - set5
+		// the changed order assures that the entities of the same set are moved by the same distance and therefore get the same setId.
+		String tempWithSetId = "SELECT *, (ROW_NUMBER() OVER (ORDER BY temp.entityId, temp.time)) - (ROW_NUMBER() OVER (ORDER BY temp.entityId, temp.result, temp.time)) as setId FROM  (" + selectTempTable + ") AS temp";
+
+		String selectOnTemp = "SELECT t1.result, t1.entityId,MIN(t1.time) AS startTime, MAX(t1.time) AS endTime FROM (" + tempWithSetId + ") AS t1 WHERE result=true GROUP BY t1.result,t1.entityId,t1.setId";
+
+		log.debug("Final query: {}", selectOnTemp);
+		return selectOnTemp;
+	}
+
+	private String selectAndTerm(String tableA, String tableB) {
+		String selectAnd = "SELECT a.result as result, a.entityId as entityId, GREATEST(a.startTime,b.startTime) as startTime, LEAST(a.endTime, b.endTime) as endTime FROM (" + tableA + ") as a, (" + tableB + ") as b WHERE " +
+				"a.entityId=b.entityId " +
+				"AND ((a.startTime between b.startTime and b.endTime) " +
+				"OR (a.endTime between b.startTime and b.endTime) " +
+				"OR (b.startTime between a.startTime and a.endTime) " +
+				"OR (b.endTime between a.startTime and a.endTime)) ";
+		log.debug("Select and: {}", selectAnd);
+		return selectAnd;
+	}
+
+	private String selectOrTerm(String tableA, String tableB) {
+		String selectAnd = "SELECT a.result, a.entityId, (a.startTime,b.startTime), MAX(endTime) FROM (" + tableA + ") as a, (" + tableB + ") as b WHERE " +
+				"(a.entityId=b.entityId " +
+				"AND ((a.startTime between b.startTime and b.endTime) " +
+				"OR (a.endTime between b.startTime and b.endTime) " +
+				"OR (b.start between a.startTime and a.endTime) " +
+				"OR (b.endTime between a.startTime and a.endTime))) " +
+				"OR (a.entityId=b.entityId " +
+				"AND (NOT (a.startTime between b.startTime and b.endTime) " +
+				"AND NOT (a.endTime between b.startTime and b.endTime) " +
+				"AND NOT (b.startTime between a.startTime and a.endTime) " +
+				"AND NOT (b.endTime between a.startTime and a.endTime))";
+		log.debug("Select and: {}", selectAnd);
+		return selectAnd;
 	}
 
 }

@@ -17,13 +17,19 @@ public class TimeQuery {
 	private final Instant timeAt;
 	private final Instant endTime;
 	private final String timeProperty;
+	private final boolean inclusive;
 
 	public TimeQuery(TimeRelation timeRelation, Instant timeAt, Instant endTime, String timeProperty) {
+		this(timeRelation, timeAt, endTime, timeProperty, false);
+	}
+
+	public TimeQuery(TimeRelation timeRelation, Instant timeAt, Instant endTime, String timeProperty, boolean inclusive) {
 		validateTimeRelation(timeAt, endTime, timeRelation);
 		this.timeRelation = timeRelation;
 		this.timeAt = timeAt;
 		this.endTime = endTime;
 		this.timeProperty = timeProperty;
+		this.inclusive = inclusive;
 	}
 
 	/**
@@ -89,10 +95,19 @@ public class TimeQuery {
 
 		switch (timeRelation) {
 			case BETWEEN:
+				if (inclusive) {
+					return String.format("and %s >= '%s' and  %s <= '%s' ", timePropertyQuery, timeAtLDT, timePropertyQuery, LocalDateTime.ofInstant(endTime, ZoneOffset.UTC));
+				}
 				return String.format("and %s > '%s' and  %s < '%s' ", timePropertyQuery, timeAtLDT, timePropertyQuery, LocalDateTime.ofInstant(endTime, ZoneOffset.UTC));
 			case BEFORE:
+				if (inclusive) {
+					return String.format("and %s <= '%s' ", timePropertyQuery, timeAtLDT);
+				}
 				return String.format("and %s < '%s' ", timePropertyQuery, timeAtLDT);
 			case AFTER:
+				if (inclusive) {
+					return String.format("and %s >= '%s' ", timePropertyQuery, timeAtLDT);
+				}
 				return String.format("and %s > '%s' ", timePropertyQuery, timeAtLDT);
 			default:
 				throw invalidTimeRelationException;

@@ -6,9 +6,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.fiware.mintaka.context.LdContextCache;
 import org.fiware.mintaka.domain.ApiDomainMapper;
-import org.fiware.mintaka.domain.GeoQuery;
-import org.fiware.mintaka.domain.Geometry;
+import org.fiware.mintaka.domain.query.GeoQuery;
+import org.fiware.mintaka.domain.query.Geometry;
 import org.fiware.mintaka.domain.TimeQuery;
+import org.fiware.mintaka.domain.query.QueryParser;
+import org.fiware.mintaka.domain.query.QueryTerm;
 import org.fiware.mintaka.service.EntityTemporalService;
 import org.fiware.ngsi.api.TemporalRetrievalApi;
 import org.fiware.ngsi.model.EntityTemporalListVO;
@@ -34,7 +36,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class TemporalApiController implements TemporalRetrievalApi {
 
-	private static final List<String> WELL_KNOWN_ATTRIBUTES = List.of("location", "observationSpace", "operationSpace", "unitCode");
+	public static final List<String> WELL_KNOWN_ATTRIBUTES = List.of("location", "observationSpace", "operationSpace", "unitCode");
 	private static final String DEFAULT_TIME_PROPERTY = "observedAt";
 	private static final String DEFAULT_GEO_PROPERTY = "location";
 	private static final String SYS_ATTRS_OPTION = "sysAttrs";
@@ -43,6 +45,7 @@ public class TemporalApiController implements TemporalRetrievalApi {
 
 	private final EntityTemporalService entityTemporalService;
 	private final LdContextCache contextCache;
+	private final QueryParser queryParser;
 	private final ApiDomainMapper apiDomainMapper;
 
 	@Override
@@ -55,12 +58,11 @@ public class TemporalApiController implements TemporalRetrievalApi {
 				.orElse(DEFAULT_GEO_PROPERTY);
 		TimeQuery timeQuery = new TimeQuery(apiDomainMapper.timeRelVoToTimeRelation(timerel), time, endTime, getTimeRelevantProperty(timeproperty));
 
-
 		List<EntityTemporalVO> entityTemporalVOS = entityTemporalService.getEntitiesWithQuery(
 				Optional.ofNullable(idPattern),
 				getExpandedTypes(contextUrls, type),
 				getExpandedAttributes(contextUrls, attrs),
-				Optional.ofNullable(q),
+				Optional.ofNullable(q).map(queryString -> queryParser.toTerm(queryString, contextUrls)),
 				getGeometryQuery(georel, geometry, coordinates, expandedGeoProperty),
 				timeQuery,
 				lastN,
