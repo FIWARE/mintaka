@@ -15,10 +15,12 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class QueryParser {
 
-	public static final char CLOSE_BRACE = ')';
 	public static final char QUOTE = '"';
 	private static final String STRING_VALUE_REGEX = "\".*?\"";
 	public static final char OPEN_BRACE = '(';
+	public static final char CLOSE_BRACE = ')';
+	public static final char OPEN_SQUARE_BRACE = '[';
+	public static final char CLOSE_SQUARE_BRACE = ']';
 
 	private final LdContextCache contextCache;
 

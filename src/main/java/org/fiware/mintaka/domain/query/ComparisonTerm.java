@@ -10,9 +10,13 @@ import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.StringJoiner;
+import java.util.stream.Collectors;
 
+import static org.fiware.mintaka.rest.TemporalApiController.COMMA_SEPERATOR;
 import static org.fiware.mintaka.rest.TemporalApiController.WELL_KNOWN_ATTRIBUTES;
 
 @Getter
@@ -66,7 +70,12 @@ public class ComparisonTerm extends QueryTerm {
 
 	public String getAttributePath() {
 		if (attributePath.contains(DOT_SEPERATOR_STRING)) {
+			// return the attribute value(left of the . separated subattribute)
 			return expandAttribute(attributePath.split(ESCAPED_DOT_SEPERATOR_STRING)[0]);
+		}
+		if (getCompoundQuery().isPresent()) {
+			// return the attribute value(left of the [ separated compound value)
+			return expandAttribute(attributePath.substring(0, attributePath.indexOf(LEFT_SQUARE_BRACKET_STRING)));
 		}
 		return expandAttribute(attributePath);
 	}
@@ -177,7 +186,7 @@ public class ComparisonTerm extends QueryTerm {
 		int leftIndex = attributePath.indexOf(LEFT_SQUARE_BRACKET_STRING);
 		int rightIndex = attributePath.indexOf(RIGHT_SQUARE_BRACKET_STRING);
 		String jsonKey = attributePath.substring(leftIndex + 1, rightIndex);
-		return Optional.of(String.format(" compound -> '%s' %s '%s'", jsonKey, operator.getDbOperator(), comparisonValue));
+		return Optional.of(String.format(" (compound ->> '%s' %s '%s')", jsonKey, operator.getDbOperator(), comparisonValue));
 	}
 
 	private Optional<String> getRangeQuery() {
@@ -226,15 +235,84 @@ public class ComparisonTerm extends QueryTerm {
 	}
 
 	private Optional<String> getListQuery() {
-		boolean isList = comparisonValue.charAt(0) == QueryParser.OPEN_BRACE && comparisonValue.charAt(comparisonValue.length() - 1) == QueryParser.CLOSE_BRACE;
+		boolean isList = comparisonValue.charAt(0) == QueryParser.OPEN_SQUARE_BRACE && comparisonValue.charAt(comparisonValue.length() - 1) == QueryParser.CLOSE_SQUARE_BRACE;
 		if (!isList) {
 			return Optional.empty();
 		}
-		return Optional.of(
-				"boolean IN " + comparisonValue + " " +
-						"OR text IN " + comparisonValue + " " +
-						"OR number IN " + comparisonValue + " " +
-						"OR datetime IN " + comparisonValue);
+		String[] splittedList = comparisonValue
+				.replace(String.valueOf(QueryParser.OPEN_SQUARE_BRACE), "")
+				.replace(String.valueOf(QueryParser.CLOSE_SQUARE_BRACE), "")
+				.split(COMMA_SEPERATOR);
+
+		StringJoiner selectionJoiner = new StringJoiner("OR ", "(", ") ");
+		getBooleanListQuery(splittedList).ifPresent(query -> selectionJoiner.add(query));
+		getNumberListQuery(splittedList).ifPresent(query -> selectionJoiner.add(query));
+		getTimeListQuery(splittedList).ifPresent(query -> selectionJoiner.add(query));
+		getStringListQuery(splittedList).ifPresent(query -> selectionJoiner.add(query));
+		getDateTimeListQuery(splittedList).ifPresent(query -> selectionJoiner.add(query));
+
+
+		return Optional.of(selectionJoiner.toString());
+	}
+
+	private Optional<String> stringOrEmpty(String queryTemplate, String value) {
+		return value.isEmpty() || value.equals("()") ? Optional.empty() : Optional.of(String.format(queryTemplate, value));
+	}
+
+	private Optional<String> getBooleanListQuery(String[] valuesList) {
+		String queryList = Arrays.stream(valuesList)
+				.map(this::getBooleanValue)
+				.filter(Optional::isPresent)
+				.map(Optional::get)
+				.map(String::valueOf)
+				.collect(Collectors.joining(",", "(", ")"));
+		return stringOrEmpty("boolean in %s", queryList);
+	}
+
+	private Optional<String> getStringListQuery(String[] valuesList) {
+		String queryList = Arrays.stream(valuesList)
+				.map(this::getStringValue)
+				.filter(Optional::isPresent)
+				.map(Optional::get)
+				.map(stringValue -> String.format("'%s'", stringValue))
+				.collect(Collectors.joining(",", "(", ")"));
+		return stringOrEmpty("text in %s", queryList);
+	}
+
+	private Optional<String> getNumberListQuery(String[] valuesList) {
+		String queryList = Arrays.stream(valuesList)
+				.map(this::getNumberValue)
+				.filter(Optional::isPresent)
+				.map(Optional::get)
+				.map(String::valueOf)
+				.collect(Collectors.joining(",", "(", ")"));
+		return stringOrEmpty("number in %s", queryList);
+	}
+
+	private Optional<String> getTimeListQuery(String[] valuesList) {
+		String queryList = Arrays.stream(valuesList)
+				.map(this::getTimeValue)
+				.filter(Optional::isPresent)
+				.map(Optional::get)
+				.map(stringValue -> String.format("'%s'::time", stringValue))
+				.collect(Collectors.joining(",", "(", ")"));
+		return stringOrEmpty("datetime in %s", queryList);
+	}
+
+	private Optional<String> getDateTimeListQuery(String[] valuesList) {
+		List<String> dateValues = Arrays.stream(valuesList)
+				.map(this::getDateValue)
+				.filter(Optional::isPresent)
+				.map(Optional::get)
+				.collect(Collectors.toList());
+		List<String> dateTimeValues = Arrays.stream(valuesList)
+				.map(this::getDateTimeValue)
+				.filter(Optional::isPresent)
+				.map(Optional::get)
+				.collect(Collectors.toList());
+		dateValues.addAll(dateTimeValues);
+		String queryList = dateValues.stream().map(value -> String.format("'%s'")).collect(Collectors.joining(",", "(", ")"));
+		return stringOrEmpty("datetime in %s", queryList);
 	}
 
 	private Optional<String> getStringValue(String toCheck) {

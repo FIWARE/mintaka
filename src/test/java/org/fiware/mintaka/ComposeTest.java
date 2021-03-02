@@ -361,23 +361,30 @@ public abstract class ComposeTest {
 		PropertyVO radioProperty = getNewPropety().value(true);
 		PropertyVO driverProperty = getNewPropety().value("Stefan");
 		PropertyVO motorProperty = getMotorSubProperty(Optional.of(0.9), Optional.of(1700));
-		entityVO.setAdditionalProperties(Map.of("radio", radioProperty, "temperature", temperatureProperty, "driver", driverProperty, "motor", motorProperty));
+		PropertyVO compoundProperty = getCompoundProperty(3);
+		entityVO.setAdditionalProperties(
+				Map.of(
+						"radio", radioProperty,
+						"temperature", temperatureProperty,
+						"driver", driverProperty,
+						"motor", motorProperty,
+						"trunk", compoundProperty));
 		entitiesApiTestClient.createEntity(entityVO);
 
 		for (int i = 0; i < 100; i++) {
-			currentTime = move(lat++, longi++, currentTime, entityId, Optional.of(25), Optional.of(true), Optional.of("Stefan"), Optional.of(0.9), Optional.of(1300));
+			currentTime = move(lat++, longi++, currentTime, entityId, Optional.of(25), Optional.of(true), Optional.of("Stefan"), Optional.of(0.9), Optional.of(1300), Optional.of(3));
 		}
 		for (int i = 100; i < 150; i++) {
-			currentTime = move(lat++, longi++, currentTime, entityId, Optional.of(25), Optional.of(true), Optional.of("Mira"), Optional.of(0.8), Optional.of(1700));
+			currentTime = move(lat++, longi++, currentTime, entityId, Optional.of(25), Optional.of(true), Optional.of("Mira"), Optional.of(0.8), Optional.of(1700), Optional.of(2));
 		}
 		for (int i = 150; i < 200; i++) {
-			currentTime = move(lat++, longi++, currentTime, entityId, Optional.of(25), Optional.of(true), Optional.of("Mira"), Optional.of(0.7), Optional.of(1700));
+			currentTime = move(lat++, longi++, currentTime, entityId, Optional.of(25), Optional.of(true), Optional.of("Mira"), Optional.of(0.7), Optional.of(1700), Optional.of(2));
 		}
 		for (int i = 200; i < 300; i++) {
-			currentTime = move(lat--, longi--, currentTime, entityId, Optional.of(20), Optional.of(false), Optional.of("Franzi"), Optional.of(0.6), Optional.of(2500));
+			currentTime = move(lat--, longi--, currentTime, entityId, Optional.of(20), Optional.of(false), Optional.of("Franzi"), Optional.of(0.6), Optional.of(2500), Optional.of(2));
 		}
 		for (int i = 300; i < 400; i++) {
-			currentTime = move(lat--, longi--, currentTime, entityId, Optional.of(15), Optional.of(true), Optional.empty(), Optional.of(0.5), Optional.of(2000));
+			currentTime = move(lat--, longi--, currentTime, entityId, Optional.of(15), Optional.of(true), Optional.empty(), Optional.of(0.5), Optional.of(2000), Optional.of(3));
 		}
 	}
 
@@ -386,10 +393,11 @@ public abstract class ComposeTest {
 						 Optional<Boolean> optionalRadio,
 						 Optional<String> optionalDriver,
 						 Optional<Double> optionalFuel,
-						 Optional<Integer> optionalRPM) {
+						 Optional<Integer> optionalRPM,
+						 Optional<Integer> optionalCases) {
 		currentTime = currentTime.plus(1, ChronoUnit.MINUTES);
 		when(clock.instant()).thenReturn(currentTime);
-		updateLatLong(entityId, lat, longi, optionalTemp, optionalRadio, optionalDriver, optionalFuel, optionalRPM);
+		updateLatLong(entityId, lat, longi, optionalTemp, optionalRadio, optionalDriver, optionalFuel, optionalRPM, optionalCases);
 		return currentTime;
 	}
 
@@ -398,7 +406,8 @@ public abstract class ComposeTest {
 								 Optional<Boolean> optionalRadio,
 								 Optional<String> optionalDriver,
 								 Optional<Double> optionalFuel,
-								 Optional<Integer> optionalRPM) {
+								 Optional<Integer> optionalRPM,
+								 Optional<Integer> optionalCases) {
 		PointVO pointVO = new PointVO();
 		pointVO.type(PointVO.Type.POINT);
 		pointVO.coordinates().add(lat);
@@ -415,10 +424,20 @@ public abstract class ComposeTest {
 		PropertyVO radioProperty = getNewPropety().value(optionalRadio.orElse(true));
 		PropertyVO driverProperty = getNewPropety().value(optionalDriver.orElse("unknown"));
 		PropertyVO motorProperty = getMotorSubProperty(optionalFuel, optionalRPM);
-		entityFragmentVO.setAdditionalProperties(Map.of("temperature", temperatureProperty, "radio", radioProperty, "driver", driverProperty, "motor", motorProperty));
+		PropertyVO compoundProperty = getCompoundProperty(optionalCases.orElse(3));
+		entityFragmentVO.setAdditionalProperties(
+				Map.of(
+						"temperature", temperatureProperty,
+						"radio", radioProperty,
+						"driver", driverProperty,
+						"motor", motorProperty,
+						"trunk", compoundProperty));
 		entitiesApiTestClient.updateEntityAttrs(entityId, entityFragmentVO);
 	}
 
+	private PropertyVO getCompoundProperty(int cases) {
+		return getNewPropety().value(new TestTrunk(cases, 2));
+	}
 
 	private PropertyVO getMotorSubProperty(Optional<Double> fuel, Optional<Integer> rpm) {
 		PropertyVO propertyWithSubProperty = getNewPropety().value("motor");
