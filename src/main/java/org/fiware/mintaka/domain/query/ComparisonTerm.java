@@ -1,7 +1,6 @@
 package org.fiware.mintaka.domain.query;
 
 import lombok.Getter;
-import org.checkerframework.checker.nullness.Opt;
 import org.fiware.mintaka.context.LdContextCache;
 
 import java.net.URL;
@@ -10,7 +9,8 @@ import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
 
 import static org.fiware.mintaka.rest.TemporalApiController.WELL_KNOWN_ATTRIBUTES;
 
@@ -24,6 +24,12 @@ public class ComparisonTerm extends QueryTerm {
 	private static final String LEFT_SQUARE_BRACKET_STRING = String.valueOf(LEFT_SQUARE_BRACKET);
 	private static final char RIGHT_SQUARE_BRACKET = ']';
 	private static final String RIGHT_SQUARE_BRACKET_STRING = String.valueOf(RIGHT_SQUARE_BRACKET);
+
+	private static final String OBSERVED_AT = "observedAt";
+	private static final String DATA_SET_ID = "datasetId";
+	private static final String MODIFIED_AT = "modifiedAt";
+	private static final String CREATED_AT = "createdAt";
+	private static final String UNIT_CODE = "unitCode";
 
 	private static final DateFormat TIME_FORMAT = new SimpleDateFormat("hh:mm:ss,ssssssZ");
 	private static final DateFormat DATE_FORMAT = new SimpleDateFormat("YYYY-MM-DD");
@@ -43,22 +49,36 @@ public class ComparisonTerm extends QueryTerm {
 		this.contextUrls = contextUrls;
 	}
 
-	// TODO: build timeframe subselect per comparison, similar to geoquery
-
 	@Override
 	public String toSQLQuery() {
-		// handle well known subpaths, e.g. observedAt, modifiedAt, createdAt, unitcode, datasetid
-		Optional<String> optionalSubAttributePath = getSubAttributePath();
-		// TODO: handle correct
-		if (optionalSubAttributePath.isPresent()) {
-//			String attributeSelector = String.format("FROM subattributes sa WHERE sa.attrinstanceid IN (SELECT instanceId %s) AND id='%s'", attributeSelector, optionalSubAttributePath.get());
-		}
+		String selectionQuery = getSelectionQuery();
 
-		if (isCompound()) {
+		Optional<String> optionalSubAttributePath = getSubAttributePath();
+		if (optionalSubAttributePath.isPresent()) {
+			return String.format("attrinstanceid in (SELECT attrinstanceid  FROM subattributes sa WHERE %s and id='%s)", selectionQuery, optionalSubAttributePath.get());
+		}
+		return getSelectionQuery();
+	}
+
+	public String getAttributePath() {
+		if (attributePath.contains(DOT_SEPERATOR_STRING)) {
+			return expandAttribute(attributePath.split(DOT_SEPERATOR_STRING)[0]);
+		}
+		return expandAttribute(attributePath);
+	}
+
+	private String getSelectionQuery() {
+		Optional<String> optionalWellKnownQuery = getWellKnownQuery();
+		if (optionalWellKnownQuery.isPresent()) {
+			return optionalWellKnownQuery.get();
+		}
+		Optional<String> optionalCompoundQuery = getCompoundQuery();
+		if (optionalCompoundQuery.isPresent()) {
 			// query inside a compound
+			return optionalCompoundQuery.get();
 		}
 		Optional<String> optionalListQuery = getListQuery();
- 		if (optionalListQuery.isPresent()) {
+		if (optionalListQuery.isPresent()) {
 			// query for list
 			return optionalListQuery.get();
 		}
@@ -99,28 +119,13 @@ public class ComparisonTerm extends QueryTerm {
 		throw new IllegalArgumentException(String.format("Comparison with the given value is not supported. Value: %s", comparisonValue));
 	}
 
-	public String getAttributePath() {
-		if (attributePath.contains(DOT_SEPERATOR_STRING)) {
-			return expandAttribute(attributePath.split(DOT_SEPERATOR_STRING)[0]);
-		}
-		return expandAttribute(attributePath);
-	}
-
-	private Optional<String> getCompoundPath() {
-		if (!isCompound()) {
-			return Optional.empty();
-		}
-		// path is everything after the left bracket until the end of the string, except the last position, which is the closing ']'
-		int startIndex = attributePath.indexOf(LEFT_SQUARE_BRACKET_STRING) + 1;
-		return Optional.of(attributePath.substring(startIndex));
-	}
-
 	private Optional<String> getSubAttributePath() {
 		if (!attributePath.contains(DOT_SEPERATOR_STRING)) {
 			return Optional.empty();
 		}
 		String[] pathComponents = attributePath.split(DOT_SEPERATOR_STRING);
-		if (isCompound(pathComponents[1])) {
+		Optional<String> optionalCompoundQuery = getCompoundQuery(pathComponents[1]);
+		if (optionalCompoundQuery.isPresent()) {
 			return Optional.empty();
 		}
 		return Optional.of(expandAttribute(pathComponents[1]));
@@ -135,13 +140,40 @@ public class ComparisonTerm extends QueryTerm {
 		}
 	}
 
+	private Optional<String> getWellKnownQuery() {
+		if (attributePath.equals(OBSERVED_AT) || attributePath.equals(CREATED_AT) || attributePath.equals(MODIFIED_AT)) {
+			Optional<String> optionalTimeValue = getTimeValue();
+			if (optionalTimeValue.isPresent()) {
+				return Optional.of(String.format(" %s::time%s'%s'::time", attributePath, operator.getDbOperator(), optionalTimeValue.get()));
+			}
+			Optional<String> optionalDateTimeValue = getDateTimeValue();
+			if (optionalDateTimeValue.isPresent()) {
+				return Optional.of(String.format(" %s:%s'%s'", attributePath, operator.getDbOperator(), optionalDateTimeValue.get()));
 
-	private boolean isCompound() {
-		return isCompound(attributePath);
+			}
+			Optional<String> optionalDateValue = getDateValue();
+			if (optionalDateValue.isPresent()) {
+				return Optional.of(String.format(" %s:%s'%s'", attributePath, operator.getDbOperator(), optionalDateValue.get()));
+			}
+		}
+		if (attributePath.equals(UNIT_CODE) || attributePath.equals(DATA_SET_ID)) {
+			return Optional.of(String.format(" %s:%s'%s'", attributePath, operator.getDbOperator(), comparisonValue));
+		}
+		return Optional.empty();
 	}
 
-	private boolean isCompound(String pathToCheck) {
-		return pathToCheck.contains(LEFT_SQUARE_BRACKET_STRING) && pathToCheck.contains(RIGHT_SQUARE_BRACKET_STRING);
+	private Optional<String> getCompoundQuery() {
+		return getCompoundQuery(attributePath);
+	}
+
+	private Optional<String> getCompoundQuery(String attributePath) {
+		if (!attributePath.contains(LEFT_SQUARE_BRACKET_STRING) || !attributePath.contains(RIGHT_SQUARE_BRACKET_STRING)) {
+			return Optional.empty();
+		}
+		int leftIndex = attributePath.indexOf(LEFT_SQUARE_BRACKET_STRING);
+		int rightIndex = attributePath.indexOf(RIGHT_SQUARE_BRACKET_STRING);
+		String jsonKey = attributePath.substring(leftIndex + 1, rightIndex);
+		return Optional.of(String.format(" compound -> '%s' %s '%s'", jsonKey, operator.getDbOperator(), comparisonValue));
 	}
 
 	private Optional<String> getRangeQuery() {
