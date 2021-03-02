@@ -106,7 +106,6 @@ public class EntityRepository {
 		log.debug("Final select:  {}", finalSelect);
 		Query getIdsAndTimeRangeQuery = entityManager.createNativeQuery(finalSelect);
 
-
 		List<Object[]> queryResultList = getIdsAndTimeRangeQuery.getResultList();
 
 		return queryResultList.stream()
@@ -267,17 +266,23 @@ public class EntityRepository {
 	}
 
 	private String createSelectionCriteriaFromQueryTerm(Optional<String> idPattern, List<String> types, TimeQuery timeQuery, QueryTerm queryTerm) {
+		log.debug("Build from term {}.", queryTerm);
 		if (queryTerm instanceof LogicalTerm) {
 			Optional<String> tableA = Optional.empty();
 			Optional<LogicalOperator> operator = Optional.empty();
 			LogicalTerm logicalTerm = (LogicalTerm) queryTerm;
 			for (QueryTerm subTerm : logicalTerm.getSubTerms()) {
+				log.debug("Subterm: {}", subTerm);
 				if (tableA.isPresent() && operator.isPresent()) {
 					switch (operator.get()) {
 						case OR:
-							return selectOrTerm(tableA.get(), createSelectionCriteriaFromQueryTerm(idPattern, types, timeQuery, subTerm));
+							tableA = Optional.of(selectOrTerm(tableA.get(), createSelectionCriteriaFromQueryTerm(idPattern, types, timeQuery, subTerm)));
+							operator = Optional.empty();
+							continue;
 						case AND:
-							return selectAndTerm(tableA.get(), createSelectionCriteriaFromQueryTerm(idPattern, types, timeQuery, subTerm));
+							tableA = Optional.of(selectAndTerm(tableA.get(), createSelectionCriteriaFromQueryTerm(idPattern, types, timeQuery, subTerm)));
+							operator = Optional.empty();
+							continue;
 						default:
 							throw new IllegalArgumentException(String.format("Cannot build criteria for operator %s.", operator.get()));
 					}
@@ -295,10 +300,11 @@ public class EntityRepository {
 					continue;
 				}
 			}
-
+			return tableA.get();
 		} else if (queryTerm instanceof ComparisonTerm) {
 			return createSelectionCriteria(idPattern, types, timeQuery, Optional.empty(), Optional.of(((ComparisonTerm) queryTerm)));
 		}
+		log.debug("Failed term {}.", queryTerm);
 		throw new IllegalArgumentException(String.format("Cannot build criteria from given term: %s", queryTerm));
 
 	}

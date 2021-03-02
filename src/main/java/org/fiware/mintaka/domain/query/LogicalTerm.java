@@ -1,12 +1,13 @@
 package org.fiware.mintaka.domain.query;
 
-import lombok.Data;
 import lombok.Getter;
+import lombok.ToString;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Getter
+@ToString
 public class LogicalTerm extends QueryTerm {
 
 	private final List<QueryTerm> subTerms = new ArrayList<>();

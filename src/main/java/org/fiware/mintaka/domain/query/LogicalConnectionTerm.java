@@ -1,7 +1,9 @@
 package org.fiware.mintaka.domain.query;
 
 import lombok.Getter;
+import lombok.ToString;
 
+@ToString
 public class LogicalConnectionTerm extends QueryTerm {
 
 	@Getter

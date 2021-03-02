@@ -1,6 +1,7 @@
 package org.fiware.mintaka.domain.query;
 
 import lombok.Getter;
+import lombok.ToString;
 import org.fiware.mintaka.context.LdContextCache;
 
 import java.net.URL;
@@ -15,11 +16,14 @@ import java.util.Optional;
 import static org.fiware.mintaka.rest.TemporalApiController.WELL_KNOWN_ATTRIBUTES;
 
 @Getter
+@ToString
 public class ComparisonTerm extends QueryTerm {
 
 	private static final char DOT_SEPERATOR = '.';
 	private static final String DOT_SEPERATOR_STRING = String.valueOf(DOT_SEPERATOR);
+	private static final String ESCAPED_DOT_SEPERATOR_STRING = "\\.";
 	private static final String RANGE_SEPERATOR = "..";
+	private static final String ESCAPED_RANGE_SEPERATOR = "\\.\\.";
 	private static final char LEFT_SQUARE_BRACKET = '[';
 	private static final String LEFT_SQUARE_BRACKET_STRING = String.valueOf(LEFT_SQUARE_BRACKET);
 	private static final char RIGHT_SQUARE_BRACKET = ']';
@@ -55,14 +59,14 @@ public class ComparisonTerm extends QueryTerm {
 
 		Optional<String> optionalSubAttributePath = getSubAttributePath();
 		if (optionalSubAttributePath.isPresent()) {
-			return String.format("attrinstanceid in (SELECT attrinstanceid  FROM subattributes sa WHERE %s and id='%s)", selectionQuery, optionalSubAttributePath.get());
+			return String.format(" instanceid in (SELECT attrinstanceid  FROM subattributes sa WHERE %s and id='%s')", selectionQuery, optionalSubAttributePath.get());
 		}
 		return getSelectionQuery();
 	}
 
 	public String getAttributePath() {
 		if (attributePath.contains(DOT_SEPERATOR_STRING)) {
-			return expandAttribute(attributePath.split(DOT_SEPERATOR_STRING)[0]);
+			return expandAttribute(attributePath.split(ESCAPED_DOT_SEPERATOR_STRING)[0]);
 		}
 		return expandAttribute(attributePath);
 	}
@@ -123,7 +127,7 @@ public class ComparisonTerm extends QueryTerm {
 		if (!attributePath.contains(DOT_SEPERATOR_STRING)) {
 			return Optional.empty();
 		}
-		String[] pathComponents = attributePath.split(DOT_SEPERATOR_STRING);
+		String[] pathComponents = attributePath.split(ESCAPED_DOT_SEPERATOR_STRING);
 		Optional<String> optionalCompoundQuery = getCompoundQuery(pathComponents[1]);
 		if (optionalCompoundQuery.isPresent()) {
 			return Optional.empty();
@@ -181,7 +185,7 @@ public class ComparisonTerm extends QueryTerm {
 		if (!getStringValue().isEmpty() || !comparisonValue.contains(RANGE_SEPERATOR)) {
 			return Optional.empty();
 		}
-		String[] rangeValue = comparisonValue.split(RANGE_SEPERATOR);
+		String[] rangeValue = comparisonValue.split(ESCAPED_RANGE_SEPERATOR);
 		if (rangeValue.length != 2) {
 			throw exception;
 		}
