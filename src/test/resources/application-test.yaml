@@ -11,6 +11,10 @@ micronaut:
 loggers:
   level:
     root: ERROR
+    org:
+      fiware:
+        mintaka:
+          persistence: DEBUG
 
 test:
   clientId: entities

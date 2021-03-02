@@ -31,8 +31,8 @@ public class QueryingTest extends ComposeTest {
 				.add("endTime", "1970-01-01T07:30:00Z");
 		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
 		// we expect the two cars to be inside the area two times each, between 00:04 and 00:08 and again between 06:32 and 06.36
-		List expectedValues = List.of("1970-01-01T00:04:00Z", "1970-01-01T00:05:00Z", "1970-01-01T00:06:00Z", "1970-01-01T00:07:00Z", "1970-01-01T00:08:00Z",
-				"1970-01-01T06:32:00Z", "1970-01-01T06:33:00Z", "1970-01-01T06:34:00Z", "1970-01-01T06:35:00Z", "1970-01-01T06:36:00Z");
+		List expectedValues = List.of("1970-01-01T00:05:00Z", "1970-01-01T00:06:00Z", "1970-01-01T00:07:00Z", "1970-01-01T00:08:00Z", "1970-01-01T00:09:00Z",
+				"1970-01-01T06:33:00Z", "1970-01-01T06:34:00Z", "1970-01-01T06:35:00Z", "1970-01-01T06:36:00Z", "1970-01-01T06:37:00Z");
 
 		assertEquals(2, entryList.size(), "Both matching entities should have been returned.");
 		entryList.forEach(entry -> {
@@ -57,7 +57,7 @@ public class QueryingTest extends ComposeTest {
 				.add("time", "1970-01-01T00:01:00Z")
 				.add("endTime", "1970-01-01T07:30:00Z");
 		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
- 		// temp should only be high enough until
+		// temp should only be high enough until
 		assertEquals(2, entryList.size(), "Both matching entities should have been returned.");
 		entryList.forEach(entry -> {
 			assertTrue(entry.containsKey("temperature"), "The temperature property should be present.");
@@ -124,8 +124,8 @@ public class QueryingTest extends ComposeTest {
 			List<List> temporalValuesList = temperaturePropertyMap.get("values");
 			List timeList = temporalValuesList.stream().map(list -> list.get(1)).sorted().collect(Collectors.toList());
 			assertEquals(5, timeList.size(), "All expected times should be present");
-			assertEquals("1970-01-01T06:36:00Z", timeList.get(4), "Last time should be at the half");
-			assertEquals("1970-01-01T06:32:00Z", timeList.get(0), "First time should be radio on at the end part");
+			assertEquals("1970-01-01T06:37:00Z", timeList.get(4), "Last time should be at the half");
+			assertEquals("1970-01-01T06:33:00Z", timeList.get(0), "First time should be radio on at the end part");
 		});
 	}
 
@@ -182,6 +182,34 @@ public class QueryingTest extends ComposeTest {
 			List timeList = temporalValuesList.stream().map(list -> list.get(1)).sorted().collect(Collectors.toList());
 			assertEquals(100, timeList.size(), "All expected times should be present");
 			assertEquals("1970-01-01T03:20:00Z", timeList.get(99), "Last time should be at the half");
+			assertEquals("1970-01-01T01:41:00Z", timeList.get(0), "First time should be radio on at the end part");
+		});
+	}
+
+	@DisplayName("Test running a temporal query including ngsi OR and AND querying with subattrs.")
+	@Test
+	public void testTempWithNgsORandANDQueryWithSubAttrsInTempValues() {
+		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
+		getRequest.getParameters()
+				.add("options", "temporalValues")
+				.add("idPattern", ".*")
+				.add("type", "car")
+				.add("q", "(temperature>20|radio==false);driver==\"Mira\";motor.fuel!=0.7")
+				.add("timerel", "between")
+				.add("time", "1970-01-01T00:01:00Z")
+				.add("endTime", "1970-01-01T07:30:00Z");
+		// get car when radio was off or temp was above 20 and the driver was "mira" and fuel was not 0.7 -> entry 100-150
+		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
+		assertEquals(2, entryList.size(), "Both matching entities should have been returned.");
+		entryList.forEach(entry -> {
+			assertTrue(entry.containsKey("temperature"), "The temperature property should be present.");
+			assertTrue(entry.containsKey("radio"), "The radio property should be present.");
+			assertTrue(entry.containsKey("driver"), "The driver property should be present.");
+			Map<String, List> temperaturePropertyMap = (Map<String, List>) entry.get("temperature");
+			List<List> temporalValuesList = temperaturePropertyMap.get("values");
+			List timeList = temporalValuesList.stream().map(list -> list.get(1)).sorted().collect(Collectors.toList());
+			assertEquals(50, timeList.size(), "All expected times should be present");
+			assertEquals("1970-01-01T02:30:00Z", timeList.get(49), "Last time should be at the half of the second quarter");
 			assertEquals("1970-01-01T01:41:00Z", timeList.get(0), "First time should be radio on at the end part");
 		});
 	}

@@ -3,6 +3,7 @@ package org.fiware.mintaka.domain.query;
 import io.micronaut.http.annotation.Get;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
 @RequiredArgsConstructor
 @Getter
