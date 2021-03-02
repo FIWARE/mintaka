@@ -119,13 +119,10 @@ public abstract class ComposeTest {
 
 		synchronized (INITIALIZED) {
 			if (!INITIALIZED.getAndSet(true)) {
-				List<Future> futureList = new ArrayList<>();
-				futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createMovingEntity(URI.create("urn:ngsi-ld:car:moving-car-2"))));
-				futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createMovingEntity(URI.create("urn:ngsi-ld:car:moving-car"))));
-				futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createEntityHistory(ENTITY_ID, START_TIME_STAMP)));
-				futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createEntityHistoryWithDeletion()));
-				futureList.add(PARALLEL_INITIALIZER_SERVICE.submit(() -> createEntityHistory(CREATED_AFTER_ENTITY_ID, START_TIME_STAMP.plus(1, ChronoUnit.YEARS))));
-				await().atMost(5, TimeUnit.MINUTES).until(() -> futureList.stream().allMatch(Future::isDone));
+				createMovingEntity(URI.create("urn:ngsi-ld:car:moving-car-2"));
+				createMovingEntity(URI.create("urn:ngsi-ld:car:moving-car"));
+				createEntityHistory(ENTITY_ID, START_TIME_STAMP);
+				createEntityHistoryWithDeletion();
 			}
 		}
 
