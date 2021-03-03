@@ -20,10 +20,12 @@ import javax.sql.DataSource;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * Entity manager factory to enable the usage of the multitenant datasource provider
+ */
 @RequiredArgsConstructor
 @Factory
 public class MultiTenantEntityManagerFactoryBean {
-
 
 	private final JpaConfiguration jpaConfiguration;
 	private final BeanLocator beanLocator;

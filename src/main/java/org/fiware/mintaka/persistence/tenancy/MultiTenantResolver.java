@@ -2,23 +2,28 @@ package org.fiware.mintaka.persistence.tenancy;
 
 import io.micronaut.multitenancy.exceptions.TenantNotFoundException;
 import io.micronaut.multitenancy.tenantresolver.TenantResolver;
+import lombok.RequiredArgsConstructor;
 import org.hibernate.context.spi.CurrentTenantIdentifierResolver;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.io.Serializable;
 
+/**
+ * Tenant provider for datasource selection. Returns a default tenant in case none is given.
+ */
 @Singleton
+@RequiredArgsConstructor
 public class MultiTenantResolver implements CurrentTenantIdentifierResolver {
-	@Inject
-	TenantResolver resolver;
+
+	private final TenantResolver resolver;
 
 	@Override
 	public String resolveCurrentTenantIdentifier() {
 		try {
 			return (String) resolver.resolveTenantIdentifier();
 		} catch (TenantNotFoundException notFoundException) {
-			return "orion";
+			return MultiTenantDatasourceConnectionProviderImpl.DEFAULT_TENANT;
 		}
 	}
 

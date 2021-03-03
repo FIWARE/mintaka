@@ -2,7 +2,6 @@ package org.fiware.mintaka.persistence.tenancy;
 
 import com.zaxxer.hikari.HikariConfig;
 import io.micronaut.configuration.jdbc.hikari.HikariUrlDataSource;
-import io.micronaut.multitenancy.tenantresolver.TenantResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.engine.jdbc.connections.spi.AbstractDataSourceBasedMultiTenantConnectionProviderImpl;
@@ -11,19 +10,25 @@ import javax.inject.Singleton;
 import javax.sql.DataSource;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 
+/**
+ * Connection provider to offer DataSources based on the requested tenant.
+ */
 @Slf4j
 @Singleton
 @RequiredArgsConstructor
 public class MultiTenantDatasourceConnectionProviderImpl extends AbstractDataSourceBasedMultiTenantConnectionProviderImpl {
 
 	public static final String DEFAULT_TENANT = "orion";
-
+	// configuration of the default datasource
+	private final HikariConfig hikariConfig;
+	// map to hold all tenant specific datasources
 	private Map<String, DataSource> dataSourceMap = new HashMap<>();
 
-	private final HikariConfig hikariConfig;
-
+	/**
+	 * Add the datasource for the default tenant
+	 * @param dataSource the datasource to use as default
+	 */
 	public void registerDefaultDatasource(DataSource dataSource) {
 		dataSourceMap.put(DEFAULT_TENANT, dataSource);
 	}
@@ -38,11 +43,12 @@ public class MultiTenantDatasourceConnectionProviderImpl extends AbstractDataSou
 		if (dataSourceMap.containsKey(tenantIdentifier)) {
 			return dataSourceMap.get(tenantIdentifier);
 		}
-		DataSource tenantDatasource = createDataSource(tenantIdentifier);
-		dataSourceMap.put(tenantIdentifier, tenantDatasource);
-		return tenantDatasource;
+		return createDataSource(tenantIdentifier);
 	}
 
+	/**
+	 * Create a datasource for the given tenant, based on the default database configuration.
+	 */
 	private DataSource createDataSource(String tenantName) {
 		HikariConfig dataSourceConfig = new HikariConfig();
 		dataSourceConfig.setConnectionTimeout(hikariConfig.getConnectionTimeout());
@@ -64,6 +70,9 @@ public class MultiTenantDatasourceConnectionProviderImpl extends AbstractDataSou
 		dataSourceConfig.setAllowPoolSuspension(hikariConfig.isAllowPoolSuspension());
 		// db name is DEFAULTTENANT_TENANT by definition
 		dataSourceConfig.setJdbcUrl(String.format("%s_%s", hikariConfig.getJdbcUrl(), tenantName));
-		return new HikariUrlDataSource(dataSourceConfig);
+
+		DataSource dataSource = new HikariUrlDataSource(dataSourceConfig);
+		dataSourceMap.put(tenantName, dataSource);
+		return dataSource;
 	}
 }
