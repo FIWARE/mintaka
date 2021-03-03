@@ -1,15 +1,20 @@
-package org.fiware.mintaka.domain.query;
+package org.fiware.mintaka.domain.query.ngsi;
 
-import io.micronaut.http.annotation.Get;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.ToString;
 
+/**
+ * Abstract superclass for all query terms
+ */
 @RequiredArgsConstructor
 @Getter
 public abstract class QueryTerm {
 
 	protected final String term;
 
+	/**
+	 * Return the sql string representation of the query term
+	 * @return the sql string
+	 */
 	public abstract String toSQLQuery();
 }

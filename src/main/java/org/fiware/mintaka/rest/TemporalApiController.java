@@ -2,15 +2,15 @@ package org.fiware.mintaka.rest;
 
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.annotation.Controller;
+import io.micronaut.multitenancy.tenantresolver.TenantResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.fiware.mintaka.context.LdContextCache;
 import org.fiware.mintaka.domain.ApiDomainMapper;
-import org.fiware.mintaka.domain.query.GeoQuery;
-import org.fiware.mintaka.domain.query.Geometry;
-import org.fiware.mintaka.domain.TimeQuery;
-import org.fiware.mintaka.domain.query.QueryParser;
-import org.fiware.mintaka.domain.query.QueryTerm;
+import org.fiware.mintaka.domain.query.geo.GeoQuery;
+import org.fiware.mintaka.domain.query.geo.Geometry;
+import org.fiware.mintaka.domain.query.temporal.TimeQuery;
+import org.fiware.mintaka.domain.query.ngsi.QueryParser;
 import org.fiware.mintaka.service.EntityTemporalService;
 import org.fiware.ngsi.api.TemporalRetrievalApi;
 import org.fiware.ngsi.model.EntityTemporalListVO;
@@ -47,6 +47,8 @@ public class TemporalApiController implements TemporalRetrievalApi {
 	private final LdContextCache contextCache;
 	private final QueryParser queryParser;
 	private final ApiDomainMapper apiDomainMapper;
+
+	private final TenantResolver tenantResolver;
 
 	@Override
 	public HttpResponse<EntityTemporalListVO> queryTemporalEntities(@Nullable String link, @Nullable URI id, @Nullable String idPattern, @Nullable @Size(min = 1) String type, @Nullable @Size(min = 1) String attrs, @Nullable @Size(min = 1) String q, @Nullable String georel, @Nullable String geometry, @Nullable String coordinates, @Nullable @Size(min = 1) String geoproperty, @Nullable TimerelVO timerel, @Nullable @Pattern(regexp = "^((\\d|[a-zA-Z]|_)+(:(\\d|[a-zA-Z]|_)+)?(#\\d+)?)$") @Size(min = 1) String timeproperty, @Nullable Instant time, @Nullable Instant endTime, @Nullable @Size(min = 1) String csf, @Nullable @Min(1) Integer limit, @Nullable String options, @Nullable @Min(1) Integer lastN) {
@@ -95,6 +97,9 @@ public class TemporalApiController implements TemporalRetrievalApi {
 		}
 	}
 
+	/**
+	 * Add the context urls to the entities temporal represenation
+	 */
 	private EntityTemporalVO addContextToEntityTemporalVO(EntityTemporalVO entityTemporalVO, List<URL> contextUrls) {
 		if (contextUrls.size() > 1) {
 			entityTemporalVO.atContext(contextUrls);
@@ -104,6 +109,12 @@ public class TemporalApiController implements TemporalRetrievalApi {
 		return entityTemporalVO;
 	}
 
+	/**
+	 * Expand all attributes present in the attrs parameter
+	 * @param contextUrls
+	 * @param attrs
+	 * @return
+	 */
 	private List<String> getExpandedAttributes(List<URL> contextUrls, String attrs) {
 		return Optional.ofNullable(attrs)
 				.map(al -> contextCache.expandStrings(Arrays.asList(attrs.split(COMMA_SEPERATOR)), contextUrls))

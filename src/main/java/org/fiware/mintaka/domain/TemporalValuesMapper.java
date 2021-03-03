@@ -1,5 +1,6 @@
 package org.fiware.mintaka.domain;
 
+import org.fiware.mintaka.domain.query.temporal.TimeStampType;
 import org.fiware.mintaka.exception.JacksonConversionException;
 import org.fiware.ngsi.model.EntityTemporalVO;
 import org.fiware.ngsi.model.GeoPropertyVO;

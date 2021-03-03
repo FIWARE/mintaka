@@ -5,6 +5,9 @@ import lombok.Data;
 
 import java.util.List;
 
+/**
+ * Temporal representation of a property according to the NGSI-LD spec
+ */
 @Data
 public class TemporalValueProperty extends AbstractTemporalValue {
 

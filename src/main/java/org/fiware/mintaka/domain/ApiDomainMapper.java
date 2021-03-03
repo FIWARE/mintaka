@@ -1,5 +1,6 @@
 package org.fiware.mintaka.domain;
 
+import org.fiware.mintaka.domain.query.temporal.TimeRelation;
 import org.fiware.ngsi.model.TimerelVO;
 import org.mapstruct.Mapper;
 

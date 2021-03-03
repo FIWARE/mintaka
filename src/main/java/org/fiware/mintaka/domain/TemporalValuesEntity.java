@@ -9,6 +9,9 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Temporal representation of an entity according to the NGSI-LD spec
+ */
 @Data
 public class TemporalValuesEntity {
 

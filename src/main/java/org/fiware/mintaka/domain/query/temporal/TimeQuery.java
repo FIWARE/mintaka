@@ -1,10 +1,9 @@
-package org.fiware.mintaka.domain;
+package org.fiware.mintaka.domain.query.temporal;
 
 import lombok.Data;
 import org.fiware.mintaka.exception.InvalidTimeRelationException;
 import org.fiware.mintaka.exception.PersistenceRetrievalException;
 import org.fiware.mintaka.persistence.OpMode;
-import org.fiware.ngsi.model.TimerelVO;
 
 import java.time.Instant;
 import java.time.LocalDateTime;

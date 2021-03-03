@@ -19,12 +19,12 @@ import jakarta.json.JsonObjectBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.fiware.mintaka.context.LdContextCache;
+import org.fiware.mintaka.domain.query.temporal.TimeStampType;
 import org.fiware.ngsi.model.EntityTemporalVO;
 
 import javax.inject.Singleton;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.net.URI;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.List;

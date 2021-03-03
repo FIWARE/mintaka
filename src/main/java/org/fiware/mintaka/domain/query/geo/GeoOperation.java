@@ -1,4 +1,4 @@
-package org.fiware.mintaka.domain.query;
+package org.fiware.mintaka.domain.query.geo;
 
 /**
  * Supported geo operations(as defined by NGSI-LD v1.3.1)

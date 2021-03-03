@@ -4,10 +4,10 @@ import io.micronaut.transaction.annotation.ReadOnly;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.fiware.mintaka.domain.AttributePropertyVOMapper;
-import org.fiware.mintaka.domain.TimeQuery;
-import org.fiware.mintaka.domain.TimeRelation;
-import org.fiware.mintaka.domain.query.GeoQuery;
-import org.fiware.mintaka.domain.query.QueryTerm;
+import org.fiware.mintaka.domain.query.temporal.TimeQuery;
+import org.fiware.mintaka.domain.query.temporal.TimeRelation;
+import org.fiware.mintaka.domain.query.geo.GeoQuery;
+import org.fiware.mintaka.domain.query.ngsi.QueryTerm;
 import org.fiware.mintaka.persistence.AbstractAttribute;
 import org.fiware.mintaka.persistence.Attribute;
 import org.fiware.mintaka.persistence.EntityRepository;
@@ -53,7 +53,7 @@ public class EntityTemporalService {
 				entityRepository.findEntityIdsAndTimeframesByQuery(namePattern, expandedTypes, timeQuery, geoQuery, query)
 						.stream()
 						.map(tempResult -> getNgsiEntitiesWithTimerel(
-								tempResult.getEntiyId(),
+								tempResult.getEntityId(),
 								new TimeQuery(TimeRelation.BETWEEN, tempResult.getStartTime(), tempResult.getEndTime(), timeQuery.getTimeProperty(), true),
 								expandedAttributes,
 								lastN,

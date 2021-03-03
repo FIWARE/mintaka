@@ -1,7 +1,10 @@
-package org.fiware.mintaka.domain.query;
+package org.fiware.mintaka.domain.query.ngsi;
 
 import java.util.Arrays;
 
+/**
+ * Operator for comparisons, according to NGSI-LD api
+ */
 public enum ComparisonOperator {
 
 	EQUAL("==", "="),
@@ -11,7 +14,6 @@ public enum ComparisonOperator {
 	LESS_EQ("<=", "<="),
 	LESS("<", "<"),
 	PATTERN("~=", "~"),
-	//TODO: decide how to handle
 	NOT_PATTERN("!~=", "NOT ~");
 
 	private final String value;

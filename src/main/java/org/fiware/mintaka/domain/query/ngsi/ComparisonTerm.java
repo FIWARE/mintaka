@@ -1,4 +1,4 @@
-package org.fiware.mintaka.domain.query;
+package org.fiware.mintaka.domain.query.ngsi;
 
 import lombok.Getter;
 import lombok.ToString;
@@ -19,6 +19,10 @@ import java.util.stream.Collectors;
 import static org.fiware.mintaka.rest.TemporalApiController.COMMA_SEPERATOR;
 import static org.fiware.mintaka.rest.TemporalApiController.WELL_KNOWN_ATTRIBUTES;
 
+/**
+ * Query term to reflect a comparison, according to the ngsi-ld api.
+ * A terms looks like: <attribute> <operator> <value>, f.e. name=='name'
+ */
 @Getter
 @ToString
 public class ComparisonTerm extends QueryTerm {
@@ -68,6 +72,10 @@ public class ComparisonTerm extends QueryTerm {
 		return getSelectionQuery();
 	}
 
+	/**
+	 * Return the expanded version of the attribute from the term.
+	 * @return the attribute path, expanded according to the current context.
+	 */
 	public String getAttributePath() {
 		if (attributePath.contains(DOT_SEPERATOR_STRING)) {
 			// return the attribute value(left of the . separated subattribute)
@@ -80,6 +88,9 @@ public class ComparisonTerm extends QueryTerm {
 		return expandAttribute(attributePath);
 	}
 
+	/**
+	 * Return a selection query according to the value present in the term
+	 */
 	private String getSelectionQuery() {
 		Optional<String> optionalWellKnownQuery = getWellKnownQuery();
 		if (optionalWellKnownQuery.isPresent()) {
@@ -132,6 +143,9 @@ public class ComparisonTerm extends QueryTerm {
 		throw new IllegalArgumentException(String.format("Comparison with the given value is not supported. Value: %s", comparisonValue));
 	}
 
+	/**
+	 * Return the (expanded) subAttribute-path of the term.
+	 */
 	private Optional<String> getSubAttributePath() {
 		if (!attributePath.contains(DOT_SEPERATOR_STRING)) {
 			return Optional.empty();
@@ -144,6 +158,9 @@ public class ComparisonTerm extends QueryTerm {
 		return Optional.of(expandAttribute(pathComponents[1]));
 	}
 
+	/**
+	 * Expand the attribute according to the current context.
+	 */
 	private String expandAttribute(String attribute) {
 		if (WELL_KNOWN_ATTRIBUTES.contains(attribute)) {
 			return attribute;
@@ -153,6 +170,9 @@ public class ComparisonTerm extends QueryTerm {
 		}
 	}
 
+	/**
+	 * Get a query for wellknow attributes, e.g. those that are explicitly mapped to db-fields.
+	 */
 	private Optional<String> getWellKnownQuery() {
 		if (attributePath.equals(OBSERVED_AT) || attributePath.equals(CREATED_AT) || attributePath.equals(MODIFIED_AT)) {
 			Optional<String> optionalTimeValue = getTimeValue();
@@ -175,6 +195,9 @@ public class ComparisonTerm extends QueryTerm {
 		return Optional.empty();
 	}
 
+	/**
+	 * Get a query for jsonb values
+	 */
 	private Optional<String> getCompoundQuery() {
 		return getCompoundQuery(attributePath);
 	}
@@ -189,6 +212,9 @@ public class ComparisonTerm extends QueryTerm {
 		return Optional.of(String.format(" (compound ->> '%s' %s '%s')", jsonKey, operator.getDbOperator(), comparisonValue));
 	}
 
+	/**
+	 * Get a query for range values
+	 */
 	private Optional<String> getRangeQuery() {
 		IllegalArgumentException exception = new IllegalArgumentException(String.format("%s is not a valid range.", comparisonValue));
 		if (!getStringValue().isEmpty() || !comparisonValue.contains(RANGE_SEPERATOR)) {
@@ -234,6 +260,9 @@ public class ComparisonTerm extends QueryTerm {
 		throw exception;
 	}
 
+	/**
+	 * Get a query for list values
+	 */
 	private Optional<String> getListQuery() {
 		boolean isList = comparisonValue.charAt(0) == QueryParser.OPEN_SQUARE_BRACE && comparisonValue.charAt(comparisonValue.length() - 1) == QueryParser.CLOSE_SQUARE_BRACE;
 		if (!isList) {
@@ -255,7 +284,10 @@ public class ComparisonTerm extends QueryTerm {
 		return Optional.of(selectionJoiner.toString());
 	}
 
-	private Optional<String> stringOrEmpty(String queryTemplate, String value) {
+	/**
+	 * Helper method to only return the query when the list is not empty
+	 */
+	private Optional<String> stringListOrEmpty(String queryTemplate, String value) {
 		return value.isEmpty() || value.equals("()") ? Optional.empty() : Optional.of(String.format(queryTemplate, value));
 	}
 
@@ -266,7 +298,7 @@ public class ComparisonTerm extends QueryTerm {
 				.map(Optional::get)
 				.map(String::valueOf)
 				.collect(Collectors.joining(",", "(", ")"));
-		return stringOrEmpty("boolean in %s", queryList);
+		return stringListOrEmpty("boolean in %s", queryList);
 	}
 
 	private Optional<String> getStringListQuery(String[] valuesList) {
@@ -276,7 +308,7 @@ public class ComparisonTerm extends QueryTerm {
 				.map(Optional::get)
 				.map(stringValue -> String.format("'%s'", stringValue))
 				.collect(Collectors.joining(",", "(", ")"));
-		return stringOrEmpty("text in %s", queryList);
+		return stringListOrEmpty("text in %s", queryList);
 	}
 
 	private Optional<String> getNumberListQuery(String[] valuesList) {
@@ -286,7 +318,7 @@ public class ComparisonTerm extends QueryTerm {
 				.map(Optional::get)
 				.map(String::valueOf)
 				.collect(Collectors.joining(",", "(", ")"));
-		return stringOrEmpty("number in %s", queryList);
+		return stringListOrEmpty("number in %s", queryList);
 	}
 
 	private Optional<String> getTimeListQuery(String[] valuesList) {
@@ -296,7 +328,7 @@ public class ComparisonTerm extends QueryTerm {
 				.map(Optional::get)
 				.map(stringValue -> String.format("'%s'::time", stringValue))
 				.collect(Collectors.joining(",", "(", ")"));
-		return stringOrEmpty("datetime in %s", queryList);
+		return stringListOrEmpty("datetime in %s", queryList);
 	}
 
 	private Optional<String> getDateTimeListQuery(String[] valuesList) {
@@ -312,7 +344,7 @@ public class ComparisonTerm extends QueryTerm {
 				.collect(Collectors.toList());
 		dateValues.addAll(dateTimeValues);
 		String queryList = dateValues.stream().map(value -> String.format("'%s'")).collect(Collectors.joining(",", "(", ")"));
-		return stringOrEmpty("datetime in %s", queryList);
+		return stringListOrEmpty("datetime in %s", queryList);
 	}
 
 	private Optional<String> getStringValue(String toCheck) {

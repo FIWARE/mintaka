@@ -1,5 +1,8 @@
-package org.fiware.mintaka.domain.query;
+package org.fiware.mintaka.domain.query.geo;
 
+/**
+ * Modifier in geo queries, according to the ngsi-ld api
+ */
 public enum GeoModifier {
 
 	MAX_DISTANCE("maxDistance"),

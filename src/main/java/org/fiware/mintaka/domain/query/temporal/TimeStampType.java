@@ -1,4 +1,4 @@
-package org.fiware.mintaka.domain;
+package org.fiware.mintaka.domain.query.temporal;
 
 import java.util.StringTokenizer;
 

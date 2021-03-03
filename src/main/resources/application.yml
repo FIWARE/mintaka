@@ -7,12 +7,19 @@ micronaut:
       # allow 100 contexts to be cached
       maximum-size: 100
 
+
+  multitenancy:
+    tenantresolver:
+      httpheader:
+        enabled: true
+        header-name: NGSILD-Tenant
+
 ---
 datasources:
   default:
     driverClassName: org.postgresql.Driver
     url:  jdbc:postgresql://${datasources.default.host:localhost}:${datasources.default.port:5432}/${datasources.default.database}
-    dialect: org.hibernate.spatial.dialect.postgis.PostgisDialect
+    dialect: org.hibernate.dialect.PostgreSQL95Dialect
     database: orion
     username: orion
     password: orion

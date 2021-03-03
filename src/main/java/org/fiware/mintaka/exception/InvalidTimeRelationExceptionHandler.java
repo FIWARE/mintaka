@@ -9,6 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import javax.inject.Singleton;
 
+/**
+ * Handle exceptions due to invalid timerelations.
+ */
 @Produces
 @Singleton
 @Requires(classes = {InvalidTimeRelationException.class, ExceptionHandler.class})

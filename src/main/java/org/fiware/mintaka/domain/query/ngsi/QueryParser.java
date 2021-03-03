@@ -1,4 +1,4 @@
-package org.fiware.mintaka.domain.query;
+package org.fiware.mintaka.domain.query.ngsi;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +10,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Parser for queries(according to the NGSI-LD api) into the internal QueryTerm representation.
+ */
 @Slf4j
 @Singleton
 @RequiredArgsConstructor
@@ -24,23 +27,39 @@ public class QueryParser {
 
 	private final LdContextCache contextCache;
 
-	public QueryTerm toTerm(String testQuery, List<URL> contextURLs) {
-		if (isLogicalQuery(testQuery)) {
-			return parseLogicalString(testQuery, contextURLs);
+	/**
+	 * Translate a query into the QueryTerm representation, using the given context for expanding the attribute paths.
+	 * @param query - string representation of the query
+	 * @param contextURLs - url of the context's to use
+	 * @return the query term
+	 */
+	public QueryTerm toTerm(String query, List<URL> contextURLs) {
+		if (isLogicalQuery(query)) {
+			return parseLogicalString(query, contextURLs);
 		} else {
-			return parseComparisonString(testQuery, contextURLs);
+			return parseComparisonString(query, contextURLs);
 		}
 	}
 
+	/**
+	 * Check if the given string is a logical query
+	 */
 	private static boolean isLogicalQuery(String queryString) {
 		String strippedString = stripStringValues(queryString);
 		return Arrays.stream(LogicalOperator.values()).anyMatch(logicalOperator -> strippedString.contains(logicalOperator.getValue()));
 	}
 
+	/**
+	 *
+	 * Remove all string values from the given string(to ease the query checking).
+	 */
 	private static String stripStringValues(String queryString) {
 		return queryString.replaceAll(STRING_VALUE_REGEX, "");
 	}
 
+	/**
+	 * Parse the given comparison string into a query term
+	 */
 	private QueryTerm parseComparisonString(String comparisonString, List<URL> contextUrls) {
 		return Arrays.stream(ComparisonOperator.values())
 				.map(operator -> {
@@ -56,6 +75,9 @@ public class QueryParser {
 				).filter(Objects::nonNull).findAny().orElseThrow(() -> new IllegalArgumentException(String.format("Comparison is not valid: %s", comparisonString)));
 	}
 
+	/**
+	 * Parse a query string into a logical term
+	 */
 	private LogicalTerm parseLogicalString(String logicalString, List<URL> contextUrls) {
 		LogicalTerm theTerm = new LogicalTerm(logicalString);
 		logicalString = removeTopLevelBraces(logicalString);

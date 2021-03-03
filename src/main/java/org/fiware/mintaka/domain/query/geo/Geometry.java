@@ -1,7 +1,10 @@
-package org.fiware.mintaka.domain.query;
+package org.fiware.mintaka.domain.query.geo;
 
 import java.util.Arrays;
 
+/**
+ * Enum for geometries according to the ngsi-ld api
+ */
 public enum Geometry {
 
 	POINT("Point", "geopoint"),

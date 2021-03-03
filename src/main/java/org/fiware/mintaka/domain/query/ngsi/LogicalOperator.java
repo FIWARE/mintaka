@@ -1,7 +1,10 @@
-package org.fiware.mintaka.domain.query;
+package org.fiware.mintaka.domain.query.ngsi;
 
 import java.util.Arrays;
 
+/**
+ * Representation of a logical operator according to the ngsi-ld api
+ */
 public enum LogicalOperator {
 
 	AND(";", "AND", ';'),
