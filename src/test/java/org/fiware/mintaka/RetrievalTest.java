@@ -89,21 +89,6 @@ public class RetrievalTest extends ComposeTest {
 		assertAttributesInMap(entityTemporalMap, FULL_ENTITY_ATTRIBUTES_LIST, NUMBER_OF_UPDATES + 1, START_TIME_STAMP, START_TIME_STAMP.plus(NUMBER_OF_UPDATES, ChronoUnit.MINUTES));
 	}
 
-	@DisplayName("Retrieve the full entity in temporalValues representation. No timeframe definition, default context.")
-	@ParameterizedTest
-	@MethodSource("provideEntityIds")
-	@Disabled("Temporal representation is currently invalid json-ld, needs to be fixed first.")
-	public void testGetEntityByIdWithoutTimeTemporalValues(URI entityId) {
-		MutableHttpRequest request = HttpRequest.GET("/temporal/entities/" + entityId);
-		request.getParameters().add("options", "temporalValues");
-		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(request, Map.class);
-		assertDefaultStoreTemporalEntity(entityId, entityTemporalMap);
-
-		assertEquals(FULL_ENTITY_ATTRIBUTES_LIST.size() + 3, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
-
-		assertAttributesInMap(entityTemporalMap, FULL_ENTITY_ATTRIBUTES_LIST, NUMBER_OF_UPDATES + 1, START_TIME_STAMP, START_TIME_STAMP.plus(NUMBER_OF_UPDATES, ChronoUnit.MINUTES));
-	}
-
 	@DisplayName("Retrieve the entity with only the requested attribute. No timeframe definition, default context.")
 	@ParameterizedTest
 	@MethodSource("provideFullEntityAttributeStrings")

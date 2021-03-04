@@ -3,9 +3,10 @@ package org.fiware.mintaka.persistence;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.fiware.mintaka.domain.EntityIdTempResults;
-import org.fiware.mintaka.domain.query.temporal.TimeQuery;
 import org.fiware.mintaka.domain.query.geo.GeoQuery;
 import org.fiware.mintaka.domain.query.ngsi.*;
+import org.fiware.mintaka.domain.query.temporal.TimeQuery;
+import org.fiware.mintaka.exception.InvalidTimeRelationException;
 import org.fiware.mintaka.exception.PersistenceRetrievalException;
 
 import javax.inject.Singleton;
@@ -16,6 +17,8 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -28,6 +31,8 @@ import java.util.stream.Collectors;
 @Singleton
 @RequiredArgsConstructor
 public class EntityRepository {
+
+	private static final DateTimeFormatter LOCAL_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm:ss.ss");
 
 	private final EntityManager entityManager;
 
@@ -320,7 +325,7 @@ public class EntityRepository {
 		log.debug("Subselect: {}", idSubSelect);
 
 
-		String selectTempTable = "SELECT ";
+		String selectTempTable = "(SELECT ";
 		if (geoQuery.isPresent()) {
 			selectTempTable += geoQuery.get().toSQLQuery() + " as result";
 		} else if (comparisonTerm.isPresent()) {
@@ -332,7 +337,7 @@ public class EntityRepository {
 		//if(query.isPresent()){
 		//innerJoin += query.get().getSqlRepresentation() + "as queryResult";
 		//}
-		selectTempTable += ",attribute." + timeQuery.getTimeProperty() + " as time, attribute.entityId " +
+		selectTempTable += ",attribute." + timeQuery.getTimeProperty() + " as time, attribute.entityId as entityId " +
 				"FROM attributes attribute WHERE attribute.entityId in (" + idSubSelect + ") ";
 		if (comparisonTerm.isPresent()) {
 			selectTempTable += "and attribute.id='" + comparisonTerm.get().getAttributePath() + "' ";
@@ -341,6 +346,29 @@ public class EntityRepository {
 			selectTempTable += "and attribute.id='" + geoQuery.get().getGeoProperty() + "' ";
 		}
 
+		LocalDateTime ldtTimeAt = LocalDateTime.ofInstant(timeQuery.getTimeAt(), ZoneOffset.UTC);
+
+		String timeEnd;
+		String timeAt;
+		switch (timeQuery.getTimeRelation()) {
+			case AFTER:
+				timeEnd = "now()";
+				timeAt = ldtTimeAt.format(LOCAL_DATE_TIME_FORMATTER);
+				break;
+			case BEFORE:
+				timeEnd = ldtTimeAt.minus(1, ChronoUnit.MILLIS).format(LOCAL_DATE_TIME_FORMATTER);
+				timeAt = ldtTimeAt.format(LOCAL_DATE_TIME_FORMATTER);
+				break;
+			case BETWEEN:
+				timeEnd = LocalDateTime.ofInstant(timeQuery.getEndTime(), ZoneOffset.UTC).minus(1, ChronoUnit.MILLIS).format(LOCAL_DATE_TIME_FORMATTER);
+				timeAt = ldtTimeAt.format(LOCAL_DATE_TIME_FORMATTER);
+				break;
+			default:
+				throw new InvalidTimeRelationException(String.format("Requested timerelation was not valid: %s", timeQuery));
+		}
+		// select the last known value before time at, in order to get the attribute state at that time
+		String selectLastBefore = "(SELECT last(lastBefore.result,lastBefore.time) as result, '" + timeAt + "' as time, lastBefore.entityId as entityId FROM" + selectTempTable + ") as lastBefore WHERE time<='" + timeAt + "' GROUP BY lastBefore.entityId)";
+		String selectLastIn = "(SELECT last(lastIn.result,lastIn.time) as result, '" + timeEnd + "' as time, lastIn.entityId as entityId FROM" + selectTempTable + ") as lastIn WHERE time<='" + timeEnd + "' GROUP BY lastIn.entityId)";
 
 		selectTempTable += timeQueryPart + " order by attribute.entityId, attribute." + timeQuery.getTimeProperty();
 		log.debug("Select temp table: {}", selectTempTable);
@@ -356,7 +384,7 @@ public class EntityRepository {
 		// id2, false, t2 - set5
 		// id2, false, t3 - set5
 		// the changed order assures that the entities of the same set are moved by the same distance and therefore get the same setId.
-		String tempWithSetId = "SELECT *, (ROW_NUMBER() OVER (ORDER BY temp.entityId, temp.time)) - (ROW_NUMBER() OVER (ORDER BY temp.entityId, temp.result, temp.time)) as setId FROM  (" + selectTempTable + ") AS temp";
+		String tempWithSetId = "SELECT *, (ROW_NUMBER() OVER (ORDER BY temp.entityId, temp.time)) - (ROW_NUMBER() OVER (ORDER BY temp.entityId, temp.result, temp.time)) as setId FROM  (" + selectTempTable + ") UNION " + selectLastBefore + " UNION " + selectLastIn + ") as temp";
 
 		String selectOnTemp = "SELECT t1.result, t1.entityId,MIN(t1.time) AS startTime, MAX(t1.time) AS endTime FROM (" + tempWithSetId + ") AS t1 WHERE result=true GROUP BY t1.result,t1.entityId,t1.setId";
 

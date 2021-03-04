@@ -381,7 +381,11 @@ public abstract class ComposeTest {
 			currentTime = move(lat++, longi++, currentTime, entityId, Optional.of(25), Optional.of(true), Optional.of("Mira"), Optional.of(0.7), Optional.of(1700), Optional.of(2));
 		}
 		for (int i = 200; i < 300; i++) {
-			currentTime = move(lat--, longi--, currentTime, entityId, Optional.of(20), Optional.of(false), Optional.of("Franzi"), Optional.of(0.6), Optional.of(2500), Optional.of(2));
+			if(entityId.equals(URI.create("urn:ngsi-ld:car:moving-car-2"))){
+				currentTime = move(lat--, longi--, currentTime, entityId, Optional.of(20), Optional.of(false), Optional.of("Unknown"), Optional.of(0.6), Optional.of(2500), Optional.of(2));
+			} else {
+				currentTime = move(lat--, longi--, currentTime, entityId, Optional.of(20), Optional.of(false), Optional.of("Franzi"), Optional.of(0.6), Optional.of(2500), Optional.of(2));
+			}
 		}
 		for (int i = 300; i < 400; i++) {
 			currentTime = move(lat--, longi--, currentTime, entityId, Optional.of(15), Optional.of(true), Optional.empty(), Optional.of(0.5), Optional.of(2000), Optional.of(3));
@@ -422,16 +426,17 @@ public abstract class ComposeTest {
 				.type("store");
 		PropertyVO temperatureProperty = getNewPropety().value(optionalTemp.orElseGet(() -> (int) (Math.random() * 10)));
 		PropertyVO radioProperty = getNewPropety().value(optionalRadio.orElse(true));
-		PropertyVO driverProperty = getNewPropety().value(optionalDriver.orElse("unknown"));
 		PropertyVO motorProperty = getMotorSubProperty(optionalFuel, optionalRPM);
 		PropertyVO compoundProperty = getCompoundProperty(optionalCases.orElse(3));
-		entityFragmentVO.setAdditionalProperties(
-				Map.of(
-						"temperature", temperatureProperty,
-						"radio", radioProperty,
-						"driver", driverProperty,
-						"motor", motorProperty,
-						"trunk", compoundProperty));
+		Map<String, Object> additionalProperties = new HashMap<>();
+		additionalProperties.put("temperature", temperatureProperty);
+		additionalProperties.put("radio", radioProperty);
+		additionalProperties.put("motor", motorProperty);
+		additionalProperties.put("trunk", compoundProperty);
+		optionalDriver
+				.map(driverName -> getNewPropety().value(driverName))
+				.ifPresent(driverProperty -> additionalProperties.put("driver", driverProperty));
+		entityFragmentVO.setAdditionalProperties(additionalProperties);
 		entitiesApiTestClient.updateEntityAttrs(entityId, entityFragmentVO);
 	}
 

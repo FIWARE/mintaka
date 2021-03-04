@@ -34,7 +34,8 @@ jpa:
       hibernate:
         hbm2ddl:
           auto: none
-        show_sql: true
+        # set to true if you want to see the queries.
+        show_sql: false
 
 loggers:
   level:
