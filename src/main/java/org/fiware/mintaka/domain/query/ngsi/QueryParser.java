@@ -36,9 +36,8 @@ public class QueryParser {
 	public QueryTerm toTerm(String query, List<URL> contextURLs) {
 		if (isLogicalQuery(query)) {
 			return parseLogicalString(query, contextURLs);
-		} else {
-			return parseComparisonString(query, contextURLs);
 		}
+		return parseComparisonString(query, contextURLs);
 	}
 
 	/**

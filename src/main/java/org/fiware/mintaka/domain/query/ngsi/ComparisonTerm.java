@@ -188,8 +188,7 @@ public class ComparisonTerm extends QueryTerm {
 			if (optionalDateValue.isPresent()) {
 				return Optional.of(String.format(" %s:%s'%s'", attributePath, operator.getDbOperator(), optionalDateValue.get()));
 			}
-		}
-		if (attributePath.equals(UNIT_CODE) || attributePath.equals(DATA_SET_ID)) {
+		} else if (attributePath.equals(UNIT_CODE) || attributePath.equals(DATA_SET_ID)) {
 			return Optional.of(String.format(" %s:%s'%s'", attributePath, operator.getDbOperator(), comparisonValue));
 		}
 		return Optional.empty();
