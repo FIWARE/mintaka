@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.fiware.mintaka.exception.StringExpansionException;
 import org.fiware.mintaka.exception.ContextRetrievalException;
 
+import javax.annotation.PostConstruct;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -36,21 +37,22 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class LdContextCache {
 
-	public static final JsonLdOptions JSON_LD_OPTIONS = new JsonLdOptions();
+	private final ContextProperties contextProperties;
 
-	private static final URL CORE_CONTEXT_URL;
-	private static final Object CORE_CONTEXT;
+	private URL coreContextUrl;
+	private Object coreContext;
 
-	static {
+	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+	@PostConstruct
+	public void initDefaultContext() {
 		try {
-			CORE_CONTEXT_URL = new URL("https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld");
-			CORE_CONTEXT = JsonUtils.fromURLJavaNet(CORE_CONTEXT_URL);
+			coreContextUrl = new URL(contextProperties.getDefaultUrl());
+			coreContext = JsonUtils.fromURLJavaNet(coreContextUrl);
 		} catch (IOException e) {
 			throw new ContextRetrievalException("Invalid core context configured.");
 		}
 	}
-
-	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 	/**
 	 * Get context from the given url. Will be cached.
@@ -60,8 +62,8 @@ public class LdContextCache {
 	 */
 	@Cacheable
 	public Object getContextFromURL(URL url) {
-		if (url.equals(CORE_CONTEXT_URL)) {
-			return CORE_CONTEXT;
+		if (url.equals(coreContextUrl)) {
+			return coreContext;
 		}
 		try {
 			return JsonUtils.fromURLJavaNet(url);
@@ -168,7 +170,7 @@ public class LdContextCache {
 	 * @param headerString - content of the link header
 	 * @return list of context urls, will either be only the core context or the core-context + the header context
 	 */
-	public static List<URL> getContextURLsFromLinkHeader(String headerString) {
+	public List<URL> getContextURLsFromLinkHeader(String headerString) {
 
 		Optional<String> linkedContextString = Optional.empty();
 
@@ -185,7 +187,7 @@ public class LdContextCache {
 					}
 				})
 				// core-context needs to be first, so that it can be overwritten by the provided context.
-				.map(url -> List.of(CORE_CONTEXT_URL, url)).orElse(List.of(CORE_CONTEXT_URL));
+				.map(url -> List.of(coreContextUrl, url)).orElse(List.of(coreContextUrl));
 	}
 
 	// extract the Id from the expanded object

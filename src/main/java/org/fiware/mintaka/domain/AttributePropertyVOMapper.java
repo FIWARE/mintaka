@@ -41,7 +41,7 @@ public interface AttributePropertyVOMapper {
 	 * @param attribute to check if its a relationship
 	 * @return true if its a relationship
 	 */
-	default boolean isRelationShip(AbstractAttribute attribute) {
+	default boolean isRelationship(AbstractAttribute attribute) {
 		return attribute.getValueType() == ValueType.Relationship;
 	}
 
@@ -53,7 +53,7 @@ public interface AttributePropertyVOMapper {
 	 * @return the mapped relationship
 	 */
 	default RelationshipVO attributeToRelationShip(AbstractAttribute attribute, Instant createdAt, boolean modifiedAt) {
-		if (!isRelationShip(attribute)) {
+		if (!isRelationship(attribute)) {
 			throw new IllegalArgumentException("Received attribute is not a relationship");
 		}
 		RelationshipVO relationshipVO = new RelationshipVO()
@@ -166,7 +166,7 @@ public interface AttributePropertyVOMapper {
 		if (isGeoProperty(attribute)) {
 			throw new IllegalArgumentException("Received a geoproperty.");
 		}
-		if (isRelationShip(attribute)) {
+		if (isRelationship(attribute)) {
 			throw new IllegalArgumentException("Received a relationship.");
 		}
 		PropertyVO propertyVO = new PropertyVO()

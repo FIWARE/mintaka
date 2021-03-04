@@ -261,7 +261,7 @@ public class EntityTemporalService {
 
 	private Map.Entry<String, Object> attributeToMapEntry(AbstractAttribute attribute, Instant createdAt, boolean modifiedAt) {
 
-		if (attributePropertyVOMapper.isRelationShip(attribute)) {
+		if (attributePropertyVOMapper.isRelationship(attribute)) {
 			return Map.entry(attribute.getId(), attributePropertyVOMapper.attributeToRelationShip(attribute, createdAt, modifiedAt));
 		}
 		if (attributePropertyVOMapper.isGeoProperty(attribute)) {

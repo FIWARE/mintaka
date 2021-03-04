@@ -48,12 +48,10 @@ public class TemporalApiController implements TemporalRetrievalApi {
 	private final QueryParser queryParser;
 	private final ApiDomainMapper apiDomainMapper;
 
-	private final TenantResolver tenantResolver;
-
 	@Override
 	public HttpResponse<EntityTemporalListVO> queryTemporalEntities(@Nullable String link, @Nullable URI id, @Nullable String idPattern, @Nullable @Size(min = 1) String type, @Nullable @Size(min = 1) String attrs, @Nullable @Size(min = 1) String q, @Nullable String georel, @Nullable String geometry, @Nullable String coordinates, @Nullable @Size(min = 1) String geoproperty, @Nullable TimerelVO timerel, @Nullable @Pattern(regexp = "^((\\d|[a-zA-Z]|_)+(:(\\d|[a-zA-Z]|_)+)?(#\\d+)?)$") @Size(min = 1) String timeproperty, @Nullable Instant time, @Nullable Instant endTime, @Nullable @Size(min = 1) String csf, @Nullable @Min(1) Integer limit, @Nullable String options, @Nullable @Min(1) Integer lastN) {
 
-		List<URL> contextUrls = LdContextCache.getContextURLsFromLinkHeader(link);
+		List<URL> contextUrls = contextCache.getContextURLsFromLinkHeader(link);
 		String expandedGeoProperty = Optional.ofNullable(geoproperty)
 				.filter(property -> !WELL_KNOWN_ATTRIBUTES.contains(property))
 				.map(property -> contextCache.expandString(property, contextUrls))
@@ -80,7 +78,7 @@ public class TemporalApiController implements TemporalRetrievalApi {
 	@Override
 	public HttpResponse<EntityTemporalVO> retrieveEntityTemporalById(URI entityId, @Nullable String link, @Nullable @Size(min = 1) String attrs, @Nullable String options, @Nullable TimerelVO timerel, @Nullable @Pattern(regexp = "^((\\d|[a-zA-Z]|_)+(:(\\d|[a-zA-Z]|_)+)?(#\\d+)?)$") @Size(min = 1) String timeproperty, @Nullable Instant time, @Nullable Instant endTime, @Nullable @Min(1) Integer lastN) {
 
-		List<URL> contextUrls = LdContextCache.getContextURLsFromLinkHeader(link);
+		List<URL> contextUrls = contextCache.getContextURLsFromLinkHeader(link);
 		TimeQuery timeQuery = new TimeQuery(apiDomainMapper.timeRelVoToTimeRelation(timerel), time, endTime, getTimeRelevantProperty(timeproperty));
 
 		Optional<EntityTemporalVO> entityTemporalVOOptional = entityTemporalService
