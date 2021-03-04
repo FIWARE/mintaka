@@ -125,4 +125,6 @@ public interface TemporalValuesMapper {
 				return relationshipVO.observedAt();
 		}
 	}
+
+	//TODO add support methods for Vocabulary and LanguageMap in >1.4
 }
