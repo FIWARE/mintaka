@@ -30,12 +30,6 @@
         <version.org.postgresql>42.2.12</version.org.postgresql>
     </properties>
 
-    <dependencyManagement>
-        <dependencies>
-        </dependencies>
-    </dependencyManagement>
-
-
     <dependencies>
 
         <!-- build -->
