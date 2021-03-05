@@ -1,6 +1,4 @@
 micronaut:
-  server:
-    port: 8081
 
   application:
     name:  ${project.artifactId}
