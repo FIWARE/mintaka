@@ -1,17 +1,23 @@
 package org.fiware.mintaka;
 
+import com.apicatalog.jsonld.loader.DocumentLoader;
+import com.apicatalog.jsonld.loader.HttpLoader;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.runtime.Micronaut;
+import org.fiware.mintaka.context.CacheableDocumentLoader;
+import org.fiware.mintaka.context.LdContextCache;
 import org.fiware.mintaka.domain.EntityTemporalListVOSerializer;
 import org.fiware.mintaka.domain.EntityTemporalSerializer;
 
 import javax.inject.Singleton;
+import java.net.http.HttpClient;
 
 /**
  * Base application as starting point

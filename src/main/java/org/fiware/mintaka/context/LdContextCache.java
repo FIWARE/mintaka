@@ -21,6 +21,7 @@ import javax.annotation.PostConstruct;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
@@ -145,6 +146,8 @@ public class LdContextCache {
 			return getContextFromURL((URL) contextURLs);
 		} else if (contextURLs instanceof String) {
 			return getContextFromURL((String) contextURLs);
+		} else if (contextURLs instanceof URI) {
+			return getContextFromURL(contextURLs.toString());
 		}
 		throw new ContextRetrievalException(String.format("Did not receive a valid context: %s.", contextURLs));
 	}

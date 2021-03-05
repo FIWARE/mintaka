@@ -1,4 +1,7 @@
 micronaut:
+  server:
+    port: 8081
+
   application:
     name:  ${project.artifactId}
 
@@ -43,4 +46,4 @@ loggers:
     org:
       fiware:
         mintaka:
-          persistence: DEBUG
+          persistence: WARN

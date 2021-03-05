@@ -2,8 +2,11 @@ package org.fiware.mintaka.domain;
 
 import com.apicatalog.jsonld.JsonLd;
 import com.apicatalog.jsonld.JsonLdError;
+import com.apicatalog.jsonld.api.CompactionApi;
 import com.apicatalog.jsonld.document.Document;
 import com.apicatalog.jsonld.document.JsonDocument;
+import com.apicatalog.jsonld.loader.DocumentLoader;
+import com.apicatalog.jsonld.loader.HttpLoader;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,13 +14,16 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.jsonldjava.core.JsonLdOptions;
+import com.github.jsonldjava.utils.Obj;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.context.ServerRequestContext;
 import jakarta.json.Json;
 import jakarta.json.JsonArrayBuilder;
+import jakarta.json.JsonObject;
 import jakarta.json.JsonObjectBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.impl.client.DefaultHttpClient;
 import org.fiware.mintaka.context.LdContextCache;
 import org.fiware.mintaka.domain.query.temporal.TimeStampType;
 import org.fiware.ngsi.model.EntityTemporalVO;
@@ -26,6 +32,7 @@ import javax.inject.Singleton;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URL;
+import java.net.http.HttpClient;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -42,6 +49,7 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 	private static final String TIME_PROPERTY_KEY = "timeproperty";
 	private static final String TEMPORAL_VALUES_OPTION = "temporalValues";
 
+	private final DocumentLoader documentLoader;
 	private final TemporalValuesMapper temporalValuesMapper;
 
 	// we cannot take the bean from the context, since that will be circular reference, e.g. stack-overflow
@@ -67,6 +75,7 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 	public void serialize(EntityTemporalVO value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
 
 		try {
+			Object contextObject = value.atContext();
 			String jsonString;
 			// decide about the representation type.
 			if (isTemporalValuesOptionSet()) {
@@ -75,18 +84,18 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 			} else {
 				jsonString = OBJECT_MAPPER.writeValueAsString(value);
 			}
-			Document context = ldContextCache.getContextDocument(value.atContext());
+			Document context = ldContextCache.getContextDocument(contextObject);
+			CompactionApi compactionApi = JsonLd.compact(JsonDocument.of(new ByteArrayInputStream(jsonString.getBytes())), context);
+			JsonObject jsonObject = compactionApi.loader(documentLoader).get();
+
 			// create an builder for the compacted object
-			JsonObjectBuilder compactedJsonBuilder = Json.createObjectBuilder(
-					JsonLd.compact(
-							JsonDocument.of(new ByteArrayInputStream(jsonString.getBytes())),
-							context).get());
+			JsonObjectBuilder compactedJsonBuilder = Json.createObjectBuilder(jsonObject);
 			// add the context as URL instead of fully embed it.
-			if (value.atContext() instanceof URL) {
-				compactedJsonBuilder.add("@context", value.atContext().toString());
-			} else if (value.atContext() instanceof List) {
+			if (contextObject instanceof URL) {
+				compactedJsonBuilder.add("@context", contextObject.toString());
+			} else if (contextObject instanceof List) {
 				JsonArrayBuilder contextArrayBuilder = Json.createArrayBuilder();
-				((List<URL>) value.atContext()).forEach(contextItem -> contextArrayBuilder.add(contextItem.toString()));
+				((List<URL>) contextObject).forEach(contextItem -> contextArrayBuilder.add(contextItem.toString()));
 				compactedJsonBuilder.add("@context", contextArrayBuilder);
 			} else {
 				throw new IllegalArgumentException(String.format("Context is invalid: %s", value.atContext()));

@@ -105,6 +105,10 @@
             <artifactId>micronaut-data-hibernate-jpa</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.micronaut</groupId>
+            <artifactId>micronaut-management</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.micronaut.sql</groupId>
             <artifactId>micronaut-hibernate-jpa</artifactId>
         </dependency>
