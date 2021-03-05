@@ -48,7 +48,8 @@ public abstract class AbstractAttribute {
 	private LocalDateTime datetime;
 
 	@Column(columnDefinition = "jsonb")
-	private String compound;
+	@Convert(converter = JacksonJsonBConverter.class)
+	private Object compound;
 
 	@Formula(value = "ST_AsGeoJSON(geopoint)")
 	@Convert(converter = JacksonGeoJsonConverter.class)

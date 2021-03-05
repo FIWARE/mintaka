@@ -17,7 +17,7 @@ import java.io.IOException;
 @Converter(autoApply = true)
 public class JacksonGeoJsonConverter implements AttributeConverter<GeoJsonObject, String> {
 
-    private final static ObjectMapper objectMapper = new ObjectMapper();
+    private final static ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
     public String convertToDatabaseColumn(GeoJsonObject meta) {
@@ -25,7 +25,7 @@ public class JacksonGeoJsonConverter implements AttributeConverter<GeoJsonObject
             return null;
         }
         try {
-            return objectMapper.writeValueAsString(meta);
+            return OBJECT_MAPPER.writeValueAsString(meta);
         } catch (JsonProcessingException ex) {
             log.debug("Was not able to translate db object: %s", meta);
             throw new JacksonConversionException("Was not able to convert to database column.", ex);
@@ -38,7 +38,7 @@ public class JacksonGeoJsonConverter implements AttributeConverter<GeoJsonObject
             return null;
         }
         try {
-            return objectMapper.readValue(dbData, GeoJsonObject.class);
+            return OBJECT_MAPPER.readValue(dbData, GeoJsonObject.class);
         } catch (IOException ex) {
             log.debug("Was not able to translate db object: %s", dbData);
             throw new RuntimeException("Was not ablt to translate database object.", ex);
