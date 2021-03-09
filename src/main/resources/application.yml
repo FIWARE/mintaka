@@ -1,13 +1,18 @@
 micronaut:
-
   application:
-    name:  ${project.artifactId}
+    name: ${project.artifactId}
 
   caches:
     contexts:
       # allow 100 contexts to be cached
       maximum-size: 100
 
+  metrics:
+    enabled: true
+    export:
+      prometheus:
+        step: PT2s
+        descriptions: false
 
   multitenancy:
     tenantresolver:
@@ -16,10 +21,17 @@ micronaut:
         header-name: NGSILD-Tenant
 
 ---
+endpoints:
+  metrics:
+    enabled: true
+  health:
+    enabled: true
+
+---
 datasources:
   default:
     driverClassName: org.postgresql.Driver
-    url:  jdbc:postgresql://${datasources.default.host:localhost}:${datasources.default.port:5432}/${datasources.default.database}
+    url: jdbc:postgresql://${datasources.default.host:localhost}:${datasources.default.port:5432}/${datasources.default.database}
     dialect: org.hibernate.dialect.PostgreSQL95Dialect
     database: orion
     username: orion

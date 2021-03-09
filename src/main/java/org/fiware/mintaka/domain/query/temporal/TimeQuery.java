@@ -78,11 +78,11 @@ public class TimeQuery {
 			return "";
 		}
 		String timePropertyQuery = "";
-		if (timeProperty.equals("observedAt")) {
+		if (TimeStampType.OBSERVED_AT.value().equals(timeProperty)) {
 			timePropertyQuery += String.format("%s.observedAt", dbEntityType);
-		} else if (timeProperty.equals("createdAt")) {
+		} else if (TimeStampType.CREATED_AT.value().equals(timeProperty)) {
 			timePropertyQuery += String.format(" %s.opMode='", dbEntityType) + OpMode.Create.name() + String.format("' and %s.ts", dbEntityType);
-		} else if (timeProperty.equals("modifiedAt")) {
+		} else if (TimeStampType.MODIFIED_AT.value().equals(timeProperty)) {
 			timePropertyQuery += String.format(" %s.opMode!='", dbEntityType) + OpMode.Create.name() + String.format("' and %s.ts", dbEntityType);
 		} else if (timeProperty.equals("ts")) {
 			timePropertyQuery += String.format("%s.ts", dbEntityType);

@@ -18,6 +18,7 @@
         <micronaut.version>2.1.3</micronaut.version>
         <exec.mainClass>org.fiware.mintaka.Application</exec.mainClass>
         <micronaut.data.version>2.1.1</micronaut.data.version>
+        <micronaut.configuration.version>1.3.1</micronaut.configuration.version>
 
         <!-- lazy dev -->
         <version.org.mapstruct>1.3.1.Final</version.org.mapstruct>
@@ -119,6 +120,16 @@
         <dependency>
             <groupId>io.micronaut.cache</groupId>
             <artifactId>micronaut-cache-caffeine</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micronaut.configuration</groupId>
+            <artifactId>micronaut-micrometer-core</artifactId>
+            <version>${micronaut.configuration.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.micronaut.configuration</groupId>
+            <artifactId>micronaut-micrometer-registry-prometheus</artifactId>
+            <version>${micronaut.configuration.version}</version>
         </dependency>
 
         <dependency>
