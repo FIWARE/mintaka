@@ -11,6 +11,7 @@ import org.fiware.mintaka.domain.query.ngsi.QueryTerm;
 import org.fiware.mintaka.persistence.AbstractAttribute;
 import org.fiware.mintaka.persistence.Attribute;
 import org.fiware.mintaka.persistence.EntityRepository;
+import org.fiware.mintaka.persistence.LimitableResult;
 import org.fiware.mintaka.persistence.NgsiEntity;
 import org.fiware.ngsi.model.EntityTemporalVO;
 import org.fiware.ngsi.model.GeoPropertyVO;
@@ -23,6 +24,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -37,7 +39,7 @@ public class EntityTemporalService {
 	private final AttributePropertyVOMapper attributePropertyVOMapper;
 
 	@ReadOnly
-	public List<EntityTemporalVO> getEntitiesWithQuery(
+	public LimitableResult<List<EntityTemporalVO>> getEntitiesWithQuery(
 			Optional<String> namePattern,
 			List<String> expandedTypes,
 			List<String> expandedAttributes,
@@ -48,8 +50,9 @@ public class EntityTemporalService {
 			boolean sysAttrs,
 			boolean temporalRepresentation) {
 
-
-		return new ArrayList<>(
+		AtomicBoolean isLimited = new AtomicBoolean(false);
+		
+		List<EntityTemporalVO> entityTemporalVOS = new ArrayList<>(
 				entityRepository.findEntityIdsAndTimeframesByQuery(namePattern, expandedTypes, timeQuery, geoQuery, query)
 						.stream()
 						.map(tempResult -> getNgsiEntitiesWithTimerel(
@@ -60,8 +63,16 @@ public class EntityTemporalService {
 								sysAttrs,
 								temporalRepresentation))
 						.filter(Optional::isPresent)
-						.map(Optional::get)
+						.map(optionalResult -> {
+							LimitableResult<EntityTemporalVO> limitableResult = optionalResult.get();
+							if (limitableResult.isLimited()) {
+								isLimited.set(true);
+							}
+							return limitableResult.getResult();
+						})
 						.collect(Collectors.toMap(EntityTemporalVO::getId, etVO -> etVO, this::mergeEntityTemporals)).values());
+
+		return new LimitableResult<>(entityTemporalVOS, isLimited.get());
 	}
 
 	private EntityTemporalVO mergeEntityTemporals(EntityTemporalVO entityTemporalVO1, EntityTemporalVO entityTemporalVO2) {
@@ -98,14 +109,15 @@ public class EntityTemporalService {
 	}
 
 	@ReadOnly
-	public Optional<EntityTemporalVO> getNgsiEntitiesWithTimerel(
+	public Optional<LimitableResult<EntityTemporalVO>> getNgsiEntitiesWithTimerel(
 			String entityId,
 			TimeQuery timeQuery,
 			List<String> attrs,
 			Integer lastN,
 			boolean sysAttrs,
 			boolean temporalRepresentation) {
-		List<Attribute> attributes = entityRepository.findAttributeByEntityId(entityId, timeQuery, attrs, lastN);
+		LimitableResult<List<Attribute>> limitableAttributesList = entityRepository.findAttributeByEntityId(entityId, timeQuery, attrs, lastN);
+		List<Attribute> attributes = limitableAttributesList.getResult();
 		List<String> attributesWithSubattributes = attributes.stream()
 				.filter(Attribute::getSubProperties)
 				.map(Attribute::getInstanceId)
@@ -157,7 +169,7 @@ public class EntityTemporalService {
 		entityTemporalVO.type(ngsiEntity.getType()).id(URI.create(entityId));
 
 		entityTemporalVO.setAdditionalProperties(temporalAttributes);
-		return Optional.ofNullable(entityTemporalVO);
+		return Optional.of(new LimitableResult<EntityTemporalVO>(entityTemporalVO, limitableAttributesList.isLimited()));
 
 	}
 

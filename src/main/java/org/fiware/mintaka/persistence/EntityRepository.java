@@ -22,6 +22,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 /**
@@ -32,6 +33,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class EntityRepository {
 
+	private static final int TOTAL_MAX_NUMBER_OF_INSTANCES = 1000;
 	private static final DateTimeFormatter LOCAL_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm:ss.ss");
 
 	private final EntityManager entityManager;
@@ -72,17 +74,55 @@ public class EntityRepository {
 	 * @param lastN      number of instances to be retrieved, will retrieve the last instances
 	 * @return list of attribute instances
 	 */
-	public List<Attribute> findAttributeByEntityId(String entityId, TimeQuery timeQuery, List<String> attributes, Integer lastN) {
-
+	public LimitableResult<List<Attribute>> findAttributeByEntityId(String entityId, TimeQuery timeQuery, List<String> attributes, Integer lastN) {
+		AtomicBoolean isLimited = new AtomicBoolean(false);
 		String timeQueryPart = timeQuery.getSqlRepresentation();
 		if (attributes == null || attributes.isEmpty()) {
 			attributes = findAllAttributesForEntity(entityId, timeQueryPart);
 		}
+		// if there still is nothing, return
+		if (attributes.isEmpty()) {
+			return new LimitableResult<>(List.of(), false);
+		}
 
+		boolean backwards = isBackwards(lastN);
+		int limit = getLimit(attributes.size(), lastN, backwards);
 		// we need to do single queries in order to fullfil the "lastN" parameter.
-		return attributes.stream()
-				.flatMap(attributeId -> findAttributeInstancesForEntity(entityId, attributeId, timeQueryPart, lastN).stream())
+		List<Attribute> attributeInstance = attributes.stream()
+				.flatMap(attributeId -> {
+					List<Attribute> instances = findAttributeInstancesForEntity(entityId, attributeId, timeQueryPart, timeQuery.getTimeProperty(), backwards, limit);
+					if (instances.size() == limit) {
+						// Resultset was most probably limited. In an edge case the not limited number of attributes will exactly match the number of retrieved
+						// instances. Since it would be expensive to differ that case(e.g. an additional query would be required), we accept that.
+						isLimited.set(true);
+					}
+					return instances.stream();
+				})
 				.collect(Collectors.toList());
+		return new LimitableResult<>(attributeInstance, isLimited.get());
+	}
+
+	private boolean isBackwards(Integer lastN) {
+		return lastN != null && lastN >= 0;
+	}
+
+	private int getLimit(int attributesNumber, Integer lastN, boolean backwards) {
+		if (backwards) {
+			// in case of lastN, we can make an assumption
+			int expectedInstances = lastN * attributesNumber;
+			if (expectedInstances > TOTAL_MAX_NUMBER_OF_INSTANCES) {
+				// implicit cast to int will cut everything after the comma -> will keep total number below max
+				return TOTAL_MAX_NUMBER_OF_INSTANCES / attributesNumber;
+			} else {
+				return lastN;
+			}
+		}
+		if (attributesNumber < TOTAL_MAX_NUMBER_OF_INSTANCES) {
+			// implicit cast to int will cut everything after the comma -> will keep total number below max
+			return TOTAL_MAX_NUMBER_OF_INSTANCES / attributesNumber;
+		}
+		// we have at least {@link TOTAL_MAX_NUMBER_OF_INSTANCES} attributes, only return one instance per attribute
+		return 1;
 	}
 
 	/**
@@ -188,24 +228,28 @@ public class EntityRepository {
 	 * @param entityId      the entity to retrieve the entities for
 	 * @param attributeId   id of the attribute to retrieve the instances for
 	 * @param timeQueryPart the part of the sql query that denotes the timeframe
-	 * @param lastN         number of instances to be retrieved, will retrieve the last instances
+	 * @param backwards     if the instances should be retrieved starting with the newest
 	 * @return list of attribute instances
 	 */
-	private List<Attribute> findAttributeInstancesForEntity(String entityId, String attributeId, String timeQueryPart, Integer lastN) {
-		TypedQuery<Attribute> getAttributeInstancesQuery =
-				entityManager.createQuery(
-						"Select attribute " +
-								"from Attribute attribute " +
-								"where attribute.entityId=:entityId " +
-								"and attribute.id=:attributeId " +
-								"and attribute.opMode!='" + OpMode.Delete.name() + "' " +
-								timeQueryPart +
-								"order by attribute.ts desc", Attribute.class);
+	private List<Attribute> findAttributeInstancesForEntity(String entityId, String attributeId, String timeQueryPart, String timeProperty, boolean backwards, Integer limit) {
+		String selectionQuery = "Select attribute " +
+				"from Attribute attribute " +
+				"where attribute.entityId=:entityId " +
+				"and attribute.id=:attributeId " +
+				"and attribute.opMode!='" + OpMode.Delete.name() + "' " +
+				timeQueryPart;
+		if (backwards) {
+			// retrieve backwards
+			selectionQuery += String.format("order by attribute.%s desc", timeProperty);
+		} else {
+			// retrieve forward
+			selectionQuery += String.format("order by attribute.%s asc", timeProperty);
+		}
+
+		TypedQuery<Attribute> getAttributeInstancesQuery = entityManager.createQuery(selectionQuery, Attribute.class);
 		getAttributeInstancesQuery.setParameter("entityId", entityId);
 		getAttributeInstancesQuery.setParameter("attributeId", attributeId);
-		if (lastN != null && lastN > 0) {
-			getAttributeInstancesQuery.setMaxResults(lastN);
-		}
+		getAttributeInstancesQuery.setMaxResults(limit);
 		return getAttributeInstancesQuery.getResultList();
 	}
 
@@ -333,10 +377,7 @@ public class EntityRepository {
 		} else {
 			selectTempTable += " true as result";
 		}
-		//TODO: at query result
-		//if(query.isPresent()){
-		//innerJoin += query.get().getSqlRepresentation() + "as queryResult";
-		//}
+
 		selectTempTable += ",attribute." + timeQuery.getTimeProperty() + " as time, attribute.entityId as entityId " +
 				"FROM attributes attribute WHERE attribute.entityId in (" + idSubSelect + ") ";
 		if (comparisonTerm.isPresent()) {

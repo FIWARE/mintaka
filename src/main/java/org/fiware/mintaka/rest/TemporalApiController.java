@@ -1,6 +1,7 @@
 package org.fiware.mintaka.rest;
 
 import io.micronaut.http.HttpResponse;
+import io.micronaut.http.HttpStatus;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.multitenancy.tenantresolver.TenantResolver;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +12,7 @@ import org.fiware.mintaka.domain.query.geo.GeoQuery;
 import org.fiware.mintaka.domain.query.geo.Geometry;
 import org.fiware.mintaka.domain.query.temporal.TimeQuery;
 import org.fiware.mintaka.domain.query.ngsi.QueryParser;
+import org.fiware.mintaka.persistence.LimitableResult;
 import org.fiware.mintaka.service.EntityTemporalService;
 import org.fiware.ngsi.api.TemporalRetrievalApi;
 import org.fiware.ngsi.model.EntityTemporalListVO;
@@ -58,7 +60,7 @@ public class TemporalApiController implements TemporalRetrievalApi {
 				.orElse(DEFAULT_GEO_PROPERTY);
 		TimeQuery timeQuery = new TimeQuery(apiDomainMapper.timeRelVoToTimeRelation(timerel), time, endTime, getTimeRelevantProperty(timeproperty));
 
-		List<EntityTemporalVO> entityTemporalVOS = entityTemporalService.getEntitiesWithQuery(
+		LimitableResult<List<EntityTemporalVO>> limitableResult = entityTemporalService.getEntitiesWithQuery(
 				Optional.ofNullable(idPattern),
 				getExpandedTypes(contextUrls, type),
 				getExpandedAttributes(contextUrls, attrs),
@@ -68,11 +70,19 @@ public class TemporalApiController implements TemporalRetrievalApi {
 				lastN,
 				isSysAttrs(options),
 				isTemporalValuesOptionSet(options));
+
+		List<EntityTemporalVO> entityTemporalVOS = limitableResult.getResult();
 		entityTemporalVOS.forEach(entityTemporalVO -> addContextToEntityTemporalVO(entityTemporalVO, contextUrls));
 
 		EntityTemporalListVO entityTemporalListVO = new EntityTemporalListVO();
 		entityTemporalListVO.addAll(entityTemporalVOS);
-		return HttpResponse.ok(entityTemporalListVO);
+
+		if (limitableResult.isLimited()) {
+			// TODO: find limits.
+			return HttpResponse.status(HttpStatus.PARTIAL_CONTENT).body(entityTemporalListVO);
+		} else {
+			return HttpResponse.ok(entityTemporalListVO);
+		}
 	}
 
 	@Override
@@ -81,17 +91,24 @@ public class TemporalApiController implements TemporalRetrievalApi {
 		List<URL> contextUrls = contextCache.getContextURLsFromLinkHeader(link);
 		TimeQuery timeQuery = new TimeQuery(apiDomainMapper.timeRelVoToTimeRelation(timerel), time, endTime, getTimeRelevantProperty(timeproperty));
 
-		Optional<EntityTemporalVO> entityTemporalVOOptional = entityTemporalService
+		Optional<LimitableResult<EntityTemporalVO>> optionalLimitableResult = entityTemporalService
 				.getNgsiEntitiesWithTimerel(entityId.toString(),
 						timeQuery,
 						getExpandedAttributes(contextUrls, attrs),
 						lastN,
 						isSysAttrs(options),
 						isTemporalValuesOptionSet(options));
-		if (entityTemporalVOOptional.isEmpty()) {
+
+		if (optionalLimitableResult.isEmpty()) {
 			return HttpResponse.notFound();
+		}
+
+		LimitableResult<EntityTemporalVO> limitableResult = optionalLimitableResult.get();
+		if (limitableResult.isLimited()) {
+			// TODO: find limits.
+			return HttpResponse.status(HttpStatus.PARTIAL_CONTENT).body(limitableResult.getResult());
 		} else {
-			return HttpResponse.ok(addContextToEntityTemporalVO(entityTemporalVOOptional.get(), contextUrls));
+			return HttpResponse.ok(addContextToEntityTemporalVO(limitableResult.getResult(), contextUrls));
 		}
 	}
 
@@ -109,6 +126,7 @@ public class TemporalApiController implements TemporalRetrievalApi {
 
 	/**
 	 * Expand all attributes present in the attrs parameter
+	 *
 	 * @param contextUrls
 	 * @param attrs
 	 * @return
