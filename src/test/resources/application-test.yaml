@@ -1,0 +1,23 @@
+micronaut:
+  http:
+    services:
+      entities:
+        path: ngsi-ld/v1
+        url: http://localhost:1026
+      temporalRetrieval:
+        path: /
+        url: http://localhost:8080
+
+loggers:
+  level:
+    root: ERROR
+    org:
+      fiware:
+        mintaka:
+          persistence: DEBUG
+
+test:
+  clientId: entities
+datasources:
+  default:
+    host: localhost
