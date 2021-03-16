@@ -1,7 +1,6 @@
 micronaut:
   application:
     name: ${project.artifactId}
-
   caches:
     contexts:
       # allow 100 contexts to be cached

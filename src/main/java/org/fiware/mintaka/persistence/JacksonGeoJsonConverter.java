@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.fiware.mintaka.exception.JacksonConversionException;
+import org.fiware.mintaka.exception.PersistenceRetrievalException;
 import org.geojson.GeoJsonObject;
 
 import javax.persistence.AttributeConverter;
@@ -17,7 +18,7 @@ import java.io.IOException;
 @Converter(autoApply = true)
 public class JacksonGeoJsonConverter implements AttributeConverter<GeoJsonObject, String> {
 
-    private final static ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
     public String convertToDatabaseColumn(GeoJsonObject meta) {
@@ -41,7 +42,7 @@ public class JacksonGeoJsonConverter implements AttributeConverter<GeoJsonObject
             return OBJECT_MAPPER.readValue(dbData, GeoJsonObject.class);
         } catch (IOException ex) {
             log.debug("Was not able to translate db object: %s", dbData);
-            throw new RuntimeException("Was not ablt to translate database object.", ex);
+            throw new PersistenceRetrievalException("Was not able to translate database object.", ex);
         }
     }
 

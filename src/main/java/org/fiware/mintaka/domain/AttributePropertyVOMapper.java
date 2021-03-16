@@ -69,7 +69,6 @@ public interface AttributePropertyVOMapper {
 			relationshipVO.createdAt(createdAt);
 		}
 
-
 		Optional.ofNullable(attribute.getObservedAt()).ifPresent(oa -> relationshipVO.observedAt(oa.toInstant(ZoneOffset.UTC)));
 		if (attribute instanceof Attribute) {
 			Optional.ofNullable(((Attribute) attribute).getDatasetId()).ifPresent(di -> relationshipVO.datasetId(URI.create(di)));
@@ -93,6 +92,9 @@ public interface AttributePropertyVOMapper {
 				.instanceId(URI.create(attribute.getInstanceId()))
 				.type(GeoPropertyVO.Type.GEOPROPERTY);
 
+		if (attribute.getUnitCode() != null){
+			geoPropertyVO.unitCode(attribute.getUnitCode());
+		}
 		if (modifiedAt) {
 			geoPropertyVO.modifiedAt(attribute.getTs().toInstant(ZoneOffset.UTC));
 		}
@@ -173,6 +175,9 @@ public interface AttributePropertyVOMapper {
 				.instanceId(URI.create(attribute.getInstanceId()))
 				.type(PropertyVO.Type.PROPERTY);
 
+		if (attribute.getUnitCode() != null){
+			propertyVO.unitCode(attribute.getUnitCode());
+		}
 		if (modifiedAt) {
 			propertyVO.modifiedAt(attribute.getTs().toInstant(ZoneOffset.UTC));
 		}

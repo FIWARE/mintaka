@@ -14,3 +14,22 @@ This project is part of [FIWARE](https://www.fiware.org/). For more information 
 [Core Context](https://github.com/Fiware/catalogue/tree/master/core).
 
 | :whale: [Docker Hub](https://hub.docker.com/r/wistefan/mintaka-j/) |
+
+
+## API-Remarks
+
+### Pagination
+
+The api supports two dimensions of pagination. 
+The first one is similar to the normal query api and compliant with the 
+[NGSI-LD](https://www.etsi.org/deliver/etsi_gs/CIM/001_099/009/01.04.01_60/gs_cim009v010401p.pdf) spec(see 5.5.9):
+* retrieval of entities will be automatically limited to a default pageSize(100) 
+* the id of the next-page anchor will be returned via the header "Next-Page"
+* the id of the previous-page anchor will be returned via the header "Previous-Page"
+* the page-size will be returned via the header "Page-Size"
+* "Next-Page" will not be returned for the last page
+* "Previous-Page" will not be returned for the first page
+* the parameters "pageAnchor" and "pageSize" can be used for requesting pages
+
+The second one limits the retrieval of temporal instances and will be described in section 6.3.10 of future NGSI-LD api releases. It automatically 
+limits the number of returned instances and responds with Http-Status 206 "PARTIAL-CONTENT". The returned range is described in the "Content-Range" header.

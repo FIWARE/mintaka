@@ -16,12 +16,12 @@ import javax.inject.Singleton;
 @Singleton
 @Requires(classes = {InvalidTimeRelationException.class, ExceptionHandler.class})
 @Slf4j
-public class InvalidTimeRelationExceptionHandler implements ExceptionHandler<InvalidTimeRelationException, HttpResponse> {
+public class InvalidTimeRelationExceptionHandler implements ExceptionHandler<InvalidTimeRelationException, HttpResponse<String>> {
 
 	@Override
-	public HttpResponse handle(HttpRequest request, InvalidTimeRelationException exception) {
+	public HttpResponse<String> handle(HttpRequest request, InvalidTimeRelationException exception) {
 		log.info("Received an invalid time relation.");
 		log.debug("Error was: ", exception);
-		return HttpResponse.badRequest(String.format("Received an invalid timerelation: {}.", exception.getMessage()));
+		return HttpResponse.badRequest(String.format("Received an invalid timerelation: %s.", exception.getMessage()));
 	}
 }

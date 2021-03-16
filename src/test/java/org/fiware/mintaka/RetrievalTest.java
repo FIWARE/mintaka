@@ -1,20 +1,30 @@
 package org.fiware.mintaka;
 
 import io.micronaut.http.HttpRequest;
+import io.micronaut.http.HttpResponse;
+import io.micronaut.http.HttpStatus;
 import io.micronaut.http.MutableHttpRequest;
-import org.junit.jupiter.api.Disabled;
+import io.micronaut.http.client.exceptions.HttpClientResponseException;
+import org.fiware.mintaka.domain.query.temporal.TimeRelation;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.net.URI;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class RetrievalTest extends ComposeTest {
 
@@ -22,6 +32,41 @@ public class RetrievalTest extends ComposeTest {
 	@Test
 	public void testGetEntityByIdNotFound() {
 		assertNotFound(HttpRequest.GET("/temporal/entities/rn:ngsi-ld:store:not-found"), "For non existing entities a 404 should be returned.");
+	}
+
+	@DisplayName("Requests with unsupported parameters should lead to a 400")
+	@Test
+	public void testGetWithUnsupportedParameter() {
+		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/" + ENTITY_ID);
+		getRequest.getParameters().add("myUnsupportedParam", "myValue");
+
+		assertBadRequest(getRequest);
+	}
+
+	@DisplayName("Request with invalid timerelation should lead to 400")
+	@ParameterizedTest
+	@MethodSource("provideInvalidTimeRelations")
+	public void testGetWithInvalidTimeRel(Map<String, String> parameter) {
+		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/" + ENTITY_ID);
+		parameter.entrySet().forEach(entry -> getRequest.getParameters().add(entry.getKey(), entry.getValue()));
+
+		assertBadRequest(getRequest);
+	}
+
+	private void assertBadRequest(MutableHttpRequest getRequest) {
+		try {
+			mintakaTestClient.toBlocking().exchange(getRequest);
+		} catch (HttpClientResponseException e) {
+			assertEquals(HttpStatus.BAD_REQUEST, e.getStatus(), "The request should have been rejected with a 400.");
+			return;
+		}
+		fail("The request should have been rejected with a 400.");
+	}
+
+	private static Stream<Arguments> provideInvalidTimeRelations() {
+		return Stream.of(
+				Arguments.of(Map.of("timerel", "beforex", "timeAt", "1970-01-02T00:00:00Z")));
+//				Arguments.of(Map.of("timerel", "beorex")));
 	}
 
 	@DisplayName("Retrieve entity without attributes if non-existent is requested.")
@@ -44,7 +89,7 @@ public class RetrievalTest extends ComposeTest {
 	public void testGetDeletedEntityByIdAfterDeletion() {
 		MutableHttpRequest request = HttpRequest.GET("/temporal/entities/" + DELETED_ENTITY_ID);
 		request.getParameters().add("timerel", "after")
-				.add("time", "1970-01-02T00:00:00Z");
+				.add("timeAt", "1970-01-02T00:00:00Z");
 		assertNotFound(request, "A deleted entity should not be retrieved.");
 	}
 
@@ -53,7 +98,7 @@ public class RetrievalTest extends ComposeTest {
 	public void testGetEntityByIdBeforeCreation() {
 		MutableHttpRequest request = HttpRequest.GET("/temporal/entities/" + CREATED_AFTER_ENTITY_ID);
 		request.getParameters().add("timerel", "before")
-				.add("time", "1970-01-02T00:00:00Z");
+				.add("timeAt", "1970-01-02T00:00:00Z");
 		assertNotFound(request, "An entity should not be retrieved before its creation.");
 	}
 
@@ -62,8 +107,8 @@ public class RetrievalTest extends ComposeTest {
 	public void testGetDeletedEntityByIdAfterDeletionWithBetween() {
 		MutableHttpRequest request = HttpRequest.GET("/temporal/entities/" + DELETED_ENTITY_ID);
 		request.getParameters().add("timerel", "between")
-				.add("time", "1970-01-01T10:00:00Z")
-				.add("endTime", "1970-01-02T00:00:00Z");
+				.add("timeAt", "1970-01-01T10:00:00Z")
+				.add("endTimeAt", "1970-01-02T00:00:00Z");
 		assertNotFound(request, "A deleted entity should not be retrieved.");
 	}
 
@@ -72,8 +117,8 @@ public class RetrievalTest extends ComposeTest {
 	public void testGetEntityByIdBeforeCreationWithBetween() {
 		MutableHttpRequest request = HttpRequest.GET("/temporal/entities/" + DELETED_ENTITY_ID);
 		request.getParameters().add("timerel", "between")
-				.add("time", "1970-01-01T10:00:00Z")
-				.add("endTime", "1970-01-02T00:00:00Z");
+				.add("timeAt", "1970-01-01T10:00:00Z")
+				.add("endTimeAt", "1970-01-02T00:00:00Z");
 		assertNotFound(request, "An entity should not be retrieved before its creation.");
 	}
 
@@ -81,7 +126,10 @@ public class RetrievalTest extends ComposeTest {
 	@ParameterizedTest
 	@MethodSource("provideEntityIds")
 	public void testGetEntityByIdWithoutTime(URI entityId) {
-		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(HttpRequest.GET("/temporal/entities/" + entityId), Map.class);
+		MutableHttpRequest request = HttpRequest.GET("/temporal/entities/" + entityId);
+		request.getParameters().add("attrs", "temperature,open,storeName,polygon,multiPolygon,lineString,multiLineString,propertyWithSubProperty,relatedEntity");
+
+		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(request, Map.class);
 		assertDefaultStoreTemporalEntity(entityId, entityTemporalMap);
 
 		assertEquals(FULL_ENTITY_ATTRIBUTES_LIST.size() + 3, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
@@ -99,7 +147,7 @@ public class RetrievalTest extends ComposeTest {
 
 		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
 		assertDefaultStoreTemporalEntity(entityID, entityTemporalMap);
-		assertEquals(entityTemporalMap.size(), 4, "Only id, type, context and the open attribute should have been returned.");
+		assertEquals(4, entityTemporalMap.size(), "Only id, type, context and the open attribute should have been returned.");
 		List<Map<String, Object>> listRepresentation = retrieveListRepresentationForProperty(propertyToRetrieve, entityTemporalMap);
 
 		assertFalse(listRepresentation.isEmpty(), "There should be some updates for the requested property.");
@@ -189,7 +237,6 @@ public class RetrievalTest extends ComposeTest {
 		assertAttributesAfter(subList);
 	}
 
-
 	// lastN
 	@DisplayName("Retrieve the last n full instances. default context.")
 	@Test
@@ -218,7 +265,7 @@ public class RetrievalTest extends ComposeTest {
 
 		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
 		assertDefaultStoreTemporalEntity(ENTITY_ID, entityTemporalMap);
-		assertEquals(entityTemporalMap.size(), 4, "Only id, type, context and the open attribute should have been returned.");
+		assertEquals(4, entityTemporalMap.size(), "Only id, type, context and the open attribute should have been returned.");
 		List<Map<String, Object>> listRepresentation = retrieveListRepresentationForProperty(propertyToRetrieve, entityTemporalMap);
 
 		assertFalse(listRepresentation.isEmpty(), "There should be some updates for the requested property.");
@@ -304,4 +351,127 @@ public class RetrievalTest extends ComposeTest {
 		assertAttributesBetweenWithLastN(subList, 5, entityId);
 	}
 
+	@DisplayName("Retrieve an entity that gets paged.")
+	@Test
+	public void testGetPagedEntity() {
+		Instant startTime = START_TIME_STAMP;
+		Instant endTime = START_TIME_STAMP.plus(110, ChronoUnit.MINUTES);
+
+		// initial query without range
+		assertRange(startTime, endTime, Optional.empty(), Optional.empty());
+		startTime = endTime;
+		endTime = startTime.plus(111, ChronoUnit.MINUTES);
+		// second query with after(due to partial content response)
+		assertRange(startTime, endTime, Optional.of(TimeRelation.AFTER), Optional.empty());
+		startTime = endTime;
+		endTime = startTime.plus(111, ChronoUnit.MINUTES);
+		// third query, similar to second
+		assertRange(startTime, endTime, Optional.of(TimeRelation.AFTER), Optional.empty());
+		startTime = endTime;
+
+		// final query for the full end result
+		MutableHttpRequest request = HttpRequest.GET("/temporal/entities/" + LIMITED_ENTITY_ID);
+		request.getParameters()
+				.add("timerel", TimeRelation.AFTER.name())
+				.add("timeAt", LocalDateTime.ofInstant(startTime, ZoneOffset.UTC).toString());
+		HttpResponse<Map<String, Object>> response = mintakaTestClient.toBlocking().exchange(request, Map.class);
+		assertEquals(HttpStatus.OK, response.getStatus(), "Last response shouldn't be partial anymore.");
+		assertDefaultStoreTemporalEntity(LIMITED_ENTITY_ID, response.body());
+		assertAttributesInMap(response.body(),
+				List.of("temperature", "open", "storeName", "polygon", "multiPolygon", "lineString", "multiLineString", "propertyWithSubProperty", "relatedEntity"),
+				18,
+				startTime.plus(1, ChronoUnit.MINUTES),
+				startTime.plus(18, ChronoUnit.MINUTES));
+	}
+
+	@DisplayName("Retrieve an entity that gets paged limited by lastN.")
+	@Test
+	public void testGetPagedEntityWithLastN() {
+		int lastN = 350;
+		Instant startTime = START_TIME_STAMP.plus(lastN - 110, ChronoUnit.MINUTES);
+		Instant endTime = START_TIME_STAMP.plus(lastN, ChronoUnit.MINUTES);
+
+		// initial query without range
+		assertRange(startTime, endTime, Optional.empty(), Optional.of(lastN));
+		endTime = endTime.minus(111, ChronoUnit.MINUTES);
+		startTime = endTime.minus(111, ChronoUnit.MINUTES);
+		// second query with after(due to partial content response)
+		assertRange(startTime, endTime, Optional.of(TimeRelation.BEFORE), Optional.of(lastN));
+		endTime = endTime.minus(111, ChronoUnit.MINUTES);
+		startTime = endTime.minus(111, ChronoUnit.MINUTES);
+		// third query, similar to second
+		assertRange(startTime, endTime, Optional.of(TimeRelation.BEFORE), Optional.of(lastN));
+		endTime = startTime;
+
+		// final query for the full end result
+		MutableHttpRequest request = HttpRequest.GET("/temporal/entities/" + LIMITED_ENTITY_ID);
+		request.getParameters()
+				.add("timerel", TimeRelation.BEFORE.name())
+				.add("timeAt", LocalDateTime.ofInstant(endTime, ZoneOffset.UTC).toString());
+		HttpResponse<Map<String, Object>> response = mintakaTestClient.toBlocking().exchange(request, Map.class);
+		assertEquals(HttpStatus.OK, response.getStatus(), "Last response shouldn't be partial anymore.");
+		assertDefaultStoreTemporalEntity(LIMITED_ENTITY_ID, response.body());
+		assertAttributesInMap(response.body(),
+				List.of("temperature", "open", "storeName", "polygon", "multiPolygon", "lineString", "multiLineString", "propertyWithSubProperty", "relatedEntity"),
+				17,
+				endTime.minus(17, ChronoUnit.MINUTES),
+				endTime.minus(1, ChronoUnit.MINUTES));
+	}
+
+	private void assertRange(Instant expectedStartTime, Instant expectedEndTime, Optional<TimeRelation> queryRelation, Optional<Integer> optionalLastN) {
+		MutableHttpRequest request = HttpRequest.GET("/temporal/entities/" + LIMITED_ENTITY_ID);
+		request.getParameters().add("attrs", "temperature,open,storeName,polygon,multiPolygon,lineString,multiLineString,propertyWithSubProperty,relatedEntity");
+		String expectedRangeHeader = getRangeHeader(expectedStartTime, expectedEndTime, optionalLastN);
+		if (queryRelation.isPresent()) {
+			switch (queryRelation.get()) {
+				case BETWEEN:
+					request.getParameters()
+							.add("timerel", TimeRelation.BETWEEN.name())
+							.add("timeAt", LocalDateTime.ofInstant(expectedStartTime, ZoneOffset.UTC).toString())
+							.add("endTimeAt", LocalDateTime.ofInstant(expectedEndTime, ZoneOffset.UTC).toString());
+					expectedEndTime = expectedEndTime.minus(1, ChronoUnit.MINUTES);
+					expectedStartTime = expectedStartTime.plus(1, ChronoUnit.MINUTES);
+					break;
+				case BEFORE:
+					request.getParameters()
+							.add("timerel", TimeRelation.BEFORE.name())
+							.add("timeAt", LocalDateTime.ofInstant(expectedEndTime, ZoneOffset.UTC).toString());
+					expectedEndTime = expectedEndTime.minus(1, ChronoUnit.MINUTES);
+					break;
+				case AFTER:
+					request.getParameters()
+							.add("timerel", TimeRelation.AFTER.name())
+							.add("timeAt", LocalDateTime.ofInstant(expectedStartTime, ZoneOffset.UTC).toString());
+					expectedStartTime = expectedStartTime.plus(1, ChronoUnit.MINUTES);
+					break;
+			}
+		}
+
+		optionalLastN.ifPresent(lastN -> request.getParameters().add("lastN", lastN.toString()));
+
+		HttpResponse<Map<String, Object>> response = mintakaTestClient.toBlocking().exchange(request, Map.class);
+		assertEquals(HttpStatus.PARTIAL_CONTENT, response.getStatus(), "Only parts of the history should be returned.");
+		assertDefaultStoreTemporalEntity(LIMITED_ENTITY_ID, response.body());
+		String rangeHeader = response.getHeaders().get("Content-Range");
+		assertEquals(
+				expectedRangeHeader,
+				rangeHeader,
+				"Range header should contain the retrieved range.");
+		assertAttributesInMap(response.body(),
+				List.of("temperature", "open", "storeName", "polygon", "multiPolygon", "lineString", "multiLineString", "propertyWithSubProperty", "relatedEntity"),
+				111,
+				expectedStartTime,
+				expectedEndTime);
+	}
+
+	private String getRangeHeader(Instant start, Instant end, Optional<Integer> lastN) {
+		String size = lastN.map(Object::toString).orElse("*");
+		String headerTemplate = "date-time %s-%s/%s";
+
+		if (lastN.isPresent()) {
+			return String.format(headerTemplate, LocalDateTime.ofInstant(end, ZoneOffset.UTC), LocalDateTime.ofInstant(start, ZoneOffset.UTC), size);
+		} else {
+			return String.format(headerTemplate, LocalDateTime.ofInstant(start, ZoneOffset.UTC), LocalDateTime.ofInstant(end, ZoneOffset.UTC), size);
+		}
+	}
 }

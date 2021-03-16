@@ -16,10 +16,10 @@ import javax.inject.Singleton;
 @Singleton
 @Requires(classes = {StringExpansionException.class, ExceptionHandler.class})
 @Slf4j
-public class AttributeExpansionExceptionHandler implements ExceptionHandler<StringExpansionException, HttpResponse> {
+public class AttributeExpansionExceptionHandler implements ExceptionHandler<StringExpansionException, HttpResponse<String>> {
 
 	@Override
-	public HttpResponse handle(HttpRequest request, StringExpansionException exception) {
+	public HttpResponse<String> handle(HttpRequest request, StringExpansionException exception) {
 		log.warn("Was not able to expand attributes.");
 		log.debug("Expansion error: ", exception);
 		return HttpResponse.badRequest(String.format("Was not able to expand requested attributes with the given context. Error: %s", exception.getMessage()));

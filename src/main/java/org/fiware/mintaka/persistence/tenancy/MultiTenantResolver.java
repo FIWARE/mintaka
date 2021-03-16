@@ -5,9 +5,7 @@ import io.micronaut.multitenancy.tenantresolver.TenantResolver;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.context.spi.CurrentTenantIdentifierResolver;
 
-import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.io.Serializable;
 
 /**
  * Tenant provider for datasource selection. Returns a default tenant in case none is given.

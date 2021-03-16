@@ -6,7 +6,6 @@ import com.apicatalog.jsonld.document.JsonDocument;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.jsonldjava.core.JsonLdConsts;
-import com.github.jsonldjava.core.JsonLdOptions;
 import com.github.jsonldjava.core.JsonLdProcessor;
 import com.github.jsonldjava.utils.JsonUtils;
 import io.micronaut.cache.annotation.CacheConfig;
@@ -14,14 +13,15 @@ import io.micronaut.cache.annotation.Cacheable;
 import io.micronaut.context.annotation.Context;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.fiware.mintaka.exception.StringExpansionException;
 import org.fiware.mintaka.exception.ContextRetrievalException;
+import org.fiware.mintaka.exception.StringExpansionException;
 
 import javax.annotation.PostConstruct;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
@@ -63,13 +63,15 @@ public class LdContextCache {
 	 */
 	@Cacheable
 	public Object getContextFromURL(URL url) {
-		if (url.equals(coreContextUrl)) {
-			return coreContext;
-		}
 		try {
+			if (url.toURI().equals(coreContextUrl.toURI())) {
+				return coreContext;
+			}
 			return JsonUtils.fromURLJavaNet(url);
 		} catch (IOException e) {
 			throw new ContextRetrievalException(String.format("Was not able to retrieve context from %s.", url), e);
+		} catch (URISyntaxException uriSyntaxException) {
+			throw new ContextRetrievalException(String.format("Received an invalid url: %s", url), uriSyntaxException);
 		}
 	}
 
@@ -189,8 +191,7 @@ public class LdContextCache {
 						throw new ContextRetrievalException("Was not able to get context url from the Link-header.", e);
 					}
 				})
-				// core-context needs to be first, so that it can be overwritten by the provided context.
-				.map(url -> List.of(coreContextUrl, url)).orElse(List.of(coreContextUrl));
+				.map(url -> List.of(url, coreContextUrl)).orElse(List.of(coreContextUrl));
 	}
 
 	// extract the Id from the expanded object

@@ -44,7 +44,8 @@ public class ComparisonTerm extends QueryTerm {
 	private static final String UNIT_CODE = "unitCode";
 
 	private static final DateFormat TIME_FORMAT = new SimpleDateFormat("hh:mm:ss,ssssssZ");
-	private static final DateFormat DATE_FORMAT = new SimpleDateFormat("YYYY-MM-DD");
+	private static final DateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-DD");
+	public static final String WELL_KNOWN_QUERY_TEMPLATE = " %s:%s'%s'";
 
 	private final ComparisonOperator operator;
 	private final String attributePath;
@@ -74,6 +75,7 @@ public class ComparisonTerm extends QueryTerm {
 
 	/**
 	 * Return the expanded version of the attribute from the term.
+	 *
 	 * @return the attribute path, expanded according to the current context.
 	 */
 	public String getAttributePath() {
@@ -181,15 +183,15 @@ public class ComparisonTerm extends QueryTerm {
 			}
 			Optional<String> optionalDateTimeValue = getDateTimeValue();
 			if (optionalDateTimeValue.isPresent()) {
-				return Optional.of(String.format(" %s:%s'%s'", attributePath, operator.getDbOperator(), optionalDateTimeValue.get()));
+				return Optional.of(String.format(WELL_KNOWN_QUERY_TEMPLATE, attributePath, operator.getDbOperator(), optionalDateTimeValue.get()));
 
 			}
 			Optional<String> optionalDateValue = getDateValue();
 			if (optionalDateValue.isPresent()) {
-				return Optional.of(String.format(" %s:%s'%s'", attributePath, operator.getDbOperator(), optionalDateValue.get()));
+				return Optional.of(String.format(WELL_KNOWN_QUERY_TEMPLATE, attributePath, operator.getDbOperator(), optionalDateValue.get()));
 			}
 		} else if (attributePath.equals(UNIT_CODE) || attributePath.equals(DATA_SET_ID)) {
-			return Optional.of(String.format(" %s:%s'%s'", attributePath, operator.getDbOperator(), comparisonValue));
+			return Optional.of(String.format(WELL_KNOWN_QUERY_TEMPLATE, attributePath, operator.getDbOperator(), comparisonValue));
 		}
 		return Optional.empty();
 	}
@@ -273,11 +275,11 @@ public class ComparisonTerm extends QueryTerm {
 				.split(COMMA_SEPERATOR);
 
 		StringJoiner selectionJoiner = new StringJoiner("OR ", "(", ") ");
-		getBooleanListQuery(splittedList).ifPresent(query -> selectionJoiner.add(query));
-		getNumberListQuery(splittedList).ifPresent(query -> selectionJoiner.add(query));
-		getTimeListQuery(splittedList).ifPresent(query -> selectionJoiner.add(query));
-		getStringListQuery(splittedList).ifPresent(query -> selectionJoiner.add(query));
-		getDateTimeListQuery(splittedList).ifPresent(query -> selectionJoiner.add(query));
+		getBooleanListQuery(splittedList).ifPresent(selectionJoiner::add);
+		getNumberListQuery(splittedList).ifPresent(selectionJoiner::add);
+		getTimeListQuery(splittedList).ifPresent(selectionJoiner::add);
+		getStringListQuery(splittedList).ifPresent(selectionJoiner::add);
+		getDateTimeListQuery(splittedList).ifPresent(selectionJoiner::add);
 
 
 		return Optional.of(selectionJoiner.toString());
@@ -342,7 +344,7 @@ public class ComparisonTerm extends QueryTerm {
 				.map(Optional::get)
 				.collect(Collectors.toList());
 		dateValues.addAll(dateTimeValues);
-		String queryList = dateValues.stream().map(value -> String.format("'%s'")).collect(Collectors.joining(",", "(", ")"));
+		String queryList = dateValues.stream().map(value -> String.format("'%s'", value)).collect(Collectors.joining(",", "(", ")"));
 		return stringListOrEmpty("datetime in %s", queryList);
 	}
 

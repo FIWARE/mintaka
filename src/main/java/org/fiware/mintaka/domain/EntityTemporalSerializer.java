@@ -6,7 +6,6 @@ import com.apicatalog.jsonld.api.CompactionApi;
 import com.apicatalog.jsonld.document.Document;
 import com.apicatalog.jsonld.document.JsonDocument;
 import com.apicatalog.jsonld.loader.DocumentLoader;
-import com.apicatalog.jsonld.loader.HttpLoader;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,7 +13,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.jsonldjava.core.JsonLdOptions;
-import com.github.jsonldjava.utils.Obj;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.context.ServerRequestContext;
 import jakarta.json.Json;
@@ -23,7 +21,6 @@ import jakarta.json.JsonObject;
 import jakarta.json.JsonObjectBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.impl.client.DefaultHttpClient;
 import org.fiware.mintaka.context.LdContextCache;
 import org.fiware.mintaka.domain.query.temporal.TimeStampType;
 import org.fiware.ngsi.model.EntityTemporalVO;
@@ -32,7 +29,6 @@ import javax.inject.Singleton;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URL;
-import java.net.http.HttpClient;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -54,7 +50,6 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 
 	// we cannot take the bean from the context, since that will be circular reference, e.g. stack-overflow
 	private final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
 	{
 		OBJECT_MAPPER.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 		OBJECT_MAPPER.registerModule(new JavaTimeModule());
@@ -118,7 +113,7 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 		if (optionalTimeProperty.isEmpty()) {
 			return TimeStampType.OBSERVED_AT;
 		}
-		return TimeStampType.valueOf(optionalTimeProperty.get());
+		return TimeStampType.getEnum(optionalTimeProperty.get());
 	}
 
 	private boolean isTemporalValuesOptionSet() {

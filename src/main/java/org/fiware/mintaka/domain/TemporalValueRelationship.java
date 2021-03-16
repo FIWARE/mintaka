@@ -1,11 +1,10 @@
 package org.fiware.mintaka.domain;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.util.List;
-
-import static org.fiware.mintaka.domain.TemporalValuesEntity.JSON_PROPERTY_TYPE;
 
 /**
  * Temporal representation of a relationship according to the NGSI-LD spec
