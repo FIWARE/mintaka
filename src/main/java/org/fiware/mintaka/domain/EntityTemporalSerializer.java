@@ -44,12 +44,14 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 	private static final String OPTIONS_KEY = "options";
 	private static final String TIME_PROPERTY_KEY = "timeproperty";
 	private static final String TEMPORAL_VALUES_OPTION = "temporalValues";
+	public static final String CONTEXT_KEY = "@context";
 
 	private final DocumentLoader documentLoader;
 	private final TemporalValuesMapper temporalValuesMapper;
 
 	// we cannot take the bean from the context, since that will be circular reference, e.g. stack-overflow
 	private final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
 	{
 		OBJECT_MAPPER.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 		OBJECT_MAPPER.registerModule(new JavaTimeModule());
@@ -70,6 +72,7 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 	public void serialize(EntityTemporalVO value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
 
 		try {
+			AcceptType acceptType = getAcceptType();
 			Object contextObject = value.atContext();
 			String jsonString;
 			// decide about the representation type.
@@ -85,14 +88,19 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 
 			// create an builder for the compacted object
 			JsonObjectBuilder compactedJsonBuilder = Json.createObjectBuilder(jsonObject);
+
+			if (acceptType == AcceptType.JSON) {
+				compactedJsonBuilder.remove(CONTEXT_KEY);
+			}
+
 			// add the context as URL instead of fully embed it.
-			if (contextObject instanceof URL) {
-				compactedJsonBuilder.add("@context", contextObject.toString());
-			} else if (contextObject instanceof List) {
+			if (acceptType == AcceptType.JSON_LD && contextObject instanceof URL) {
+				compactedJsonBuilder.add(CONTEXT_KEY, contextObject.toString());
+			} else if (acceptType == AcceptType.JSON_LD && contextObject instanceof List) {
 				JsonArrayBuilder contextArrayBuilder = Json.createArrayBuilder();
 				((List<URL>) contextObject).forEach(contextItem -> contextArrayBuilder.add(contextItem.toString()));
-				compactedJsonBuilder.add("@context", contextArrayBuilder);
-			} else {
+				compactedJsonBuilder.add(CONTEXT_KEY, contextArrayBuilder);
+			} else if(acceptType == AcceptType.JSON_LD) {
 				throw new IllegalArgumentException(String.format("Context is invalid: %s", value.atContext()));
 			}
 			// build and write the serialized object back to the generator
@@ -102,7 +110,8 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 			// bubble to fulfill interface
 			throw e;
 		} catch (JsonLdError jsonLdError) {
-			jsonLdError.printStackTrace();
+			log.error("Was not able to deserialize object", jsonLdError);
+			throw new RuntimeException(jsonLdError);
 		}
 	}
 
@@ -124,6 +133,14 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 			return false;
 		}
 		return Arrays.stream(optionalOptions.get().split(",")).anyMatch(TEMPORAL_VALUES_OPTION::equals);
+	}
+
+	private AcceptType getAcceptType() {
+		return ServerRequestContext.currentRequest()
+				.map(HttpRequest::getHeaders)
+				.map(headers -> headers.get("Accept"))
+				.map(AcceptType::getEnum)
+				.orElse(AcceptType.JSON_LD);
 	}
 
 }

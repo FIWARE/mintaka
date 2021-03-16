@@ -13,6 +13,7 @@ import io.micronaut.http.client.exceptions.HttpClientResponseException;
 import io.micronaut.http.client.netty.DefaultHttpClient;
 import io.micronaut.runtime.server.EmbeddedServer;
 import lombok.extern.slf4j.Slf4j;
+import org.fiware.mintaka.domain.AcceptType;
 import org.fiware.ngsi.api.EntitiesApiTestClient;
 import org.fiware.ngsi.model.*;
 import org.junit.jupiter.api.BeforeAll;
@@ -144,17 +145,29 @@ public abstract class ComposeTest {
 	protected static Stream<Arguments> provideFullEntityAttributeStrings() {
 		return FULL_ENTITY_ATTRIBUTES_LIST
 				.stream()
-				.flatMap(attribute -> Stream.of(Arguments.of(attribute, ENTITY_ID), Arguments.of(attribute, DELETED_ENTITY_ID)));
+				.flatMap(attribute -> Stream.of(
+						Arguments.of(attribute, ENTITY_ID, AcceptType.JSON),
+						Arguments.of(attribute, DELETED_ENTITY_ID, AcceptType.JSON),
+						Arguments.of(attribute, ENTITY_ID, AcceptType.JSON_LD),
+						Arguments.of(attribute, DELETED_ENTITY_ID, AcceptType.JSON_LD)));
 	}
 
 	protected static Stream<Arguments> provideCombinedAttributeStrings() {
 		return Lists.partition(FULL_ENTITY_ATTRIBUTES_LIST, 3)
 				.stream()
-				.flatMap(attribute -> Stream.of(Arguments.of(attribute, ENTITY_ID), Arguments.of(attribute, DELETED_ENTITY_ID)));
+				.flatMap(attribute -> Stream.of(
+						Arguments.of(attribute, ENTITY_ID, AcceptType.JSON_LD),
+						Arguments.of(attribute, DELETED_ENTITY_ID, AcceptType.JSON_LD),
+						Arguments.of(attribute, ENTITY_ID, AcceptType.JSON),
+						Arguments.of(attribute, DELETED_ENTITY_ID, AcceptType.JSON)));
 	}
 
 	protected static Stream<Arguments> provideEntityIds() {
-		return Stream.of(Arguments.of(ENTITY_ID), Arguments.of(DELETED_ENTITY_ID));
+		return Stream.of(
+				Arguments.of(ENTITY_ID, AcceptType.JSON),
+				Arguments.of(ENTITY_ID, AcceptType.JSON_LD),
+				Arguments.of(DELETED_ENTITY_ID, AcceptType.JSON),
+				Arguments.of(DELETED_ENTITY_ID, AcceptType.JSON_LD));
 	}
 
 	// assertions
@@ -312,12 +325,17 @@ public abstract class ComposeTest {
 
 	}
 
-	protected void assertDefaultStoreTemporalEntity(URI entityId, Map<String, Object> entityTemporalMap) {
+	protected void assertDefaultStoreTemporalEntity(URI entityId, Map<String, Object> entityTemporalMap, AcceptType acceptType) {
 		assertNotNull(entityTemporalMap, "A temporal entity should have been returned.");
 
-		assertEquals("https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld",
-				entityTemporalMap.get(JsonLdConsts.CONTEXT),
-				"The core context should be present if nothing else is requested.");
+		if (acceptType == AcceptType.JSON_LD) {
+			assertEquals("https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld",
+					entityTemporalMap.get(JsonLdConsts.CONTEXT),
+					"The core context should be present if nothing else is requested.");
+		} else {
+			assertNull(entityTemporalMap.get(JsonLdConsts.CONTEXT),
+					"For accept type json, nothing should be returned");
+		}
 		assertEquals("store", entityTemporalMap.get("type"), "The correct type of the entity should be retrieved.");
 		assertEquals(entityTemporalMap.get("id"), entityId.toString(), "The requested entity should have been retrieved.");
 	}

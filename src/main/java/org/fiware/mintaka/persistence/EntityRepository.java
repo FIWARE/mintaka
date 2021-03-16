@@ -24,6 +24,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -173,6 +174,8 @@ public class EntityRepository {
 				.filter(queryResult -> queryResult.size() == 4)
 				.filter(queryResult -> (Boolean) queryResult.get(0))
 				.map(this::mapQueryResultToPojo)
+				.filter(Optional::isPresent)
+				.map(Optional::get)
 				.collect(Collectors.toList());
 	}
 
@@ -256,16 +259,17 @@ public class EntityRepository {
 	/**
 	 * Map a query result of form result::boolean-entityId::string-startTime::timestamp-endTime::timestamp to a temporary result object.
 	 */
-	private EntityIdTempResults mapQueryResultToPojo(List<Object> queryResult) {
+	private Optional<EntityIdTempResults> mapQueryResultToPojo(List<Object> queryResult) {
 		if (!(queryResult.get(1) instanceof String)) {
 			throw new PersistenceRetrievalException(String.format("The query-result contains a non-string id: %s", queryResult.get(0)));
 		}
 		if (!(queryResult.get(2) instanceof Timestamp) || !(queryResult.get(3) instanceof Timestamp)) {
-			throw new PersistenceRetrievalException(String.format("The query-result contains a non-timestamp time. Start: %s, End: %s", queryResult.get(2), queryResult.get(3)));
+			log.info("The query-result contains a non-timestamp time. Start: {}, End: {}", queryResult.get(2), queryResult.get(3));
+			return Optional.empty();
 		}
 		Instant startTime = ((Timestamp) queryResult.get(2)).toLocalDateTime().toInstant(ZoneOffset.UTC);
 		Instant endTime = ((Timestamp) queryResult.get(3)).toLocalDateTime().toInstant(ZoneOffset.UTC);
-		return new EntityIdTempResults((String) queryResult.get(1), startTime, endTime);
+		return Optional.of(new EntityIdTempResults((String) queryResult.get(1), startTime, endTime));
 	}
 
 	/**

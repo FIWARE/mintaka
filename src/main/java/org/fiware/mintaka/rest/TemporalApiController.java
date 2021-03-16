@@ -1,12 +1,15 @@
 package org.fiware.mintaka.rest;
 
+import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.MutableHttpResponse;
 import io.micronaut.http.annotation.Controller;
+import io.micronaut.http.context.ServerRequestContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.fiware.mintaka.context.LdContextCache;
+import org.fiware.mintaka.domain.AcceptType;
 import org.fiware.mintaka.domain.ApiDomainMapper;
 import org.fiware.mintaka.domain.PaginationInformation;
 import org.fiware.mintaka.domain.query.geo.GeoQuery;
@@ -61,8 +64,10 @@ public class TemporalApiController implements TemporalRetrievalApi {
 	private static final String SYS_ATTRS_OPTION = "sysAttrs";
 	private static final String TEMPORAL_VALUES_OPTION = "temporalValues";
 	private static final String COUNT_OPTION = "count";
+	private static final String LINK_HEADER_TEMPLATE = "<%s>; rel=\"http://www.w3.org/ns/json-ld#context\"; type=\"application/ld+json";
 	public static final String COMMA_SEPERATOR = ",";
 	public static final String TIMERELATION_ERROR_MSG_TEMPLATE = "The given timestamp type is not supported: %s";
+
 
 	private final EntityTemporalService entityTemporalService;
 	private final LdContextCache contextCache;
@@ -70,7 +75,7 @@ public class TemporalApiController implements TemporalRetrievalApi {
 	private final ApiDomainMapper apiDomainMapper;
 
 	@Override
-	public HttpResponse<EntityTemporalListVO> queryTemporalEntities(
+	public HttpResponse<Object> queryTemporalEntities(
 			@Nullable String link,
 			@Nullable String id,
 			@Nullable String idPattern,
@@ -90,6 +95,8 @@ public class TemporalApiController implements TemporalRetrievalApi {
 			URI pageAnchor,
 			@Nullable String options,
 			@Nullable @Min(1) Integer lastN) {
+
+		AcceptType acceptType = getAcceptType();
 
 		List<URL> contextUrls = contextCache.getContextURLsFromLinkHeader(link);
 		String expandedGeoProperty = Optional.ofNullable(geoproperty)
@@ -131,12 +138,12 @@ public class TemporalApiController implements TemporalRetrievalApi {
 
 		EntityTemporalListVO entityTemporalListVO = new EntityTemporalListVO();
 		entityTemporalListVO.addAll(entityTemporalVOS);
-		MutableHttpResponse<EntityTemporalListVO> mutableHttpResponse;
+		MutableHttpResponse<Object> mutableHttpResponse;
 		if (limitableResult.isLimited()) {
 			Range range = getRange(getTimestampListFromEntityTemporalList(entityTemporalVOS, timeQuery), timeQuery, lastN);
 			mutableHttpResponse = HttpResponse
 					.status(HttpStatus.PARTIAL_CONTENT)
-					.body(entityTemporalListVO)
+					.body((Object) entityTemporalListVO)
 					.header(CONTENT_RANGE_HEADER_KEY, getContentRange(range, lastN));
 		} else {
 			mutableHttpResponse = HttpResponse.ok(entityTemporalListVO);
@@ -151,11 +158,15 @@ public class TemporalApiController implements TemporalRetrievalApi {
 			Number totalCount = entityTemporalService.countMatchingEntities(optionalIdList, optionalIdPattern, expandedTypes, optionalQuery, optionalGeoQuery, timeQuery);
 			mutableHttpResponse.header("NGSILD-Total-Count", totalCount.toString());
 		}
+
+		if (acceptType == AcceptType.JSON) {
+			mutableHttpResponse.header("Link", getLinkHeader(contextUrls));
+		}
 		return mutableHttpResponse;
 	}
 
 	@Override
-	public HttpResponse<EntityTemporalVO> retrieveEntityTemporalById(
+	public HttpResponse<Object> retrieveEntityTemporalById(
 			URI entityId,
 			@Nullable String link,
 			@Nullable @Size(min = 1) String attrs,
@@ -166,6 +177,7 @@ public class TemporalApiController implements TemporalRetrievalApi {
 			@Nullable Instant endTimeAt,
 			@Nullable @Min(1) Integer lastN) {
 
+		AcceptType acceptType = getAcceptType();
 		List<URL> contextUrls = contextCache.getContextURLsFromLinkHeader(link);
 		TimeQuery timeQuery = new TimeQuery(apiDomainMapper.timeRelVoToTimeRelation(timerel), timeAt, endTimeAt, getTimeRelevantProperty(timeproperty));
 
@@ -181,20 +193,30 @@ public class TemporalApiController implements TemporalRetrievalApi {
 			return HttpResponse.notFound();
 		}
 
+		MutableHttpResponse mutableHttpResponse;
 		LimitableResult<EntityTemporalVO> limitableResult = optionalLimitableResult.get();
 		if (limitableResult.isLimited()) {
 			Range range = getRange(getTimestampListFromEntityTemporal(limitableResult.getResult(), timeQuery), timeQuery, lastN);
-			return HttpResponse
+			mutableHttpResponse = HttpResponse
 					.status(HttpStatus.PARTIAL_CONTENT)
-					.body(addContextToEntityTemporalVO(limitableResult.getResult(), contextUrls))
+					.body((Object) addContextToEntityTemporalVO(limitableResult.getResult(), contextUrls))
 					.header(CONTENT_RANGE_HEADER_KEY, getContentRange(range, lastN));
 		} else {
-			return HttpResponse.ok(addContextToEntityTemporalVO(limitableResult.getResult(), contextUrls));
+			mutableHttpResponse = HttpResponse.ok(addContextToEntityTemporalVO(limitableResult.getResult(), contextUrls));
 		}
+		if (acceptType == AcceptType.JSON) {
+			mutableHttpResponse.header("Link", getLinkHeader(contextUrls));
+		}
+		return mutableHttpResponse;
 	}
 
 	private List<String> getIdList(String id) {
 		return Arrays.asList(id.split(","));
+	}
+
+	private String getLinkHeader(List<URL> contextUrls) {
+		// its either core or the current, since core is always the latest entry
+		return String.format(LINK_HEADER_TEMPLATE, contextUrls.get(0));
 	}
 
 	private String getContentRange(Range range, Integer lastN) {
@@ -417,5 +439,13 @@ public class TemporalApiController implements TemporalRetrievalApi {
 		}
 
 		return Optional.of(new GeoQuery(georel, Geometry.byName(geometry), coordinates, geoproperty));
+	}
+
+	private AcceptType getAcceptType() {
+		return ServerRequestContext.currentRequest()
+				.map(HttpRequest::getHeaders)
+				.map(headers -> headers.get("Accept"))
+				.map(AcceptType::getEnum)
+				.orElse(AcceptType.JSON_LD);
 	}
 }

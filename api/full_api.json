@@ -1421,6 +1421,11 @@
                     "externalValue": "http://localhost:8090/examples/EntityTemporalList-example.json"
                   }
                 }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityTemporalList"
+                }
               }
             }
           },
@@ -1548,6 +1553,11 @@
                   "simple": {
                     "externalValue": "http://localhost:8090/examples/EntityTemporal-example_C5.5.3.json"
                   }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityTemporal"
                 }
               }
             }
