@@ -23,6 +23,7 @@ services:
     healthcheck:
       test: curl --fail -s http://orion:1026/version || exit 1
       interval: 30s
+      retries: 15
 
 
   # Databases
