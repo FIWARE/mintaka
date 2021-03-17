@@ -172,11 +172,11 @@ public abstract class ComposeTest {
 
 	// assertions
 
-	protected void assertAttributesBetween(List<String> attributesList, URI entityId) {
-		assertAttributesBetweenWithLastN(attributesList, null, entityId);
+	protected void assertAttributesBetween(List<String> attributesList, URI entityId, AcceptType acceptType) {
+		assertAttributesBetweenWithLastN(attributesList, null, entityId, acceptType);
 	}
 
-	protected void assertAttributesBetweenWithLastN(List<String> attributesList, Integer lastN, URI entityId) {
+	protected void assertAttributesBetweenWithLastN(List<String> attributesList, Integer lastN, URI entityId, AcceptType acceptType) {
 		String timerelation = "between";
 		String startTime = "1970-01-01T00:30:00Z";
 		String endTime = "1970-01-01T00:45:00Z";
@@ -188,6 +188,7 @@ public abstract class ComposeTest {
 				.add("timerel", timerelation)
 				.add("timeAt", startTime)
 				.add("endTimeAt", endTime);
+		getRequest.getHeaders().add("Accept", acceptType.getValue());
 
 		if (attributesList != FULL_ENTITY_ATTRIBUTES_LIST) {
 			getRequest.getParameters().add("attrs", attributesParam);
@@ -205,7 +206,11 @@ public abstract class ComposeTest {
 		Integer expectedInstances = lastN != null ? lastN : 14;
 
 		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
-		assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
+		if(acceptType == AcceptType.JSON_LD){
+			assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
+		} else {
+			assertEquals(attributesList.size() + 2, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
+		}
 		assertAttributesInMap(
 				entityTemporalMap,
 				attributesList,
@@ -214,11 +219,11 @@ public abstract class ComposeTest {
 				START_TIME_STAMP.plus(44, ChronoUnit.MINUTES));
 	}
 
-	protected void assertAttributesBefore(List<String> attributesList) {
-		assertAttributesBeforeWithLastN(attributesList, null);
+	protected void assertAttributesBefore(List<String> attributesList, AcceptType acceptType) {
+		assertAttributesBeforeWithLastN(attributesList, null, acceptType);
 	}
 
-	protected void assertAttributesBeforeWithLastN(List<String> attributesList, Integer lastN) {
+	protected void assertAttributesBeforeWithLastN(List<String> attributesList, Integer lastN, AcceptType acceptType) {
 		String timerelation = "before";
 		String time = "1970-01-01T00:30:00Z";
 
@@ -228,7 +233,7 @@ public abstract class ComposeTest {
 		getRequest.getParameters()
 				.add("timerel", timerelation)
 				.add("timeAt", time);
-
+		getRequest.getHeaders().add("Accept", acceptType.getValue());
 		if (attributesList != FULL_ENTITY_ATTRIBUTES_LIST) {
 			getRequest.getParameters().add("attrs", attributesParam);
 		}
@@ -244,7 +249,11 @@ public abstract class ComposeTest {
 		Integer expectedInstances = lastN != null ? lastN : 30;
 
 		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
-		assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the requested attribute should have been returned.");
+		if(acceptType == AcceptType.JSON_LD) {
+			assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the requested attribute should have been returned.");
+		} else {
+			assertEquals(attributesList.size() + 2, entityTemporalMap.size(), "Only id, type, context and the requested attribute should have been returned.");
+		}
 		assertAttributesInMap(
 				entityTemporalMap,
 				attributesList,
@@ -253,11 +262,11 @@ public abstract class ComposeTest {
 				START_TIME_STAMP.plus(29, ChronoUnit.MINUTES));
 	}
 
-	protected void assertAttributesAfter(List<String> attributesList) {
-		assertAttributesAfterWithLastN(attributesList, null);
+	protected void assertAttributesAfter(List<String> attributesList, AcceptType acceptType) {
+		assertAttributesAfterWithLastN(attributesList, null, acceptType);
 	}
 
-	protected void assertAttributesAfterWithLastN(List<String> attributesList, Integer lastN) {
+	protected void assertAttributesAfterWithLastN(List<String> attributesList, Integer lastN, AcceptType acceptType) {
 		String timerelation = "after";
 		String time = "1970-01-01T00:30:00Z";
 
@@ -267,6 +276,7 @@ public abstract class ComposeTest {
 		getRequest.getParameters()
 				.add("timerel", timerelation)
 				.add("timeAt", time);
+		getRequest.getHeaders().add("Accept", acceptType.getValue());
 		if (attributesList != FULL_ENTITY_ATTRIBUTES_LIST) {
 			getRequest.getParameters().add("attrs", attributesParam);
 		}
@@ -283,7 +293,11 @@ public abstract class ComposeTest {
 		Integer expectedInstances = lastN != null ? lastN : 80;
 
 		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
-		assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
+		if(acceptType == AcceptType.JSON_LD) {
+			assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
+		} else {
+			assertEquals(attributesList.size() + 2, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
+		}
 		assertAttributesInMap(
 				entityTemporalMap,
 				attributesList,

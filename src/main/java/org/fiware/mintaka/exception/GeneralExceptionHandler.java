@@ -10,16 +10,16 @@ import lombok.extern.slf4j.Slf4j;
 import javax.inject.Singleton;
 
 /**
- * Handler to map errors on attribute extension to matching responses
+ * Handler to catch all not specifically(unexpected) handled exceptions and map them NGSI compliant.
  */
 @Produces
 @Singleton
-@Requires(classes = {StringExpansionException.class, ExceptionHandler.class})
+@Requires(classes = {Exception.class, ExceptionHandler.class})
 @Slf4j
-public class AttributeExpansionExceptionHandler extends NGSICompliantExceptionHandler<StringExpansionException> {
+public class GeneralExceptionHandler extends NGSICompliantExceptionHandler<Exception> {
 
 	private static final ErrorType ASSOCIATED_ERROR = ErrorType.INTERNAL_ERROR;
-	private static final String ERROR_TITLE = " Attribute expansion failed.";
+	private static final String ERROR_TITLE = "Unexpected error.";
 
 	@Override
 	public ErrorType getAssociatedErrorType() {
@@ -37,7 +37,7 @@ public class AttributeExpansionExceptionHandler extends NGSICompliantExceptionHa
 	}
 
 	@Override
-	public String getInstance(HttpRequest request, StringExpansionException exception) {
+	public String getInstance(HttpRequest request, Exception exception) {
 		return null;
 	}
 }

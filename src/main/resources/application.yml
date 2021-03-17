@@ -21,6 +21,8 @@ micronaut:
 
 ---
 endpoints:
+  all:
+    port: 9090
   metrics:
     enabled: true
   health:
@@ -50,9 +52,5 @@ jpa:
         show_sql: false
 
 loggers:
-  level:
-    root: ERROR
-    org:
-      fiware:
-        mintaka:
-          persistence: WARN
+  levels:
+    ROOT: ERROR

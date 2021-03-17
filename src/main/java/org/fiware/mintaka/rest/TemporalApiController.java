@@ -446,6 +446,6 @@ public class TemporalApiController implements TemporalRetrievalApi {
 				.map(HttpRequest::getHeaders)
 				.map(headers -> headers.get("Accept"))
 				.map(AcceptType::getEnum)
-				.orElse(AcceptType.JSON_LD);
+				.orElse(AcceptType.JSON);
 	}
 }

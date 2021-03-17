@@ -23,7 +23,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.fiware.mintaka.context.LdContextCache;
 import org.fiware.mintaka.domain.query.temporal.TimeStampType;
+import org.fiware.mintaka.exception.JacksonConversionException;
 import org.fiware.ngsi.model.EntityTemporalVO;
+import org.geojson.GeoJsonObject;
 
 import javax.inject.Singleton;
 import java.io.ByteArrayInputStream;
@@ -89,29 +91,33 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 			// create an builder for the compacted object
 			JsonObjectBuilder compactedJsonBuilder = Json.createObjectBuilder(jsonObject);
 
-			if (acceptType == AcceptType.JSON) {
-				compactedJsonBuilder.remove(CONTEXT_KEY);
+			String serializedString;
+			switch (acceptType) {
+				case JSON:
+					compactedJsonBuilder.remove(CONTEXT_KEY);
+					gen.writeRaw(compactedJsonBuilder.build().toString());
+					break;
+				case JSON_LD:
+					// add the context as URL instead of fully embed it.
+					if (contextObject instanceof URL) {
+						compactedJsonBuilder.add(CONTEXT_KEY, contextObject.toString());
+					} else if (contextObject instanceof List) {
+						JsonArrayBuilder contextArrayBuilder = Json.createArrayBuilder();
+						((List<URL>) contextObject).forEach(contextItem -> contextArrayBuilder.add(contextItem.toString()));
+						compactedJsonBuilder.add(CONTEXT_KEY, contextArrayBuilder);
+					} else {
+						throw new IllegalArgumentException(String.format("Context is invalid: %s", value.atContext()));
+					}
+					gen.writeRaw(compactedJsonBuilder.build().toString());
+					break;
 			}
-
-			// add the context as URL instead of fully embed it.
-			if (acceptType == AcceptType.JSON_LD && contextObject instanceof URL) {
-				compactedJsonBuilder.add(CONTEXT_KEY, contextObject.toString());
-			} else if (acceptType == AcceptType.JSON_LD && contextObject instanceof List) {
-				JsonArrayBuilder contextArrayBuilder = Json.createArrayBuilder();
-				((List<URL>) contextObject).forEach(contextItem -> contextArrayBuilder.add(contextItem.toString()));
-				compactedJsonBuilder.add(CONTEXT_KEY, contextArrayBuilder);
-			} else if(acceptType == AcceptType.JSON_LD) {
-				throw new IllegalArgumentException(String.format("Context is invalid: %s", value.atContext()));
-			}
-			// build and write the serialized object back to the generator
-			gen.writeRaw(compactedJsonBuilder.build().toString());
 		} catch (IOException e) {
 			log.error("Was not able to deserialize object", e);
 			// bubble to fulfill interface
-			throw e;
+			throw new JacksonConversionException("Was not able to deserialize the retrieved object.", e);
 		} catch (JsonLdError jsonLdError) {
 			log.error("Was not able to deserialize object", jsonLdError);
-			throw new RuntimeException(jsonLdError);
+			throw new JacksonConversionException(jsonLdError.getMessage());
 		}
 	}
 
@@ -140,7 +146,8 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 				.map(HttpRequest::getHeaders)
 				.map(headers -> headers.get("Accept"))
 				.map(AcceptType::getEnum)
-				.orElse(AcceptType.JSON_LD);
+				// according to NGSI-LD spec 6.3.4 is application/json the default
+				.orElse(AcceptType.JSON);
 	}
 
 }

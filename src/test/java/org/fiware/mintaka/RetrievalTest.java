@@ -7,6 +7,8 @@ import io.micronaut.http.MutableHttpRequest;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
 import org.fiware.mintaka.domain.AcceptType;
 import org.fiware.mintaka.domain.query.temporal.TimeRelation;
+import org.fiware.mintaka.exception.ErrorType;
+import org.fiware.mintaka.exception.ProblemDetails;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -37,13 +39,28 @@ public class RetrievalTest extends ComposeTest {
 		assertNotFound(HttpRequest.GET("/temporal/entities/rn:ngsi-ld:store:not-found"), "For non existing entities a 404 should be returned.");
 	}
 
+	@DisplayName("Retrieve for non existent tenant.")
+	@Test
+	public void testNonExistentTenant() {
+		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/" + ENTITY_ID);
+		getRequest.getHeaders().add("NGSILD-Tenant", "non_existent");
+		assertError(getRequest, ErrorType.NON_EXISTENT_TENANT, Optional.of("non_existent"));
+	}
+
 	@DisplayName("Requests with unsupported parameters should lead to a 400")
 	@Test
 	public void testGetWithUnsupportedParameter() {
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/" + ENTITY_ID);
 		getRequest.getParameters().add("myUnsupportedParam", "myValue");
 
-		assertBadRequest(getRequest);
+		assertError(getRequest, ErrorType.BAD_REQUEST_DATA, Optional.empty());
+	}
+
+	@DisplayName("Requests with unsupported method should lead to a 422")
+	@Test
+	public void testUnsupportedMethod() {
+		MutableHttpRequest getRequest = HttpRequest.POST("/temporal/entities/" + ENTITY_ID, "");
+		assertError(getRequest, ErrorType.OPERATION_NOT_SUPPORTED, Optional.empty());
 	}
 
 	@DisplayName("Request with invalid timerelation should lead to 400")
@@ -53,23 +70,28 @@ public class RetrievalTest extends ComposeTest {
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/" + ENTITY_ID);
 		parameter.entrySet().forEach(entry -> getRequest.getParameters().add(entry.getKey(), entry.getValue()));
 
-		assertBadRequest(getRequest);
+		assertError(getRequest, ErrorType.INVALID_REQUEST, Optional.empty());
 	}
 
-	private void assertBadRequest(MutableHttpRequest getRequest) {
+	private void assertError(MutableHttpRequest getRequest, ErrorType errorType, Optional<String> instanceId) {
 		try {
 			mintakaTestClient.toBlocking().exchange(getRequest);
+			fail("The request should have been rejected.");
 		} catch (HttpClientResponseException e) {
-			assertEquals(HttpStatus.BAD_REQUEST, e.getStatus(), "The request should have been rejected with a 400.");
-			return;
+			assertEquals(errorType.getStatus(), e.getStatus(), "The request should have been rejected.");
+			Optional<ProblemDetails> problemDetails = e.getResponse().getBody(ProblemDetails.class);
+			assertTrue(problemDetails.isPresent(), "Problem details should have been returned.");
+			assertEquals(errorType.getType(), problemDetails.get().getType(), "Correct error type should have been returned");
+			assertEquals(errorType.getStatus().getCode(), problemDetails.get().getStatus(), "Correct error status should have been returned.");
+			instanceId.ifPresent(iid -> assertEquals(iid, problemDetails.get().getInstance(), "Correct instance id should have been returned."));
 		}
-		fail("The request should have been rejected with a 400.");
 	}
 
 	private static Stream<Arguments> provideInvalidTimeRelations() {
 		return Stream.of(
 				Arguments.of(Map.of("timerel", "beforex", "timeAt", "1970-01-02T00:00:00Z")));
-//				Arguments.of(Map.of("timerel", "beorex")));
+		//TODO: update micronaut codegen for better enum errors.
+//		Arguments.of(Map.of("timerel", "beorex")));
 	}
 
 	@DisplayName("Retrieve entity without attributes if non-existent is requested.")
@@ -160,10 +182,10 @@ public class RetrievalTest extends ComposeTest {
 
 		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
 		assertDefaultStoreTemporalEntity(entityID, entityTemporalMap, acceptType);
-		if(acceptType == AcceptType.JSON_LD) {
+		if (acceptType == AcceptType.JSON_LD) {
 			assertEquals(4, entityTemporalMap.size(), "Only id, type, context and the open attribute should have been returned.");
 		} else {
-			assertEquals(3, entityTemporalMap.size(), "Only id, type, context and the open attribute should have been returned.");
+			assertEquals(3, entityTemporalMap.size(), "Only id, type and the open attribute should have been returned.");
 		}
 		List<Map<String, Object>> listRepresentation = retrieveListRepresentationForProperty(propertyToRetrieve, entityTemporalMap);
 
@@ -184,10 +206,10 @@ public class RetrievalTest extends ComposeTest {
 		getRequest.getHeaders().add("Accept", acceptType.getValue());
 		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
 		assertDefaultStoreTemporalEntity(entityId, entityTemporalMap, acceptType);
-		if(acceptType == AcceptType.JSON_LD) {
+		if (acceptType == AcceptType.JSON_LD) {
 			assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
 		} else {
-			assertEquals(attributesList.size() + 2, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
+			assertEquals(attributesList.size() + 2, entityTemporalMap.size(), "Only id, type and the attributes should have been returned.");
 		}
 		assertAttributesInMap(entityTemporalMap, attributesList, NUMBER_OF_UPDATES + 1, START_TIME_STAMP, START_TIME_STAMP.plus(NUMBER_OF_UPDATES, ChronoUnit.MINUTES));
 	}
@@ -197,65 +219,67 @@ public class RetrievalTest extends ComposeTest {
 	@ParameterizedTest
 	@MethodSource("provideEntityIds")
 	public void testGetEntityBetweenTimestamps(URI entityId, AcceptType acceptType) {
-		assertAttributesBetween(FULL_ENTITY_ATTRIBUTES_LIST, entityId);
+		assertAttributesBetween(FULL_ENTITY_ATTRIBUTES_LIST, entityId, acceptType);
 	}
 
 	@DisplayName("Retrieve the entity with the requested attribute between the timestamps, default context.")
 	@ParameterizedTest
 	@MethodSource("provideFullEntityAttributeStrings")
 	public void testGetEntityAttributesBetweenTimestamps(String attributeName, URI entityId, AcceptType acceptType) {
-		assertAttributesBetween(List.of(attributeName), entityId);
+		assertAttributesBetween(List.of(attributeName), entityId, acceptType);
 	}
 
 	@DisplayName("Retrieve the entity with the requested attributes between the timestamps, default context.")
 	@ParameterizedTest
 	@MethodSource("provideCombinedAttributeStrings")
-	public void testGetEntityMultipleAttributesBetweenTimestamps(List<String> subList, URI entityId) {
-		assertAttributesBetween(subList, entityId);
+	public void testGetEntityMultipleAttributesBetweenTimestamps(List<String> subList, URI entityId, AcceptType acceptType) {
+		assertAttributesBetween(subList, entityId, acceptType);
 	}
 
 
 	// before
 	@DisplayName("Retrieve the full entity before the timestamp, default context.")
-	@Test
-	public void testGetEntityBeforeTimestamp() {
-		assertAttributesBefore(FULL_ENTITY_ATTRIBUTES_LIST);
+	@ParameterizedTest
+	@EnumSource(AcceptType.class)
+	public void testGetEntityBeforeTimestamp(AcceptType acceptType) {
+		assertAttributesBefore(FULL_ENTITY_ATTRIBUTES_LIST, acceptType);
 	}
 
 	@DisplayName("Retrieve the entity with the requested attribute before the timestamp, default context.")
 	@ParameterizedTest
 	@MethodSource("provideFullEntityAttributeStrings")
 	public void testGetEntityAttributesBeforeTimestamps(String attributeName, URI entityId, AcceptType acceptType) {
-		assertAttributesBefore(List.of(attributeName));
+		assertAttributesBefore(List.of(attributeName), acceptType);
 	}
 
 	@DisplayName("Retrieve the entity with the requested attribute before the timestamp, default context.")
 	@ParameterizedTest
 	@MethodSource("provideCombinedAttributeStrings")
-	public void testGetEntityMultipleAttributesBeforeTimestamps(List<String> subList) {
-		assertAttributesBefore(subList);
+	public void testGetEntityMultipleAttributesBeforeTimestamps(List<String> subList, URI entityId, AcceptType acceptType) {
+		assertAttributesBefore(subList, acceptType);
 	}
 
 
 	// after
 	@DisplayName("Retrieve the full entity after the timestamp, default context.")
-	@Test
-	public void testGetEntityAfterTimestamp() {
-		assertAttributesAfter(FULL_ENTITY_ATTRIBUTES_LIST);
+	@EnumSource(AcceptType.class)
+	@ParameterizedTest
+	public void testGetEntityAfterTimestamp(AcceptType acceptType) {
+		assertAttributesAfter(FULL_ENTITY_ATTRIBUTES_LIST, acceptType);
 	}
 
 	@DisplayName("Retrieve the entity with the requested attribute after the timestamp, default context.")
 	@ParameterizedTest
 	@MethodSource("provideFullEntityAttributeStrings")
 	public void testGetEntityAttributesAfterTimestamps(String attributeName, URI entityId, AcceptType acceptType) {
-		assertAttributesAfter(List.of(attributeName));
+		assertAttributesAfter(List.of(attributeName), acceptType);
 	}
 
 	@DisplayName("Retrieve the entity with the requested attribute after the timestamp, default context.")
 	@ParameterizedTest
 	@MethodSource("provideCombinedAttributeStrings")
-	public void testGetEntityMultipleAttributesAfterTimestamps(List<String> subList) {
-		assertAttributesAfter(subList);
+	public void testGetEntityMultipleAttributesAfterTimestamps(List<String> subList, URI entityId, AcceptType acceptType) {
+		assertAttributesAfter(subList, acceptType);
 	}
 
 	// lastN
@@ -292,7 +316,7 @@ public class RetrievalTest extends ComposeTest {
 		getRequest.getHeaders().add("Accept", acceptType.getValue());
 		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
 		assertDefaultStoreTemporalEntity(ENTITY_ID, entityTemporalMap, acceptType);
-		if(acceptType == AcceptType.JSON_LD) {
+		if (acceptType == AcceptType.JSON_LD) {
 			assertEquals(4, entityTemporalMap.size(), "Only id, type, context and the open attribute should have been returned.");
 		} else {
 			assertEquals(3, entityTemporalMap.size(), "Only id, type, context and the open attribute should have been returned.");
@@ -327,64 +351,66 @@ public class RetrievalTest extends ComposeTest {
 	}
 
 	@DisplayName("Retrieve the last n instances before the timestamp, default context.")
-	@Test
-	public void testGetEntityBeforeTimestampWithLastN() {
-		assertAttributesBeforeWithLastN(FULL_ENTITY_ATTRIBUTES_LIST, 5);
+	@ParameterizedTest
+	@EnumSource(AcceptType.class)
+	public void testGetEntityBeforeTimestampWithLastN(AcceptType acceptType) {
+		assertAttributesBeforeWithLastN(FULL_ENTITY_ATTRIBUTES_LIST, 5, acceptType);
 	}
 
 	@DisplayName("Retrieve the last n instances for the requested attribute before the timestamp, default context.")
 	@ParameterizedTest
 	@MethodSource("provideFullEntityAttributeStrings")
 	public void testGetEntityAttributesBeforeTimestampsWithLastN(String attributeName, URI entityId, AcceptType acceptType) {
-		assertAttributesBeforeWithLastN(List.of(attributeName), 5);
+		assertAttributesBeforeWithLastN(List.of(attributeName), 5, acceptType);
 	}
 
 	@DisplayName("Retrieve the last n instances with the requested attribute before the timestamp, default context.")
 	@ParameterizedTest
 	@MethodSource("provideCombinedAttributeStrings")
-	public void testGetEntityMultipleAttributesBeforeTimestampsWithLastN(List<String> subList) {
-		assertAttributesBeforeWithLastN(subList, 5);
+	public void testGetEntityMultipleAttributesBeforeTimestampsWithLastN(List<String> subList, URI entityId, AcceptType acceptType) {
+		assertAttributesBeforeWithLastN(subList, 5, acceptType);
 	}
 
 	@DisplayName("Retrieve the last n instances after the timestamp, default context.")
-	@Test
-	public void testGetEntityAfterTimestampWithLastN() {
-		assertAttributesAfterWithLastN(FULL_ENTITY_ATTRIBUTES_LIST, 5);
+	@ParameterizedTest
+	@EnumSource(AcceptType.class)
+	public void testGetEntityAfterTimestampWithLastN(AcceptType acceptType) {
+		assertAttributesAfterWithLastN(FULL_ENTITY_ATTRIBUTES_LIST, 5, acceptType);
 	}
 
 	@DisplayName("Retrieve the last n instances for the requested attribute after the timestamp, default context.")
 	@ParameterizedTest
 	@MethodSource("provideFullEntityAttributeStrings")
 	public void testGetEntityAttributesAfterTimestampsWithLastN(String attributeName, URI entityId, AcceptType acceptType) {
-		assertAttributesAfterWithLastN(List.of(attributeName), 5);
+		assertAttributesAfterWithLastN(List.of(attributeName), 5, acceptType);
 	}
 
 	@DisplayName("Retrieve the last n instances with the requested attribute after the timestamp, default context.")
 	@ParameterizedTest
 	@MethodSource("provideCombinedAttributeStrings")
-	public void testGetEntityMultipleAttributesAfterTimestampsWithLastN(List<String> subList) {
-		assertAttributesAfterWithLastN(subList, 5);
+	public void testGetEntityMultipleAttributesAfterTimestampsWithLastN(List<String> subList, URI entityID, AcceptType acceptType) {
+		assertAttributesAfterWithLastN(subList, 5, acceptType);
 	}
 
 	@DisplayName("Retrieve the last n instances between the timestamps, default context.")
 	@ParameterizedTest
 	@MethodSource("provideEntityIds")
 	public void testGetEntityBetweenTimestampWithLastN(URI entityId, AcceptType acceptType) {
-		assertAttributesBetweenWithLastN(FULL_ENTITY_ATTRIBUTES_LIST, 5, entityId);
+		assertAttributesBetweenWithLastN(FULL_ENTITY_ATTRIBUTES_LIST, 5, entityId, acceptType);
 	}
 
 	@DisplayName("Retrieve the last n instances for the requested attribute between the timestamps, default context.")
 	@ParameterizedTest
 	@MethodSource("provideFullEntityAttributeStrings")
 	public void testGetEntityAttributesBetweenTimestampsWithLastN(String attributeName, URI entityId, AcceptType acceptType) {
-		assertAttributesBetweenWithLastN(List.of(attributeName), 5, entityId);
+		assertAttributesBetweenWithLastN(List.of(attributeName), 5, entityId, acceptType);
 	}
 
 	@DisplayName("Retrieve the last n instances with the requested attribute between the timestamps, default context.")
 	@ParameterizedTest
 	@MethodSource("provideCombinedAttributeStrings")
-	public void testGetEntityMultipleAttributesBetweenTimestampsWithLastN(List<String> subList, URI entityId) {
-		assertAttributesBetweenWithLastN(subList, 5, entityId);
+	public void testGetEntityMultipleAttributesBetweenTimestampsWithLastN(List<String> subList, URI entityId, AcceptType acceptType) {
+		assertAttributesBetweenWithLastN(subList, 5, entityId, acceptType);
 	}
 
 	@DisplayName("Retrieve an entity that gets paged.")

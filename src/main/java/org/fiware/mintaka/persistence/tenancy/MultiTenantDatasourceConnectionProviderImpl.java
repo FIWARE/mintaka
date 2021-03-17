@@ -27,6 +27,7 @@ public class MultiTenantDatasourceConnectionProviderImpl extends AbstractDataSou
 
 	/**
 	 * Add the datasource for the default tenant
+	 *
 	 * @param dataSource the datasource to use as default
 	 */
 	public void registerDefaultDatasource(DataSource dataSource) {
