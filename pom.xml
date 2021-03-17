@@ -474,6 +474,12 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>${version.org.jacoco.maven-plugin}</version>
+                <configuration>
+                    <!-- exclude generated code -->
+                    <excludes>
+                        <exclude>org/fiware/ngsi/**/*</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <id>pre-unit-tests</id>
