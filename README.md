@@ -42,7 +42,6 @@ The following table will concentrate on the important configurations for mintaka
 | ----------------- | ----------------------------------- | ----------------------------------------------- | ------------------------ |
 | micronaut.server.port        | MICRONAUT_SERVER_PORT | Server port to be used for mintaka    | 8080  |
 | micronaut.metrics.enabled | MICRONAUT_METRICS_ENABLED | Enable the metrics gathering | true |
-| micronaut.multitenancy.tenantresolver.httpheader.header-name | MICRONAUT_MULTITENANCY_TENANTRESOLVER_HTTPHEADER_HEADER_NAME | header to be used for resolving tenants  | NGSILD-Tenant |
 | endpoints.all.port | ENDPOINTS_ALL_PORT | Port to provide the management endpoints | 9090 |
 | endpoints.metrics.enabled | ENDPOINTS_METRICS_ENABLED | Enable the metrics endpoint | true |
 | endpoints.health.enabled | ENDPOINTS_HEALTH_ENABLED | Enable the health endpoint | true | 
