@@ -22,7 +22,7 @@ services:
     command: -logLevel DEBUG
     healthcheck:
       test: curl --fail -s http://orion:1026/version || exit 1
-      interval: 5s
+      interval: 30s
 
 
   # Databases
@@ -42,7 +42,7 @@ services:
       test: |
         host=`hostname --ip-address || echo '127.0.0.1'`;
         mongo --quiet $host/test --eval 'quit(db.runCommand({ ping: 1 }).ok ? 0 : 2)' && echo 0 || echo 1
-      interval: 5s
+      interval: 30s
 
   timescale:
     image: timescale/timescaledb-postgis:latest-pg12
@@ -51,7 +51,7 @@ services:
       test: [ "CMD-SHELL", "pg_isready -U orion" ]
       interval: 15s
       timeout: 15s
-      retries: 5
+      retries: 15
       start_period: 60s
     environment:
       - POSTGRES_USER=orion
