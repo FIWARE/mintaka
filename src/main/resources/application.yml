@@ -21,8 +21,6 @@ micronaut:
 
 ---
 endpoints:
-  all:
-    port: 9090
   metrics:
     enabled: true
   health:
