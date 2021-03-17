@@ -17,4 +17,4 @@ jobs:
           java-package: jdk
 
       - name: Run tests
-        run: mvn clean verify
+        run: mvn clean test jacoco:report coveralls:jacoco -Dcoveralls.token=${{ secrets.COVERALLS_TOKEN }}
