@@ -6,7 +6,6 @@ import com.apicatalog.jsonld.api.CompactionApi;
 import com.apicatalog.jsonld.document.Document;
 import com.apicatalog.jsonld.document.JsonDocument;
 import com.apicatalog.jsonld.loader.DocumentLoader;
-import com.apicatalog.jsonld.loader.HttpLoader;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,7 +13,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.jsonldjava.core.JsonLdOptions;
-import com.github.jsonldjava.utils.Obj;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.context.ServerRequestContext;
 import jakarta.json.Json;
@@ -23,16 +21,16 @@ import jakarta.json.JsonObject;
 import jakarta.json.JsonObjectBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.impl.client.DefaultHttpClient;
 import org.fiware.mintaka.context.LdContextCache;
 import org.fiware.mintaka.domain.query.temporal.TimeStampType;
+import org.fiware.mintaka.exception.JacksonConversionException;
 import org.fiware.ngsi.model.EntityTemporalVO;
+import org.geojson.GeoJsonObject;
 
 import javax.inject.Singleton;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URL;
-import java.net.http.HttpClient;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -48,6 +46,7 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 	private static final String OPTIONS_KEY = "options";
 	private static final String TIME_PROPERTY_KEY = "timeproperty";
 	private static final String TEMPORAL_VALUES_OPTION = "temporalValues";
+	public static final String CONTEXT_KEY = "@context";
 
 	private final DocumentLoader documentLoader;
 	private final TemporalValuesMapper temporalValuesMapper;
@@ -75,6 +74,7 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 	public void serialize(EntityTemporalVO value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
 
 		try {
+			AcceptType acceptType = getAcceptType();
 			Object contextObject = value.atContext();
 			String jsonString;
 			// decide about the representation type.
@@ -90,24 +90,34 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 
 			// create an builder for the compacted object
 			JsonObjectBuilder compactedJsonBuilder = Json.createObjectBuilder(jsonObject);
-			// add the context as URL instead of fully embed it.
-			if (contextObject instanceof URL) {
-				compactedJsonBuilder.add("@context", contextObject.toString());
-			} else if (contextObject instanceof List) {
-				JsonArrayBuilder contextArrayBuilder = Json.createArrayBuilder();
-				((List<URL>) contextObject).forEach(contextItem -> contextArrayBuilder.add(contextItem.toString()));
-				compactedJsonBuilder.add("@context", contextArrayBuilder);
-			} else {
-				throw new IllegalArgumentException(String.format("Context is invalid: %s", value.atContext()));
+
+			String serializedString;
+			switch (acceptType) {
+				case JSON:
+					compactedJsonBuilder.remove(CONTEXT_KEY);
+					gen.writeRaw(compactedJsonBuilder.build().toString());
+					break;
+				case JSON_LD:
+					// add the context as URL instead of fully embed it.
+					if (contextObject instanceof URL) {
+						compactedJsonBuilder.add(CONTEXT_KEY, contextObject.toString());
+					} else if (contextObject instanceof List) {
+						JsonArrayBuilder contextArrayBuilder = Json.createArrayBuilder();
+						((List<URL>) contextObject).forEach(contextItem -> contextArrayBuilder.add(contextItem.toString()));
+						compactedJsonBuilder.add(CONTEXT_KEY, contextArrayBuilder);
+					} else {
+						throw new IllegalArgumentException(String.format("Context is invalid: %s", value.atContext()));
+					}
+					gen.writeRaw(compactedJsonBuilder.build().toString());
+					break;
 			}
-			// build and write the serialized object back to the generator
-			gen.writeRaw(compactedJsonBuilder.build().toString());
 		} catch (IOException e) {
 			log.error("Was not able to deserialize object", e);
 			// bubble to fulfill interface
-			throw e;
+			throw new JacksonConversionException("Was not able to deserialize the retrieved object.", e);
 		} catch (JsonLdError jsonLdError) {
-			jsonLdError.printStackTrace();
+			log.error("Was not able to deserialize object", jsonLdError);
+			throw new JacksonConversionException(jsonLdError.getMessage());
 		}
 	}
 
@@ -118,7 +128,7 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 		if (optionalTimeProperty.isEmpty()) {
 			return TimeStampType.OBSERVED_AT;
 		}
-		return TimeStampType.valueOf(optionalTimeProperty.get());
+		return TimeStampType.getEnum(optionalTimeProperty.get());
 	}
 
 	private boolean isTemporalValuesOptionSet() {
@@ -129,6 +139,15 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 			return false;
 		}
 		return Arrays.stream(optionalOptions.get().split(",")).anyMatch(TEMPORAL_VALUES_OPTION::equals);
+	}
+
+	private AcceptType getAcceptType() {
+		return ServerRequestContext.currentRequest()
+				.map(HttpRequest::getHeaders)
+				.map(headers -> headers.get("Accept"))
+				.map(AcceptType::getEnum)
+				// according to NGSI-LD spec 6.3.4 is application/json the default
+				.orElse(AcceptType.JSON);
 	}
 
 }

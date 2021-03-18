@@ -26,7 +26,7 @@ public class EntityTemporalListVOSerializer extends JsonSerializer<EntityTempora
 
 	@Override
 	public void serialize(EntityTemporalListVO entityTemporalListVO, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-		JsonSerializer entityTemporalSerializer = serializers.findValueSerializer(EntityTemporalVO.class);
+		JsonSerializer<Object> entityTemporalSerializer = serializers.findValueSerializer(EntityTemporalVO.class);
 		if (entityTemporalListVO.isEmpty()) {
 			// return an empty array
 			gen.writeStartArray();

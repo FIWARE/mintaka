@@ -3,10 +3,8 @@ package org.fiware.mintaka.domain;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
-import org.fiware.ngsi.model.GeoPropertyVO;
 
 import java.net.URI;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -26,13 +24,13 @@ public class TemporalValuesEntity {
 	private Object atContext;
 
 	@JsonProperty(JSON_PROPERTY_LOCATION)
-	private TemporalValueProperty location;
+	private TemporalValueGeoProperty location;
 
 	@JsonProperty(JSON_PROPERTY_OBSERVATION_SPACE)
-	private TemporalValueProperty observationSpace;
+	private TemporalValueGeoProperty observationSpace;
 
 	@JsonProperty(JSON_PROPERTY_OPERATION_SPACE)
-	private TemporalValueProperty operationSpace;
+	private TemporalValueGeoProperty operationSpace;
 
 	@JsonProperty(JSON_PROPERTY_ID)
 	private URI id;

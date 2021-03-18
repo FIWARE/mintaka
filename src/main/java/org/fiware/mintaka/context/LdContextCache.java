@@ -6,7 +6,6 @@ import com.apicatalog.jsonld.document.JsonDocument;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.jsonldjava.core.JsonLdConsts;
-import com.github.jsonldjava.core.JsonLdOptions;
 import com.github.jsonldjava.core.JsonLdProcessor;
 import com.github.jsonldjava.utils.JsonUtils;
 import io.micronaut.cache.annotation.CacheConfig;
@@ -14,14 +13,15 @@ import io.micronaut.cache.annotation.Cacheable;
 import io.micronaut.context.annotation.Context;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.fiware.mintaka.exception.StringExpansionException;
 import org.fiware.mintaka.exception.ContextRetrievalException;
+import org.fiware.mintaka.exception.StringExpansionException;
 
 import javax.annotation.PostConstruct;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
@@ -51,7 +51,7 @@ public class LdContextCache {
 			coreContextUrl = new URL(contextProperties.getDefaultUrl());
 			coreContext = JsonUtils.fromURLJavaNet(coreContextUrl);
 		} catch (IOException e) {
-			throw new ContextRetrievalException("Invalid core context configured.");
+			throw new ContextRetrievalException("Invalid core context configured.", e, contextProperties.getDefaultUrl());
 		}
 	}
 
@@ -63,13 +63,15 @@ public class LdContextCache {
 	 */
 	@Cacheable
 	public Object getContextFromURL(URL url) {
-		if (url.equals(coreContextUrl)) {
-			return coreContext;
-		}
 		try {
+			if (url.toURI().equals(coreContextUrl.toURI())) {
+				return coreContext;
+			}
 			return JsonUtils.fromURLJavaNet(url);
 		} catch (IOException e) {
-			throw new ContextRetrievalException(String.format("Was not able to retrieve context from %s.", url), e);
+			throw new ContextRetrievalException(String.format("Was not able to retrieve context from %s.", url), e, url.toString());
+		} catch (URISyntaxException uriSyntaxException) {
+			throw new ContextRetrievalException(String.format("Received an invalid url: %s", url), uriSyntaxException, url.toString());
 		}
 	}
 
@@ -133,15 +135,11 @@ public class LdContextCache {
 	 */
 	private Object getContext(Object contextURLs) {
 		if (contextURLs instanceof List) {
-			Object compactedContext = Map.of(JsonLdConsts.CONTEXT, ((List) contextURLs).stream()
+			return Map.of(JsonLdConsts.CONTEXT, ((List) contextURLs).stream()
 					.map(this::getContext)
 					.map(contextMap -> ((Map<String, Object>) contextMap).get(JsonLdConsts.CONTEXT))
 					.flatMap(map -> ((Map<String, Object>) map).entrySet().stream())
 					.collect(Collectors.toMap(e -> ((Map.Entry<String, Object>) e).getKey(), e -> ((Map.Entry<String, Object>) e).getValue(), (e1, e2) -> e2)));
-			if (compactedContext instanceof Optional) {
-				return ((Optional<?>) compactedContext).orElseThrow(() -> new ContextRetrievalException("Was not able to get compacted context."));
-			}
-			return compactedContext;
 		} else if (contextURLs instanceof URL) {
 			return getContextFromURL((URL) contextURLs);
 		} else if (contextURLs instanceof String) {
@@ -149,7 +147,7 @@ public class LdContextCache {
 		} else if (contextURLs instanceof URI) {
 			return getContextFromURL(contextURLs.toString());
 		}
-		throw new ContextRetrievalException(String.format("Did not receive a valid context: %s.", contextURLs));
+		throw new ContextRetrievalException(String.format("Did not receive a valid context: %s.", contextURLs), contextURLs.toString());
 	}
 
 	/**
@@ -162,7 +160,7 @@ public class LdContextCache {
 		try {
 			return getContextFromURL(new URL(urlString));
 		} catch (MalformedURLException e) {
-			throw new ContextRetrievalException(String.format("Was not able to convert %s to URL.", urlString), e);
+			throw new ContextRetrievalException(String.format("Was not able to convert %s to URL.", urlString), e, urlString);
 		}
 	}
 
@@ -186,11 +184,10 @@ public class LdContextCache {
 					try {
 						return new URL(lCS);
 					} catch (MalformedURLException e) {
-						throw new ContextRetrievalException("Was not able to get context url from the Link-header.", e);
+						throw new ContextRetrievalException("Was not able to get context url from the Link-header.", e, lCS);
 					}
 				})
-				// core-context needs to be first, so that it can be overwritten by the provided context.
-				.map(url -> List.of(coreContextUrl, url)).orElse(List.of(coreContextUrl));
+				.map(url -> List.of(url, coreContextUrl)).orElse(List.of(coreContextUrl));
 	}
 
 	// extract the Id from the expanded object

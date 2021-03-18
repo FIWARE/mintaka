@@ -73,8 +73,8 @@ public interface TemporalValuesMapper {
 		return temporalValueProperty;
 	}
 
-	default TemporalValueProperty geoPropertyToTemporalValuesProperty(List<GeoPropertyVO> propertyVOList, TimeStampType timeStampType) {
-		TemporalValueProperty temporalValueProperty = new TemporalValueProperty();
+	default TemporalValueGeoProperty geoPropertyToTemporalValuesProperty(List<GeoPropertyVO> propertyVOList, TimeStampType timeStampType) {
+		TemporalValueGeoProperty temporalValueProperty = new TemporalValueGeoProperty();
 		temporalValueProperty.setValues(
 				propertyVOList.stream()
 						.map(propertyVO -> List.of(propertyVO.getValue(), getTimeStampFromGeoProperty(propertyVO, timeStampType)))

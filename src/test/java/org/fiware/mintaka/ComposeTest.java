@@ -13,6 +13,7 @@ import io.micronaut.http.client.exceptions.HttpClientResponseException;
 import io.micronaut.http.client.netty.DefaultHttpClient;
 import io.micronaut.runtime.server.EmbeddedServer;
 import lombok.extern.slf4j.Slf4j;
+import org.fiware.mintaka.domain.AcceptType;
 import org.fiware.ngsi.api.EntitiesApiTestClient;
 import org.fiware.ngsi.model.*;
 import org.junit.jupiter.api.BeforeAll;
@@ -54,19 +55,21 @@ public abstract class ComposeTest {
 
 	protected static final URI ENTITY_ID = URI.create("urn:ngsi-ld:store:" + UUID.randomUUID().toString());
 	protected static final URI DELETED_ENTITY_ID = URI.create("urn:ngsi-ld:store:deleted-" + UUID.randomUUID().toString());
+	protected static final URI LIMITED_ENTITY_ID = URI.create("urn:ngsi-ld:store:limited-" + UUID.randomUUID().toString());
 	protected static final URI CREATED_AFTER_ENTITY_ID = URI.create("urn:ngsi-ld:store:after-" + UUID.randomUUID().toString());
 	protected static final URI DATA_MODEL_CONTEXT = URI.create("https://fiware.github.io/data-models/context.jsonld");
 	protected static final URI CORE_CONTEXT = URI.create("https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld");
 	protected static final String ORION_LD_HOST = "orion-ld";
-	protected static final String TIMESCALE_HOST = "orion-ld";
 	protected static final int ORION_LD_PORT = 1026;
 	protected static final int TIMESCALE_PORT = 5432;
-	//2 hours of updates
-	public static final int NUMBER_OF_UPDATES = 120;
+	//little less than 2 hours of updates, since we have 9 attributes -> limit will be at 111 instances
+	public static final int NUMBER_OF_UPDATES = 110;
 
 	private static final DockerComposeContainer DOCKER_COMPOSE_CONTAINER = new DockerComposeContainer(new File("src/test/resources/docker-compose/docker-compose-it.yml"))
 			.withExposedService("orion-ld", ORION_LD_PORT)
 			.withExposedService("timescale", TIMESCALE_PORT);
+	public static final URI CAR_2_ID = URI.create("urn:ngsi-ld:car:moving-car-2");
+	public static final URI CAR_1_ID = URI.create("urn:ngsi-ld:car:moving-car");
 
 	{
 		synchronized (SETUP) {
@@ -119,21 +122,19 @@ public abstract class ComposeTest {
 
 		synchronized (INITIALIZED) {
 			if (!INITIALIZED.getAndSet(true)) {
-				createMovingEntity(URI.create("urn:ngsi-ld:car:moving-car-2"));
-				createMovingEntity(URI.create("urn:ngsi-ld:car:moving-car"));
+				createMovingEntity(CAR_2_ID);
+				createMovingEntity(CAR_1_ID);
+				createEntityHistory(LIMITED_ENTITY_ID, START_TIME_STAMP, 350);
 				createEntityHistory(ENTITY_ID, START_TIME_STAMP);
 				createEntityHistoryWithDeletion();
 			}
 		}
-
 
 		HttpClientConfiguration configuration = new DefaultHttpClientConfiguration();
 		//high timeout is required, because github-action runners are not that powerful
 		configuration.setReadTimeout(Duration.ofSeconds(30));
 		mintakaTestClient = new DefaultHttpClient(new URL("http://" + embeddedServer.getHost() + ":" + embeddedServer.getPort()), configuration);
 	}
-
-
 
 	/*
 	 *  TEST SUPPORT
@@ -144,26 +145,38 @@ public abstract class ComposeTest {
 	protected static Stream<Arguments> provideFullEntityAttributeStrings() {
 		return FULL_ENTITY_ATTRIBUTES_LIST
 				.stream()
-				.flatMap(attribute -> Stream.of(Arguments.of(attribute, ENTITY_ID), Arguments.of(attribute, DELETED_ENTITY_ID)));
+				.flatMap(attribute -> Stream.of(
+						Arguments.of(attribute, ENTITY_ID, AcceptType.JSON),
+						Arguments.of(attribute, DELETED_ENTITY_ID, AcceptType.JSON),
+						Arguments.of(attribute, ENTITY_ID, AcceptType.JSON_LD),
+						Arguments.of(attribute, DELETED_ENTITY_ID, AcceptType.JSON_LD)));
 	}
 
 	protected static Stream<Arguments> provideCombinedAttributeStrings() {
 		return Lists.partition(FULL_ENTITY_ATTRIBUTES_LIST, 3)
 				.stream()
-				.flatMap(attribute -> Stream.of(Arguments.of(attribute, ENTITY_ID), Arguments.of(attribute, DELETED_ENTITY_ID)));
+				.flatMap(attribute -> Stream.of(
+						Arguments.of(attribute, ENTITY_ID, AcceptType.JSON_LD),
+						Arguments.of(attribute, DELETED_ENTITY_ID, AcceptType.JSON_LD),
+						Arguments.of(attribute, ENTITY_ID, AcceptType.JSON),
+						Arguments.of(attribute, DELETED_ENTITY_ID, AcceptType.JSON)));
 	}
 
 	protected static Stream<Arguments> provideEntityIds() {
-		return Stream.of(Arguments.of(ENTITY_ID), Arguments.of(DELETED_ENTITY_ID));
+		return Stream.of(
+				Arguments.of(ENTITY_ID, AcceptType.JSON),
+				Arguments.of(ENTITY_ID, AcceptType.JSON_LD),
+				Arguments.of(DELETED_ENTITY_ID, AcceptType.JSON),
+				Arguments.of(DELETED_ENTITY_ID, AcceptType.JSON_LD));
 	}
 
 	// assertions
 
-	protected void assertAttributesBetween(List<String> attributesList, URI entityId) {
-		assertAttributesBetweenWithLastN(attributesList, null, entityId);
+	protected void assertAttributesBetween(List<String> attributesList, URI entityId, AcceptType acceptType) {
+		assertAttributesBetweenWithLastN(attributesList, null, entityId, acceptType);
 	}
 
-	protected void assertAttributesBetweenWithLastN(List<String> attributesList, Integer lastN, URI entityId) {
+	protected void assertAttributesBetweenWithLastN(List<String> attributesList, Integer lastN, URI entityId, AcceptType acceptType) {
 		String timerelation = "between";
 		String startTime = "1970-01-01T00:30:00Z";
 		String endTime = "1970-01-01T00:45:00Z";
@@ -173,8 +186,9 @@ public abstract class ComposeTest {
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/" + entityId);
 		getRequest.getParameters()
 				.add("timerel", timerelation)
-				.add("time", startTime)
-				.add("endTime", endTime);
+				.add("timeAt", startTime)
+				.add("endTimeAt", endTime);
+		getRequest.getHeaders().add("Accept", acceptType.getValue());
 
 		if (attributesList != FULL_ENTITY_ATTRIBUTES_LIST) {
 			getRequest.getParameters().add("attrs", attributesParam);
@@ -192,7 +206,11 @@ public abstract class ComposeTest {
 		Integer expectedInstances = lastN != null ? lastN : 14;
 
 		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
-		assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
+		if(acceptType == AcceptType.JSON_LD){
+			assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
+		} else {
+			assertEquals(attributesList.size() + 2, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
+		}
 		assertAttributesInMap(
 				entityTemporalMap,
 				attributesList,
@@ -201,11 +219,11 @@ public abstract class ComposeTest {
 				START_TIME_STAMP.plus(44, ChronoUnit.MINUTES));
 	}
 
-	protected void assertAttributesBefore(List<String> attributesList) {
-		assertAttributesBeforeWithLastN(attributesList, null);
+	protected void assertAttributesBefore(List<String> attributesList, AcceptType acceptType) {
+		assertAttributesBeforeWithLastN(attributesList, null, acceptType);
 	}
 
-	protected void assertAttributesBeforeWithLastN(List<String> attributesList, Integer lastN) {
+	protected void assertAttributesBeforeWithLastN(List<String> attributesList, Integer lastN, AcceptType acceptType) {
 		String timerelation = "before";
 		String time = "1970-01-01T00:30:00Z";
 
@@ -214,8 +232,8 @@ public abstract class ComposeTest {
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/" + ENTITY_ID);
 		getRequest.getParameters()
 				.add("timerel", timerelation)
-				.add("time", time);
-
+				.add("timeAt", time);
+		getRequest.getHeaders().add("Accept", acceptType.getValue());
 		if (attributesList != FULL_ENTITY_ATTRIBUTES_LIST) {
 			getRequest.getParameters().add("attrs", attributesParam);
 		}
@@ -231,7 +249,11 @@ public abstract class ComposeTest {
 		Integer expectedInstances = lastN != null ? lastN : 30;
 
 		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
-		assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the requested attribute should have been returned.");
+		if(acceptType == AcceptType.JSON_LD) {
+			assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the requested attribute should have been returned.");
+		} else {
+			assertEquals(attributesList.size() + 2, entityTemporalMap.size(), "Only id, type, context and the requested attribute should have been returned.");
+		}
 		assertAttributesInMap(
 				entityTemporalMap,
 				attributesList,
@@ -240,11 +262,11 @@ public abstract class ComposeTest {
 				START_TIME_STAMP.plus(29, ChronoUnit.MINUTES));
 	}
 
-	protected void assertAttributesAfter(List<String> attributesList) {
-		assertAttributesAfterWithLastN(attributesList, null);
+	protected void assertAttributesAfter(List<String> attributesList, AcceptType acceptType) {
+		assertAttributesAfterWithLastN(attributesList, null, acceptType);
 	}
 
-	protected void assertAttributesAfterWithLastN(List<String> attributesList, Integer lastN) {
+	protected void assertAttributesAfterWithLastN(List<String> attributesList, Integer lastN, AcceptType acceptType) {
 		String timerelation = "after";
 		String time = "1970-01-01T00:30:00Z";
 
@@ -253,13 +275,14 @@ public abstract class ComposeTest {
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/" + ENTITY_ID);
 		getRequest.getParameters()
 				.add("timerel", timerelation)
-				.add("time", time);
+				.add("timeAt", time);
+		getRequest.getHeaders().add("Accept", acceptType.getValue());
 		if (attributesList != FULL_ENTITY_ATTRIBUTES_LIST) {
 			getRequest.getParameters().add("attrs", attributesParam);
 		}
 
 		// 1 less then updates, because exclusive after
-		Instant expectedStart = START_TIME_STAMP.plus(NUMBER_OF_UPDATES - 89, ChronoUnit.MINUTES);
+		Instant expectedStart = START_TIME_STAMP.plus(NUMBER_OF_UPDATES - 79, ChronoUnit.MINUTES);
 
 		if (lastN != null) {
 			getRequest.getParameters()
@@ -267,10 +290,14 @@ public abstract class ComposeTest {
 			// +1, because the last existing update is included
 			expectedStart = START_TIME_STAMP.plus(NUMBER_OF_UPDATES - lastN + 1, ChronoUnit.MINUTES);
 		}
-		Integer expectedInstances = lastN != null ? lastN : 90;
+		Integer expectedInstances = lastN != null ? lastN : 80;
 
 		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
-		assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
+		if(acceptType == AcceptType.JSON_LD) {
+			assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
+		} else {
+			assertEquals(attributesList.size() + 2, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
+		}
 		assertAttributesInMap(
 				entityTemporalMap,
 				attributesList,
@@ -287,7 +314,13 @@ public abstract class ComposeTest {
 					assertNotNull(temporalProperty, "All entities should have been retrieved.");
 					assertTrue(temporalProperty instanceof List, "A list of the properties should have been retrieved.");
 					List<Map<String, Object>> listRepresentation = (List) temporalProperty;
-					assertEquals(listRepresentation.size(), expectedInstances, "All instances should have been returned(created + 100 updates).");
+					assertEquals(expectedInstances, listRepresentation.size(), "All instances should have been returned.");
+					if (propertyName.equals("temperature")) {
+						listRepresentation.stream().forEach(temperatureProperty -> {
+							assertTrue(temperatureProperty.containsKey("unitCode"), "The unit code should be present.");
+							assertEquals("C", temperatureProperty.get("unitCode"), "The unit code should be present.");
+						});
+					}
 					assertInstanceInTimeFrame(listRepresentation, expectedInstances, startTimeStamp, endTimeStamp);
 				});
 	}
@@ -306,13 +339,18 @@ public abstract class ComposeTest {
 
 	}
 
-	protected void assertDefaultStoreTemporalEntity(URI entityId, Map<String, Object> entityTemporalMap) {
+	protected void assertDefaultStoreTemporalEntity(URI entityId, Map<String, Object> entityTemporalMap, AcceptType acceptType) {
 		assertNotNull(entityTemporalMap, "A temporal entity should have been returned.");
 
-		assertEquals(entityTemporalMap.get(JsonLdConsts.CONTEXT),
-				"https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld",
-				"The core context should be present if nothing else is requested.");
-		assertEquals(entityTemporalMap.get("type"), "store", "The correct type of the entity should be retrieved.");
+		if (acceptType == AcceptType.JSON_LD) {
+			assertEquals("https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld",
+					entityTemporalMap.get(JsonLdConsts.CONTEXT),
+					"The core context should be present if nothing else is requested.");
+		} else {
+			assertNull(entityTemporalMap.get(JsonLdConsts.CONTEXT),
+					"For accept type json, nothing should be returned");
+		}
+		assertEquals("store", entityTemporalMap.get("type"), "The correct type of the entity should be retrieved.");
 		assertEquals(entityTemporalMap.get("id"), entityId.toString(), "The requested entity should have been retrieved.");
 	}
 
@@ -357,7 +395,8 @@ public abstract class ComposeTest {
 				.observationSpace(null)
 				.operationSpace(null)
 				.type("car");
-		PropertyVO temperatureProperty = getNewPropety().value(25);
+		PropertyVO temperatureProperty = getNewPropety().value(25).unitCode("C");
+		;
 		PropertyVO radioProperty = getNewPropety().value(true);
 		PropertyVO driverProperty = getNewPropety().value("Stefan");
 		PropertyVO motorProperty = getMotorSubProperty(Optional.of(0.9), Optional.of(1700));
@@ -381,7 +420,7 @@ public abstract class ComposeTest {
 			currentTime = move(lat++, longi++, currentTime, entityId, Optional.of(25), Optional.of(true), Optional.of("Mira"), Optional.of(0.7), Optional.of(1700), Optional.of(2));
 		}
 		for (int i = 200; i < 300; i++) {
-			if(entityId.equals(URI.create("urn:ngsi-ld:car:moving-car-2"))){
+			if (entityId.equals(URI.create("urn:ngsi-ld:car:moving-car-2"))) {
 				currentTime = move(lat--, longi--, currentTime, entityId, Optional.of(20), Optional.of(false), Optional.of("Unknown"), Optional.of(0.6), Optional.of(2500), Optional.of(2));
 			} else {
 				currentTime = move(lat--, longi--, currentTime, entityId, Optional.of(20), Optional.of(false), Optional.of("Franzi"), Optional.of(0.6), Optional.of(2500), Optional.of(2));
@@ -424,7 +463,8 @@ public abstract class ComposeTest {
 				.observationSpace(null)
 				.operationSpace(null)
 				.type("store");
-		PropertyVO temperatureProperty = getNewPropety().value(optionalTemp.orElseGet(() -> (int) (Math.random() * 10)));
+		PropertyVO temperatureProperty = getNewPropety().value(optionalTemp.orElseGet(() -> (int) (Math.random() * 10))).unitCode("C");
+		;
 		PropertyVO radioProperty = getNewPropety().value(optionalRadio.orElse(true));
 		PropertyVO motorProperty = getMotorSubProperty(optionalFuel, optionalRPM);
 		PropertyVO compoundProperty = getCompoundProperty(optionalCases.orElse(3));
@@ -455,7 +495,7 @@ public abstract class ComposeTest {
 		entitiesApiTestClient.removeEntityById(DELETED_ENTITY_ID, null);
 	}
 
-	protected void createEntityHistory(URI entityId, Instant startTimeStamp) {
+	protected void createEntityHistory(URI entityId, Instant startTimeStamp, int numberOfUpdates) {
 		when(clock.instant()).thenReturn(startTimeStamp);
 
 		Instant currentTime = startTimeStamp;
@@ -479,7 +519,7 @@ public abstract class ComposeTest {
 			throw new RuntimeException("Was not able to initialize data.");
 		}
 
-		for (int i = 0; i < NUMBER_OF_UPDATES; i++) {
+		for (int i = 0; i < numberOfUpdates; i++) {
 			currentTime = currentTime.plus(1, ChronoUnit.MINUTES);
 			when(clock.instant()).thenReturn(currentTime);
 			// evolve over time
@@ -493,6 +533,10 @@ public abstract class ComposeTest {
 		}
 	}
 
+	protected void createEntityHistory(URI entityId, Instant startTimeStamp) {
+		createEntityHistory(entityId, startTimeStamp, NUMBER_OF_UPDATES);
+	}
+
 	protected Map<String, Object> getAdditionalProperties() {
 		RelationshipVO relationshipVO = getNewRelationship()._object(URI.create("my:related:entity"));
 
@@ -500,7 +544,7 @@ public abstract class ComposeTest {
 		PropertyVO propertyWithSubProperty = getNewPropety().value("propWithSubProp");
 		propertyWithSubProperty.setAdditionalProperties(Map.of("mySubProperty", getNewPropety().value("subValue")));
 
-		PropertyVO temperatureProperty = getNewPropety().value(10.3);
+		PropertyVO temperatureProperty = getNewPropety().value(10.3).unitCode("C");
 		PropertyVO openProperty = getNewPropety().value(true);
 		PropertyVO storeNameProperty = getNewPropety().value("myStore");
 		PointVO pointVO = new PointVO();

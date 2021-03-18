@@ -84,7 +84,7 @@ public class TimeQuery {
 			timePropertyQuery += String.format(" %s.opMode='", dbEntityType) + OpMode.Create.name() + String.format("' and %s.ts", dbEntityType);
 		} else if (TimeStampType.MODIFIED_AT.value().equals(timeProperty)) {
 			timePropertyQuery += String.format(" %s.opMode!='", dbEntityType) + OpMode.Create.name() + String.format("' and %s.ts", dbEntityType);
-		} else if (timeProperty.equals("ts")) {
+		} else if (TimeStampType.TS.value().equals(timeProperty)) {
 			timePropertyQuery += String.format("%s.ts", dbEntityType);
 		} else {
 			throw new PersistenceRetrievalException(String.format("Querying by %s is currently not supported.", timeProperty));
@@ -111,5 +111,16 @@ public class TimeQuery {
 			default:
 				throw invalidTimeRelationException;
 		}
+	}
+
+	public String getDBTimeField() {
+		if(timeProperty.equals(TimeStampType.OBSERVED_AT.value())) {
+			return TimeStampType.OBSERVED_AT.value();
+		}
+		return "ts";
+	}
+
+	public TimeStampType getTimeStampType() {
+		return TimeStampType.getEnum(timeProperty);
 	}
 }
