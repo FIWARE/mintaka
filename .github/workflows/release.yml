@@ -36,9 +36,13 @@ jobs:
       - name: Build image
         run: mvn clean install jib:build -DskipTests -Dimage.tag=${VERSION}
 
+      - name: Set version output
+        id: out
+        run: echo "::set-output name=version::$(echo $VERSION)"
+
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: ${{ VERSION }}
+          automatic_release_tag: ${{ steps.out.outputs.version }}
           prerelease: false
-          title: ${{ VERSION }}
+          title: ${{ steps.out.outputs.version }}
