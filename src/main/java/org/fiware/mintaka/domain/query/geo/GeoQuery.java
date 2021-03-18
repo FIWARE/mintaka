@@ -52,7 +52,7 @@ public class GeoQuery {
 		switch (geoOperation) {
 			case NEAR:
 				if(operation.size()!= 2) {
-					throw new IllegalArgumentException("Near requires a max or minDistance configuration.");
+					throw new IllegalArgumentException("Near requires a maxDistance or minDistance configuration.");
 				}
 				String[] splittedModifier = operation.get(1).split(NGSI_LD_GEO_EQUALS);
 				return getNearOperation(geoOperation, GeoModifier.getEnum(splittedModifier[0]), Long.valueOf(splittedModifier[1]));
