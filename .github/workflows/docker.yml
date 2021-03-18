@@ -31,7 +31,7 @@ jobs:
 
       - name: Get PR Number
         id: pr_number
-        run: echo "::set-output name=nr::$(echo $GITHUB_REF | awk 'BEGIN { FS = "/" } ; { print $3 }')\n"
+        run: echo "::set-output name=nr::$(echo $GITHUB_REF | awk 'BEGIN { FS = "/" } ; { print $3 }')"
 
       - name: Build image
         run: mvn clean install jib:build -DskipTests -Dimage.tag=${VERSION}-PRE-${{ steps.pr_number.outputs.nr }} -Dimage.repository=wistefan
