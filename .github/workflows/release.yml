@@ -1,8 +1,9 @@
 name: Build&Push Pre Images
 
 on:
-  branches:
-    - main
+  push:
+    branches:
+      - main
 
 jobs:
   push:
