@@ -2,8 +2,6 @@ name: Docker Build&Push Pre
 
 on:
   pull_request:
-    branches:
-      - main
 
 jobs:
   push:
