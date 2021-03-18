@@ -538,7 +538,6 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>${version.org.apache.maven.plugins.maven-javadoc-plugin}</version>
                 <configuration>
-                    <show>private</show>
                     <destDir>${javadoc.outputFolder}</destDir>
                 </configuration>
             </plugin>

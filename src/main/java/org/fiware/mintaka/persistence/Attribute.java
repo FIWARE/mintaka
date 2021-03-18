@@ -6,8 +6,7 @@ import lombok.Data;
 import javax.persistence.*;
 
 /**
- * Database representation of a concrete Attribute. Schema is defined by orion-ld
- * {@see https://github.com/FIWARE/context.Orion-LD}
+ * Database representation of a concrete Attribute. Schema is defined by <a href="https://github.com/FIWARE/context.Orion-LD">Orion-LD</a>
  */
 @Data
 @Entity

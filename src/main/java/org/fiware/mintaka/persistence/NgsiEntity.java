@@ -7,8 +7,7 @@ import javax.validation.constraints.NotNull;
 import java.time.Instant;
 
 /**
- * Database representation of a concrete Entity. Schema is defined by orion-ld
- * {@see https://github.com/FIWARE/context.Orion-LD}
+ * Database representation of a concrete Entity. Schema is defined by <a href="https://github.com/FIWARE/context.Orion-LD">Orion-LD</a>
  */
 @Data
 @Entity

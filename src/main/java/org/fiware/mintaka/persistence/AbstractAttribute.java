@@ -9,8 +9,8 @@ import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
 /**
- * Database representation of an attribute as parent for the concrete SubAttributes and Attributes. Schema is defined by orion-ld
- * {@see https://github.com/FIWARE/context.Orion-LD}
+ * Database representation of an attribute as parent for the concrete SubAttributes and Attributes. Schema is defined by
+ * <a href="https://github.com/FIWARE/context.Orion-LD">Orion-LD</a>
  */
 @Data
 @MappedSuperclass

@@ -6,8 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Problem details as defined by RFC-7807 {@see https://tools.ietf.org/html/rfc7807} and mandated by the NGSI-LD spec
- * {@see https://www.etsi.org/deliver/etsi_gs/CIM/001_099/009/01.03.01_60/gs_cim009v010301p.pdf} 5.5.2 & 5.5.3
+ * Problem details as defined by <a href="https://tools.ietf.org/html/rfc7807">RFC-7807</a>" and mandated by the
+ * <a href="https://www.etsi.org/deliver/etsi_gs/CIM/001_099/009/01.03.01_60/gs_cim009v010301p.pdf">NGSI-LD Spec</a> 5.5.2 & 5.5.3
  */
 @AllArgsConstructor
 @NoArgsConstructor
