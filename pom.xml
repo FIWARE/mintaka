@@ -56,6 +56,7 @@
         <jacoco.reportFolder>${project.build.directory}/site/jacoco</jacoco.reportFolder>
         <jacoco.utReportFile>${jacoco.reportFolder}/test.exec</jacoco.utReportFile>
         <spotbugs.reportFolder>${project.build.directory}/site/spotbugs</spotbugs.reportFolder>
+        <javadoc.outputFolder>${project.build.directory}/site/javadoc/javadoc.outputFolder>
 
         <!-- persistence -->
         <version.org.postgresql>42.2.12</version.org.postgresql>
@@ -538,6 +539,7 @@
                 <version>${version.org.apache.maven.plugins.maven-javadoc-plugin}</version>
                 <configuration>
                     <show>private</show>
+                    <destDir>${javadoc.outputFolder}</destDir>
                 </configuration>
             </plugin>
         </plugins>
