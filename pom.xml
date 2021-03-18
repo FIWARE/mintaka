@@ -539,6 +539,7 @@
                 <version>${version.org.apache.maven.plugins.maven-javadoc-plugin}</version>
                 <configuration>
                     <destDir>${javadoc.outputFolder}</destDir>
+                    <additionalJOption>-Xdoclint:none</additionalJOption>
                 </configuration>
             </plugin>
         </plugins>
