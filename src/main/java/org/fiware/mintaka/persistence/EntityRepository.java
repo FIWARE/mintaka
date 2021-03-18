@@ -29,6 +29,8 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
+import static org.fiware.mintaka.domain.query.ngsi.ComparisonTerm.YEAR_MONTH_DAY_FORMAT;
+
 /**
  * Repository implementation for retrieving temporal entity representations from the database
  */
@@ -39,7 +41,8 @@ public class EntityRepository {
 
 	private static final int TOTAL_MAX_NUMBER_OF_INSTANCES = 1000;
 	private static final int DEFAULT_NUM_ATTRIBUTES = 10;
-	private static final DateTimeFormatter LOCAL_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm:ss.ss");
+	public static final DateTimeFormatter LOCAL_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(YEAR_MONTH_DAY_FORMAT +" hh:mm:ss.ss");
+	public static final int EXPECTED_RESULT_SIZE = 4;
 
 	private final EntityManager entityManager;
 
@@ -171,7 +174,7 @@ public class EntityRepository {
 
 		return queryResultList.stream()
 				.map(Arrays::asList)
-				.filter(queryResult -> queryResult.size() == 4)
+				.filter(queryResult -> queryResult.size() == EXPECTED_RESULT_SIZE)
 				.filter(queryResult -> (Boolean) queryResult.get(0))
 				.map(this::mapQueryResultToPojo)
 				.filter(Optional::isPresent)
@@ -195,6 +198,7 @@ public class EntityRepository {
 
 		String countSelect = "SELECT COUNT(DISTINCT entityID) FROM (" + finalSelect + ") as fs";
 		Query getCount = entityManager.createNativeQuery(countSelect);
+		// if no count is returned, the select did not find anything -> return a count of 0
 		return Optional.ofNullable(getCount.getResultList().get(0)).map(res -> (Number) res).orElse(0);
 	}
 
@@ -501,19 +505,19 @@ public class EntityRepository {
 					timeAt = ldtTimeAt.format(LOCAL_DATE_TIME_FORMATTER);
 					break;
 				case BEFORE:
-					timeEnd = ldtTimeAt.minus(1, ChronoUnit.MILLIS).format(LOCAL_DATE_TIME_FORMATTER);
+					timeEnd = ldtTimeAt.format(LOCAL_DATE_TIME_FORMATTER);
 					timeAt = ldtTimeAt.format(LOCAL_DATE_TIME_FORMATTER);
 					break;
 				case BETWEEN:
-					timeEnd = LocalDateTime.ofInstant(timeQuery.getEndTime(), ZoneOffset.UTC).minus(1, ChronoUnit.MILLIS).format(LOCAL_DATE_TIME_FORMATTER);
+					timeEnd = LocalDateTime.ofInstant(timeQuery.getEndTime(), ZoneOffset.UTC).format(LOCAL_DATE_TIME_FORMATTER);
 					timeAt = ldtTimeAt.format(LOCAL_DATE_TIME_FORMATTER);
 					break;
 				default:
 					throw new InvalidTimeRelationException(String.format("Requested timerelation was not valid: %s", timeQuery));
 			}
 			// select the last known value before time at, in order to get the attribute state at that time
-			selectLastBefore = "(SELECT last(lastBefore.result,lastBefore.time) as result, '" + timeAt + "' as time, lastBefore.entityId as entityId FROM" + selectTempTable + ") as lastBefore WHERE time<='" + timeAt + "' GROUP BY lastBefore.entityId)";
-			selectLastIn = "(SELECT last(lastIn.result,lastIn.time) as result, '" + timeEnd + "' as time, lastIn.entityId as entityId FROM" + selectTempTable + ") as lastIn WHERE time<='" + timeEnd + "' GROUP BY lastIn.entityId)";
+			selectLastBefore = "(SELECT last(lastBefore.result,lastBefore.time) as result, '" + timeAt + "' as time, lastBefore.entityId as entityId FROM" + selectTempTable + ") as lastBefore WHERE time<'" + timeAt + "' GROUP BY lastBefore.entityId)";
+			selectLastIn = "(SELECT last(lastIn.result,lastIn.time) as result, '" + timeEnd + "' as time, lastIn.entityId as entityId FROM" + selectTempTable + ") as lastIn WHERE time<'" + timeEnd + "' GROUP BY lastIn.entityId)";
 			tempWithSetId = "SELECT *, (ROW_NUMBER() OVER (ORDER BY tempTable.entityId, tempTable.time)) - (ROW_NUMBER() OVER (ORDER BY tempTable.entityId, tempTable.result, tempTable.time)) as setId FROM  (" + selectTempTable + ") UNION " + selectLastBefore + " UNION " + selectLastIn + ") as tempTable";
 		} else {
 			tempWithSetId = "SELECT *, (ROW_NUMBER() OVER (ORDER BY tempTable.entityId, tempTable.time)) - (ROW_NUMBER() OVER (ORDER BY tempTable.entityId, tempTable.result, tempTable.time)) as setId FROM  " + selectTempTable + ") as tempTable";
