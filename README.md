@@ -19,7 +19,8 @@ This project is part of [FIWARE](https://www.fiware.org/). For more information 
 ## Installation
 
 ### Preconditions
-Mintaka should be viewed as a component of [Orion-LD](https://github.com/FIWARE/helm-charts/tree/main/charts/orion) and therefore has no 
+
+Mintaka should be viewed as a component of [Orion-LD](https://github.com/FIWARE/context.Orion-LD) and therefore has no 
 mechanism to for populating the database itself. It relies on a  [TimescaleDB](https://www.timescale.com/) installation(including the 
 [Postgis](https://postgis.net/) extension), that is populated by Orion-LD. 
 For installing Orion-LD, see the [Installation-guide](https://github.com/FIWARE/context.Orion-LD/blob/develop/doc/manuals-ld/installation-guide.md),
