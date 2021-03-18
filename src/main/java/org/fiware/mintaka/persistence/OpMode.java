@@ -1,8 +1,7 @@
 package org.fiware.mintaka.persistence;
 
 /**
- * OpMode enum as used by orion-ld
- * {@see https://github.com/FIWARE/context.Orion-LD}
+ * OpMode enum as used by <a href="https://github.com/FIWARE/context.Orion-LD">Orion-LD</a>
  */
 public enum OpMode {
 	Create("Create"),

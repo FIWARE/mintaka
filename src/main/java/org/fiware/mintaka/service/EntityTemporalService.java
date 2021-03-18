@@ -3,7 +3,10 @@ package org.fiware.mintaka.service;
 import io.micronaut.transaction.annotation.ReadOnly;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.Opt;
 import org.fiware.mintaka.domain.AttributePropertyVOMapper;
+import org.fiware.mintaka.domain.EntityIdTempResults;
+import org.fiware.mintaka.domain.PaginationInformation;
 import org.fiware.mintaka.domain.query.temporal.TimeQuery;
 import org.fiware.mintaka.domain.query.temporal.TimeRelation;
 import org.fiware.mintaka.domain.query.geo.GeoQuery;
@@ -11,6 +14,7 @@ import org.fiware.mintaka.domain.query.ngsi.QueryTerm;
 import org.fiware.mintaka.persistence.AbstractAttribute;
 import org.fiware.mintaka.persistence.Attribute;
 import org.fiware.mintaka.persistence.EntityRepository;
+import org.fiware.mintaka.persistence.LimitableResult;
 import org.fiware.mintaka.persistence.NgsiEntity;
 import org.fiware.ngsi.model.EntityTemporalVO;
 import org.fiware.ngsi.model.GeoPropertyVO;
@@ -23,6 +27,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -37,7 +42,8 @@ public class EntityTemporalService {
 	private final AttributePropertyVOMapper attributePropertyVOMapper;
 
 	@ReadOnly
-	public List<EntityTemporalVO> getEntitiesWithQuery(
+	public LimitableResult<List<EntityTemporalVO>> getEntitiesWithQuery(
+			Optional<List<String>> ids,
 			Optional<String> namePattern,
 			List<String> expandedTypes,
 			List<String> expandedAttributes,
@@ -46,22 +52,142 @@ public class EntityTemporalService {
 			TimeQuery timeQuery,
 			Integer lastN,
 			boolean sysAttrs,
-			boolean temporalRepresentation) {
+			boolean temporalRepresentation,
+			int pageSize,
+			Optional<String> anchor) {
+
+		AtomicBoolean isLimited = new AtomicBoolean(false);
+
+		List<EntityIdTempResults> entityIdTempResultsList = entityRepository.findEntityIdsAndTimeframesByQuery(ids, namePattern, expandedTypes, timeQuery, geoQuery, query, pageSize, anchor);
+
+		Map<String, List<EntityIdTempResults>> tempResultsMap = new HashMap<>();
+
+		entityIdTempResultsList.stream().forEach(tempResult -> {
+			if (tempResultsMap.containsKey(tempResult.getEntityId())) {
+				tempResultsMap.get(tempResult.getEntityId()).add(tempResult);
+			} else {
+				List<EntityIdTempResults> tempResults = new ArrayList<>();
+				tempResults.add(tempResult);
+				tempResultsMap.put(tempResult.getEntityId(), tempResults);
+			}
+		});
+
+		int limitPerEntity = entityRepository.getLimit(tempResultsMap.keySet().size(), expandedAttributes.size(), lastN);
+
+		tempResultsMap.entrySet().forEach(entry -> {
+			if (lastN == null || lastN > 0) {
+				entry.getValue().sort(Comparator.comparing(EntityIdTempResults::getStartTime).reversed());
+			} else {
+				entry.getValue().sort(Comparator.comparing(EntityIdTempResults::getStartTime));
+			}
+		});
+		boolean backwards = lastN != null;
+		List<EntityTemporalVO> entityTemporalVOS = new ArrayList<>(tempResultsMap.values().stream()
+				.map(tempResults -> getLimitableEntityTemporal(tempResults,
+						timeQuery.getTimeProperty(),
+						expandedAttributes,
+						sysAttrs,
+						temporalRepresentation,
+						limitPerEntity,
+						backwards))
+				.filter(Optional::isPresent)
+				.flatMap(optionalResult -> {
+					LimitableResult<List<EntityTemporalVO>> limitableResult = optionalResult.get();
+					if (limitableResult.isLimited()) {
+						isLimited.set(true);
+					}
+					return limitableResult.getResult().stream();
+				})
+				.collect(Collectors.toMap(EntityTemporalVO::getId, etVO -> etVO, this::mergeEntityTemporals)).values());
+
+		return new LimitableResult<>(entityTemporalVOS, isLimited.get());
+	}
+
+	/**
+	 * Count the number of entities that match the current query.
+	 */
+	@ReadOnly
+	public Number countMatchingEntities(
+			Optional<List<String>> ids,
+			Optional<String> namePattern,
+			List<String> expandedTypes,
+			Optional<QueryTerm> query,
+			Optional<GeoQuery> geoQuery,
+			TimeQuery timeQuery) {
+		return entityRepository.getCount(ids, namePattern, expandedTypes, timeQuery, geoQuery, query);
+	}
+
+	@ReadOnly
+	public PaginationInformation getPaginationInfo(
+			Optional<List<String>> ids,
+			Optional<String> namePattern,
+			List<String> expandedTypes,
+			Optional<QueryTerm> query,
+			Optional<GeoQuery> geoQuery,
+			TimeQuery timeQuery,
+			int pageSize,
+			Optional<String> anchor) {
+
+		return entityRepository.getPaginationInfo(ids, namePattern, expandedTypes, timeQuery, geoQuery, query, pageSize, anchor);
+	}
+
+	private int maxNumberOfInstances(EntityTemporalVO entityTemporalVO) {
+		int size = getSizeFromNullableList(entityTemporalVO.getLocation());
+		if (size > getSizeFromNullableList(entityTemporalVO.getOperationSpace())) {
+			size = getSizeFromNullableList(entityTemporalVO.getOperationSpace());
+		}
+		if (size > getSizeFromNullableList(entityTemporalVO.getObservationSpace())) {
+			size = getSizeFromNullableList(entityTemporalVO.getObservationSpace());
+		}
+		for (Object additionalProperty : entityTemporalVO.getAdditionalProperties().values()) {
+			if ((additionalProperty instanceof List) && ((List) additionalProperty).size() > size) {
+				size = ((List) additionalProperty).size();
+			}
+		}
+		return size;
+	}
+
+	private int getSizeFromNullableList(List nullableList) {
+		return Optional.ofNullable(nullableList).map(List::size).orElse(0);
+	}
 
 
-		return new ArrayList<>(
-				entityRepository.findEntityIdsAndTimeframesByQuery(namePattern, expandedTypes, timeQuery, geoQuery, query)
-						.stream()
-						.map(tempResult -> getNgsiEntitiesWithTimerel(
-								tempResult.getEntityId(),
-								new TimeQuery(TimeRelation.BETWEEN, tempResult.getStartTime(), tempResult.getEndTime(), timeQuery.getTimeProperty(), true),
-								expandedAttributes,
-								lastN,
-								sysAttrs,
-								temporalRepresentation))
-						.filter(Optional::isPresent)
-						.map(Optional::get)
-						.collect(Collectors.toMap(EntityTemporalVO::getId, etVO -> etVO, this::mergeEntityTemporals)).values());
+	private Optional<LimitableResult<List<EntityTemporalVO>>> getLimitableEntityTemporal(
+			List<EntityIdTempResults> tempResults,
+			String timeProperty,
+			List<String> expandedAttributes,
+			boolean sysAttrs,
+			boolean temporalRepresentation,
+			int limitPerEntity,
+			boolean backwards) {
+		boolean limited = false;
+		List<EntityTemporalVO> entityTemporalVOS = new ArrayList<>();
+
+		for (EntityIdTempResults result : tempResults) {
+			Optional<LimitableResult<EntityTemporalVO>> optionalLimitableResult = getNgsiEntitiesWithTimerel(result.getEntityId(),
+					new TimeQuery(TimeRelation.BETWEEN, result.getStartTime(), result.getEndTime(), timeProperty, true),
+					expandedAttributes,
+					sysAttrs,
+					temporalRepresentation,
+					limitPerEntity,
+					backwards);
+			if (optionalLimitableResult.isPresent()) {
+				LimitableResult<EntityTemporalVO> limitableResult = optionalLimitableResult.get();
+				entityTemporalVOS.add(optionalLimitableResult.get().getResult());
+				limited = limitableResult.isLimited();
+				limitPerEntity -= maxNumberOfInstances(limitableResult.getResult());
+
+			}
+			if (limitPerEntity < 1) {
+				break;
+			}
+		}
+
+		if (entityTemporalVOS.isEmpty()) {
+			return Optional.empty();
+		}
+		return Optional.of(new LimitableResult<>(entityTemporalVOS, limited));
+
 	}
 
 	private EntityTemporalVO mergeEntityTemporals(EntityTemporalVO entityTemporalVO1, EntityTemporalVO entityTemporalVO2) {
@@ -97,15 +223,17 @@ public class EntityTemporalService {
 		return entityTemporalVO1;
 	}
 
-	@ReadOnly
-	public Optional<EntityTemporalVO> getNgsiEntitiesWithTimerel(
+	private Optional<LimitableResult<EntityTemporalVO>> getNgsiEntitiesWithTimerel(
 			String entityId,
 			TimeQuery timeQuery,
 			List<String> attrs,
-			Integer lastN,
 			boolean sysAttrs,
-			boolean temporalRepresentation) {
-		List<Attribute> attributes = entityRepository.findAttributeByEntityId(entityId, timeQuery, attrs, lastN);
+			boolean temporalRepresentation,
+			Integer limit,
+			boolean backwards) {
+
+		LimitableResult<List<Attribute>> limitableAttributesList = entityRepository.findAttributeByEntityId(entityId, timeQuery, attrs, limit, backwards);
+		List<Attribute> attributes = limitableAttributesList.getResult();
 		List<String> attributesWithSubattributes = attributes.stream()
 				.filter(Attribute::getSubProperties)
 				.map(Attribute::getInstanceId)
@@ -121,26 +249,26 @@ public class EntityTemporalService {
 		boolean includeModifiedAt = sysAttrs || timeQuery.getTimeProperty().equals(MODIFIED_AT_PROPERTY);
 
 		attributes.stream()
-				.peek(attribute -> attributeTimeStamps.add(attribute.getTs()))
 				.map(attribute -> {
+					attributeTimeStamps.add(attribute.getTs());
 					if (includeCreatedAt) {
 						return getAttributeEntryWithCreatedAt(createdAtMap, attribute, false, includeModifiedAt);
 					} else {
 						return attributeToMapEntry(attribute, null, includeModifiedAt);
 					}
 				})
-				.peek(attributeEntry -> {
+				.forEach(entry -> {
 					if (!temporalRepresentation) {
-						addSubAttributesToAttributeInstance(entityId, attributeEntry, lastN, attributesWithSubattributes, includeCreatedAt, includeModifiedAt);
+						addSubAttributesToAttributeInstance(entityId, entry, attributesWithSubattributes, includeCreatedAt, includeModifiedAt, limit, backwards);
 					}
-				})
-				.forEach(entry -> addEntryToTemporalAttributes(temporalAttributes, entry));
+					addEntryToTemporalAttributes(temporalAttributes, entry);
+				});
 
 		if (attributeTimeStamps.isEmpty()) {
 			return Optional.empty();
 		}
-		// filter the entity in the timestamp we have attributes for.
 
+		// filter the entity in the timestamp we have attributes for.
 		Optional<NgsiEntity> entity = entityRepository.findById(entityId,
 				new TimeQuery(
 						TimeRelation.BETWEEN,
@@ -157,12 +285,22 @@ public class EntityTemporalService {
 		entityTemporalVO.type(ngsiEntity.getType()).id(URI.create(entityId));
 
 		entityTemporalVO.setAdditionalProperties(temporalAttributes);
-		return Optional.ofNullable(entityTemporalVO);
+		return Optional.of(new LimitableResult<EntityTemporalVO>(entityTemporalVO, limitableAttributesList.isLimited()));
+	}
 
+	@ReadOnly
+	public Optional<LimitableResult<EntityTemporalVO>> getNgsiEntitiesWithTimerel(
+			String entityId,
+			TimeQuery timeQuery,
+			List<String> attrs,
+			Integer lastN,
+			boolean sysAttrs,
+			boolean temporalRepresentation) {
+		return getNgsiEntitiesWithTimerel(entityId, timeQuery, attrs, sysAttrs, temporalRepresentation, entityRepository.getLimit(1, attrs.size(), lastN), lastN != null);
 	}
 
 
-	private void addSubAttributesToAttributeInstance(String entityId, Map.Entry<String, Object> propertyEntry, Integer lastN, List<String> instancesWithSubattributes, boolean createdAt, boolean modifiedAt) {
+	private void addSubAttributesToAttributeInstance(String entityId, Map.Entry<String, Object> propertyEntry, List<String> instancesWithSubattributes, boolean createdAt, boolean modifiedAt, int limit, boolean backwards) {
 		if (propertyEntry.getValue() == null) {
 			log.debug("The received property entry {} does not have a value.", propertyEntry.getKey());
 			return;
@@ -174,7 +312,7 @@ public class EntityTemporalService {
 		}
 		Map<String, Object> temporalSubAttributes = new HashMap<>();
 
-		getSubAttributesForInstance(entityId, instanceId, lastN, createdAt, modifiedAt)
+		getSubAttributesForInstance(entityId, instanceId, createdAt, modifiedAt, limit, backwards)
 				.forEach(entry -> addEntryToTemporalAttributes(temporalSubAttributes, entry));
 
 		if (propertyEntry.getValue() instanceof PropertyVO) {
@@ -212,15 +350,15 @@ public class EntityTemporalService {
 		return "";
 	}
 
-	private List<Map.Entry<String, Object>> getSubAttributesForInstance(String entityId, String attributeId, Integer lastN, boolean createdAt, boolean modifiedAt) {
+	private List<Map.Entry<String, Object>> getSubAttributesForInstance(String entityId, String attributeId, boolean createdAt, boolean modifiedAt, int limit, boolean backwards) {
 		if (createdAt) {
 			Map<String, List<Instant>> createdAtMap = new HashMap<>();
-			return entityRepository.findSubAttributeInstancesForAttributeAndEntity(entityId, attributeId, lastN)
+			return entityRepository.findSubAttributeInstancesForAttributeAndEntity(entityId, attributeId, limit, backwards)
 					.stream()
 					.map(attribute -> getAttributeEntryWithCreatedAt(createdAtMap, attribute, true, modifiedAt))
 					.collect(Collectors.toList());
 		}
-		return entityRepository.findSubAttributeInstancesForAttributeAndEntity(entityId, attributeId, lastN)
+		return entityRepository.findSubAttributeInstancesForAttributeAndEntity(entityId, attributeId, limit, backwards)
 				.stream()
 				.map(subAttribute -> attributeToMapEntry(subAttribute, null, modifiedAt))
 				.collect(Collectors.toList());

@@ -37,7 +37,11 @@ public enum LogicalOperator {
 	public String getValue() {
 		return value;
 	}
-	public char getCharValue() {return charValue;};
+
+	public char getCharValue() {
+		return charValue;
+	}
+
 	public String getDbOperator() {
 		return this.dbOperator;
 	}

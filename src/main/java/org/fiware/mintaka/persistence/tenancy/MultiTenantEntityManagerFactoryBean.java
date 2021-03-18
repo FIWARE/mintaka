@@ -1,6 +1,5 @@
 package org.fiware.mintaka.persistence.tenancy;
 
-import com.zaxxer.hikari.HikariDataSource;
 import io.micronaut.configuration.hibernate.jpa.JpaConfiguration;
 import io.micronaut.context.BeanLocator;
 import io.micronaut.context.annotation.EachBean;
@@ -42,7 +41,7 @@ public class MultiTenantEntityManagerFactoryBean {
 			dataSource = ((DelegatingDataSource) dataSource).getTargetDataSource();
 		}
 		connectionProvider.registerDefaultDatasource(dataSource);
-		Map<String, Object> additionalSettings = new LinkedHashMap();
+		Map<String, Object> additionalSettings = new LinkedHashMap<>();
 		additionalSettings.put("hibernate.connection.datasource", dataSource);
 		additionalSettings.put("hibernate.current_session_context_class", MicronautSessionContext.class.getName());
 		additionalSettings.put("hibernate.session_factory_name", dataSourceName);
@@ -51,8 +50,8 @@ public class MultiTenantEntityManagerFactoryBean {
 		additionalSettings.putIfAbsent(AvailableSettings.MULTI_TENANT_CONNECTION_PROVIDER,
 				connectionProvider);
 		additionalSettings.putIfAbsent(AvailableSettings.MULTI_TENANT_IDENTIFIER_RESOLVER, multiTenantResolver);
-		JpaConfiguration jpaConfiguration = (JpaConfiguration) this.beanLocator.findBean(JpaConfiguration.class, Qualifiers.byName(dataSourceName)).orElse(this.jpaConfiguration);
-		return jpaConfiguration.buildStandardServiceRegistry(additionalSettings);
+		JpaConfiguration currentJpaConfiguration = this.beanLocator.findBean(JpaConfiguration.class, Qualifiers.byName(dataSourceName)).orElse(this.jpaConfiguration);
+		return currentJpaConfiguration.buildStandardServiceRegistry(additionalSettings);
 	}
 }
 

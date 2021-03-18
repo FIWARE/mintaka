@@ -3,7 +3,6 @@ package org.fiware.mintaka.domain;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
-import java.net.URI;
 import java.time.Instant;
 
 /**

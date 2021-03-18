@@ -2,6 +2,7 @@ package org.fiware.mintaka.persistence;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.fiware.mintaka.exception.PersistenceRetrievalException;
 
 import javax.persistence.AttributeConverter;
 import javax.persistence.Converter;
@@ -11,7 +12,7 @@ import java.io.IOException;
 @Converter(autoApply = true)
 public class JacksonJsonBConverter implements AttributeConverter<Object, String> {
 
-	private final static ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 	@Override
 	public String convertToDatabaseColumn(Object attribute) {
@@ -27,7 +28,7 @@ public class JacksonJsonBConverter implements AttributeConverter<Object, String>
 			return OBJECT_MAPPER.readValue(dbData, Object.class);
 		} catch (IOException ex) {
 			log.debug("Was not able to translate db object: %s", dbData);
-			throw new RuntimeException("Was not able to translate database object.", ex);
+			throw new PersistenceRetrievalException("Was not able to translate database object.", ex);
 		}
 	}
 }

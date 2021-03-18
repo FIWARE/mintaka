@@ -1396,7 +1396,10 @@
             "$ref": "#/components/parameters/csf"
           },
           {
-            "$ref": "#/components/parameters/limit"
+            "$ref": "#/components/parameters/pageSize"
+          },
+          {
+            "$ref": "#/components/parameters/pageAnchor"
           },
           {
             "$ref": "#/components/parameters/components-parameters-options"
@@ -1417,6 +1420,11 @@
                   "simple": {
                     "externalValue": "http://localhost:8090/examples/EntityTemporalList-example.json"
                   }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityTemporalList"
                 }
               }
             }
@@ -1545,6 +1553,11 @@
                   "simple": {
                     "externalValue": "http://localhost:8090/examples/EntityTemporal-example_C5.5.3.json"
                   }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityTemporal"
                 }
               }
             }
@@ -1815,8 +1828,7 @@
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string",
-          "format": "uri"
+          "type": "string"
         }
       },
       "idPattern": {
@@ -1914,7 +1926,41 @@
         "required": false,
         "schema": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "maximum": 100,
+          "default": 100
+        }
+      },
+      "pageAnchor": {
+        "name": "pageAnchor",
+        "description": "Size of the page to be returned",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "pageSize": {
+        "name": "pageSize",
+        "description": "Size of the page to be returned",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 100
+        }
+      },
+      "offset": {
+        "name": "offset",
+        "description": "Pagination offset",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "default": 0
         }
       },
       "options": {
@@ -2018,7 +2064,7 @@
         }
       },
       "time": {
-        "name": "time",
+        "name": "timeAt",
         "description": "start time for temporal query",
         "in": "query",
         "required": false,
@@ -2028,7 +2074,7 @@
         }
       },
       "endTime": {
-        "name": "endTime",
+        "name": "endTimeAt",
         "description": "end time for temporal query",
         "in": "query",
         "required": false,
@@ -2317,6 +2363,9 @@
           },
           "instanceId": {
             "$ref": "#/components/schemas/instanceId"
+          },
+          "unitCode": {
+            "type": "string"
           }
         },
         "required": [
@@ -2404,6 +2453,9 @@
           },
           "instanceId": {
             "$ref": "#/components/schemas/instanceId"
+          },
+          "unitCode": {
+            "type": "string"
           }
         },
         "required": [

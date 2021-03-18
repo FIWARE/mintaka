@@ -1,7 +1,6 @@
 micronaut:
   application:
     name: ${project.artifactId}
-
   caches:
     contexts:
       # allow 100 contexts to be cached
@@ -51,9 +50,5 @@ jpa:
         show_sql: false
 
 loggers:
-  level:
-    root: ERROR
-    org:
-      fiware:
-        mintaka:
-          persistence: WARN
+  levels:
+    ROOT: ERROR
