@@ -2,6 +2,8 @@ name: Publish JavaDoc
 
 on:
   push:
+    branches:
+      - main
 
 jobs:
   doc:
