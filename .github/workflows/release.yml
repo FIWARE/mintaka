@@ -17,12 +17,13 @@ jobs:
           java-version: '11'
           java-package: jdk
       
-      - id: get_pr
+      - id: pr
         uses: actions-ecosystem/action-get-merged-pull-request@v1.0.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          
       - id: test
-        run: echo ${{ steps.get_pr.outputs.labels }}
+        run: echo ${{ steps.pr.outputs.number }}
       
       - uses: zwaldowski/semver-release-action@v2
         with:
