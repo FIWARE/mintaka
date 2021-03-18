@@ -1,7 +1,8 @@
 name: Build&Push Pre Images
 
 on:
-  pull_request:
+  branches:
+    - main
 
 jobs:
   push:
@@ -29,9 +30,12 @@ jobs:
       - name: Log into registry
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      - name: Get PR Number
-        id: pr_number
-        run: echo "::set-output name=nr::$(echo $GITHUB_REF | awk 'BEGIN { FS = "/" } ; { print $3 }')"
-
       - name: Build image
-        run: mvn clean install jib:build -DskipTests -Dimage.tag=${VERSION}-PRE-${{ steps.pr_number.outputs.nr }} -Dimage.repository=wistefan
+        run: mvn clean install jib:build -DskipTests -Dimage.tag=${VERSION}
+
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: ${VERSION}
+          prerelease: false
+          title: ${VERSION}
