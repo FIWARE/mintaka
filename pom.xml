@@ -530,7 +530,6 @@
                     <xmlOutput>true</xmlOutput>
                     <failOnError>false</failOnError>
                     <xmlOutputDirectory>${spotbugs.reportFolder}</xmlOutputDirectory>
-                    <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
                 </configuration>
             </plugin>
             <plugin>
