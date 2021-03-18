@@ -15,7 +15,12 @@ jobs:
           java-version: '11'
 
       - name: Build with Maven
-        run: mvn -B spotbugs:spotbugs
+        run: mvn spotbugs:spotbugs
+
+      - name: Test ls
+        run:
+          - ls
+          - ls target/
 
       - uses: jwgmeligmeyling/spotbugs-github-action@master
         with:
