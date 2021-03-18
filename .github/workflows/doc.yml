@@ -21,4 +21,4 @@ jobs:
       - uses: JamesIves/github-pages-deploy-action@4.1.0
         with:
           branch: gh-pages
-          folder: target/site/javadoc
+          folder: target/site/apidocs
