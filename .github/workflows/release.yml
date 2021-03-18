@@ -23,7 +23,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           
       - id: test
-        run: echo ${{ steps.pr.outputs.number }}
+        run: echo ${{ steps.pr.outputs.labels }}
       
       - uses: zwaldowski/semver-release-action@v2
         with:
