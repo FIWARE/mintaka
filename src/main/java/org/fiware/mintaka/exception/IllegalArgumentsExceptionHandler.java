@@ -19,7 +19,7 @@ import javax.inject.Singleton;
 public class IllegalArgumentsExceptionHandler  extends NGSICompliantExceptionHandler<IllegalArgumentException> {
 
 	private static final ErrorType ASSOCIATED_ERROR = ErrorType.INVALID_REQUEST;
-	private static final String ERROR_TITLE = "Illeagal request.";
+	private static final String ERROR_TITLE = "Illegal request.";
 
 	@Override
 	public ErrorType getAssociatedErrorType() {

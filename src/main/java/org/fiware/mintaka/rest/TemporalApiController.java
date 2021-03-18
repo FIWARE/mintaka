@@ -64,7 +64,7 @@ public class TemporalApiController implements TemporalRetrievalApi {
 	private static final String SYS_ATTRS_OPTION = "sysAttrs";
 	private static final String TEMPORAL_VALUES_OPTION = "temporalValues";
 	private static final String COUNT_OPTION = "count";
-	private static final String LINK_HEADER_TEMPLATE = "<%s>; rel=\"http://www.w3.org/ns/json-ld#context\"; type=\"application/ld+json";
+	private static final String LINK_HEADER_TEMPLATE = "<%s>; rel=\"http://www.w3.org/ns/json-ld#context\"; type=\"application/ld+json\"";
 	public static final String COMMA_SEPERATOR = ",";
 	public static final String TIMERELATION_ERROR_MSG_TEMPLATE = "The given timestamp type is not supported: %s";
 

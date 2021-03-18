@@ -27,6 +27,12 @@ import static org.fiware.mintaka.rest.TemporalApiController.WELL_KNOWN_ATTRIBUTE
 @ToString
 public class ComparisonTerm extends QueryTerm {
 
+	/**
+	 * Date format to be used in mintaka:
+	 * calendar-year - month - day
+	 */
+	public static final String YEAR_MONTH_DAY_FORMAT = "yyyy-MM-DD";
+
 	private static final char DOT_SEPERATOR = '.';
 	private static final String DOT_SEPERATOR_STRING = String.valueOf(DOT_SEPERATOR);
 	private static final String ESCAPED_DOT_SEPERATOR_STRING = "\\.";
@@ -44,7 +50,7 @@ public class ComparisonTerm extends QueryTerm {
 	private static final String UNIT_CODE = "unitCode";
 
 	private static final DateFormat TIME_FORMAT = new SimpleDateFormat("hh:mm:ss,ssssssZ");
-	private static final DateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-DD");
+	private static final DateFormat DATE_FORMAT = new SimpleDateFormat(YEAR_MONTH_DAY_FORMAT);
 	public static final String WELL_KNOWN_QUERY_TEMPLATE = " %s:%s'%s'";
 
 	private final ComparisonOperator operator;
