@@ -22,6 +22,7 @@ jobs:
 
       - uses: zwaldowski/semver-release-action@v2
         with:
+          dry_run: true
           bump: ${{ steps.bump.outputs.match }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
