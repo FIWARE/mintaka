@@ -135,15 +135,11 @@ public class LdContextCache {
 	 */
 	private Object getContext(Object contextURLs) {
 		if (contextURLs instanceof List) {
-			Object compactedContext = Map.of(JsonLdConsts.CONTEXT, ((List) contextURLs).stream()
+			return Map.of(JsonLdConsts.CONTEXT, ((List) contextURLs).stream()
 					.map(this::getContext)
 					.map(contextMap -> ((Map<String, Object>) contextMap).get(JsonLdConsts.CONTEXT))
 					.flatMap(map -> ((Map<String, Object>) map).entrySet().stream())
 					.collect(Collectors.toMap(e -> ((Map.Entry<String, Object>) e).getKey(), e -> ((Map.Entry<String, Object>) e).getValue(), (e1, e2) -> e2)));
-			if (compactedContext instanceof Optional) {
-				return ((Optional<?>) compactedContext).orElseThrow(() -> new ContextRetrievalException("Was not able to get compacted context.", contextURLs.toString()));
-			}
-			return compactedContext;
 		} else if (contextURLs instanceof URL) {
 			return getContextFromURL((URL) contextURLs);
 		} else if (contextURLs instanceof String) {
