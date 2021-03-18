@@ -1,8 +1,11 @@
-name: Docker Build&Push
+name: Docker Build&Push Pre
 
 on:
   push:
-    branches:
+    branches-ignore:
+      - main
+  pull_request:
+    branches-ignore:
       - main
 
 jobs:
