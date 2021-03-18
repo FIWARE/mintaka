@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <FindBugsFilter>
     <Match>
-        <Source name="~target\generated-sources\..*"/>
+        <Source name="~target/generated-sources\..*"/>
     </Match>
 </FindBugsFilter>
