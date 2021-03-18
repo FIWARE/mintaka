@@ -33,4 +33,4 @@ jobs:
         uses: nelonoel/branch-name@v1.0.1
 
       - name: Build image
-        run: mvn clean install jib:build -DskipTests -Dimage.tag=${BRANCH_NAME} -Dimage.repository=wistefan
+        run: mvn clean install jib:build -DskipTests -Dimage.tag=${VERSION}-${BRANCH_NAME} -Dimage.repository=wistefan
