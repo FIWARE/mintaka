@@ -21,7 +21,7 @@ This project is part of [FIWARE](https://www.fiware.org/). For more information 
 ### Preconditions
 
 Mintaka should be viewed as a component of [Orion-LD](https://github.com/FIWARE/context.Orion-LD) and therefore has no 
-mechanism to for populating the database itself. It relies on a  [TimescaleDB](https://www.timescale.com/) installation(including the 
+mechanism for populating the database itself. It relies on a  [TimescaleDB](https://www.timescale.com/) installation(including the 
 [Postgis](https://postgis.net/) extension), that is populated by Orion-LD. 
 For installing Orion-LD, see the [Installation-guide](https://github.com/FIWARE/context.Orion-LD/blob/develop/doc/manuals-ld/installation-guide.md),
 for Timescale we recommend the [Timescale-Postgis image](https://hub.docker.com/r/timescale/timescaledb-postgis/) for [Postgres 12](https://hub.docker.com/layers/timescale/timescaledb-postgis/latest-pg12/images/sha256-40be823de6035faa44d3e811f04f3f064868ee779ebb49b287e1c809ec786994?context=explore).
@@ -35,10 +35,10 @@ Start mintaka via ```docker run  fiware/mintaka```.
 
 We recommend to run mintaka with the provided [docker container](https://hub.docker.com/r/fiware/mintaka/).   
 Since mintaka is built using the [Micronaut-Framework](https://micronaut.io/) all configurations can be provided either via configuration 
-file([application.yaml](src/main/resources/application.yml)) or as environment variables. For detailed information about the configuration mechanism,
+file ([application.yaml](src/main/resources/application.yml)) or as environment variables. For detailed information about the configuration mechanism,
 see the [framework documentation](https://docs.micronaut.io/2.1.3/guide/index.html#configurationProperties).
 
-The following table will concentrate on the important configurations for mintaka:
+The following table concentrates on the most important configuration parameters for Mintaka:
 
 |  Property | Env-Var | Description | Default |
 | ----------------- | ----------------------------------- | ----------------------------------------------- | ------------------------ |
@@ -69,8 +69,8 @@ The API complies with the [NGSI-LD spec version 1.3.1](https://www.etsi.org/deli
 The api supports two dimensions of pagination. 
 
 The first one is similar to the normal query api and compliant with the 
-[NGSI-LD](https://www.etsi.org/deliver/etsi_gs/CIM/001_099/009/01.04.01_60/gs_cim009v010401p.pdf) spec(see 5.5.9):
-* retrieval of entities will be automatically limited to a default pageSize(100) 
+[NGSI-LD](https://www.etsi.org/deliver/etsi_gs/CIM/001_099/009/01.04.01_60/gs_cim009v010401p.pdf) spec (see 5.5.9):
+* retrieval of entities is automatically limited to a default pageSize (100) 
 * the id of the next-page anchor will be returned via the header "Next-Page"
 * the id of the previous-page anchor will be returned via the header "Previous-Page"
 * the page-size will be returned via the header "Page-Size"
@@ -80,3 +80,14 @@ The first one is similar to the normal query api and compliant with the
 
 The second one limits the retrieval of temporal instances and will be described in section 6.3.10 of future NGSI-LD api releases. It automatically 
 limits the number of returned instances and responds with Http-Status 206 "PARTIAL-CONTENT". The returned range is described in the "Content-Range" header.
+
+## Contribution
+
+### Pull Request
+
+Since this project uses automatic versioning, please apply one of the following labels to your pull request:
+* patch - the PR contains a fix
+* minor - the PR contains a new feature/improvement
+* major - the PR contains a breaking change
+
+The changes will automatically be released after the PR was merged.
