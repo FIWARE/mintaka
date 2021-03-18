@@ -1,0 +1,13 @@
+org.fiware.mintaka
+org.fiware.mintaka.context
+org.fiware.mintaka.domain
+org.fiware.mintaka.domain.query.geo
+org.fiware.mintaka.domain.query.ngsi
+org.fiware.mintaka.domain.query.temporal
+org.fiware.mintaka.exception
+org.fiware.mintaka.persistence
+org.fiware.mintaka.persistence.tenancy
+org.fiware.mintaka.rest
+org.fiware.mintaka.service
+org.fiware.ngsi.api
+org.fiware.ngsi.model
