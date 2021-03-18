@@ -19,6 +19,7 @@ jobs:
 
       - name: Test ls
         run: |
+          ls
           ls target/
 
       - uses: jwgmeligmeyling/spotbugs-github-action@master
