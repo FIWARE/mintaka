@@ -68,7 +68,7 @@ services:
       - default
 
   mintaka:
-    image: wistefan/mintaka-j:latest
+    image: fiware/mintaka:latest
     hostname: mintaka
     container_name: mintaka
     environment:

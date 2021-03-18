@@ -1,7 +1,7 @@
 # <a name="top"></a>Mintaka-J
 
 [![License badge](https://img.shields.io/github/license/FIWARE/context.Orion-LD.svg)](https://opensource.org/licenses/AGPL-3.0)
-[![Docker badge](https://img.shields.io/docker/pulls/wistefan/mintaka-j.svg)](https://hub.docker.com/r/wistefan/mintaka-j/)
+[![Docker badge](https://img.shields.io/docker/pulls/fiware/mintaka.svg)](https://hub.docker.com/r/fiware/mintaka/)
 [![NGSI-LD badge](https://img.shields.io/badge/NGSI-LD-red.svg)](https://www.etsi.org/deliver/etsi_gs/CIM/001_099/009/01.04.01_60/gs_cim009v010401p.pdf)
 <br>
 
@@ -13,7 +13,7 @@ The NGSI-LD specification is a living, changing document, and the latest Orion-L
 This project is part of [FIWARE](https://www.fiware.org/). For more information check the FIWARE Catalogue entry for
 [Core Context](https://github.com/Fiware/catalogue/tree/master/core).
 
-| :whale: [Docker Hub](https://hub.docker.com/r/wistefan/mintaka-j/) |
+| :whale: [Docker Hub](https://hub.docker.com/r/fiware/mintaka/) |
 
 ## Installation
 
@@ -31,7 +31,7 @@ Start mintaka via ```docker run  fiware/mintaka```.
 
 ### Configuration
 
-We recommend to run mintaka with the provided [docker container](https://hub.docker.com/r/wistefan/mintaka-j/).   
+We recommend to run mintaka with the provided [docker container](https://hub.docker.com/r/fiware/mintaka/).   
 Since mintaka is built using the [Micronaut-Framework](https://micronaut.io/) all configurations can be provided either via configuration 
 file([application.yaml](src/main/resources/application.yml)) or as environment variables. For detailed information about the configuration mechanism,
 see the [framework documentation](https://docs.micronaut.io/2.1.3/guide/index.html#configurationProperties).
