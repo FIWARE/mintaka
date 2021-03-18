@@ -29,8 +29,8 @@ jobs:
       - name: Log into registry
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      - uses: jwalton/gh-find-current-pr@v1
-        id: findPr
+      - name: Get PR Number
+        run: PR_NUMBER=$(echo $GITHUB_REF | awk 'BEGIN { FS = "/" } ; { print $3 }')
 
       - name: Build image
-        run: mvn clean install jib:build -DskipTests -Dimage.tag=${VERSION}-PRE-${PR} -Dimage.repository=wistefan
+        run: mvn clean install jib:build -DskipTests -Dimage.tag=${VERSION}-PRE-${PR_NUMBER} -Dimage.repository=wistefan
