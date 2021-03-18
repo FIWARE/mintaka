@@ -1,4 +1,4 @@
-# <a name="top"></a>Mintaka-J
+# <a name="top"></a>Mintaka
 
 [![License badge](https://img.shields.io/github/license/FIWARE/context.Orion-LD.svg)](https://opensource.org/licenses/AGPL-3.0)
 [![Docker badge](https://img.shields.io/docker/pulls/fiware/mintaka.svg)](https://hub.docker.com/r/fiware/mintaka/)
