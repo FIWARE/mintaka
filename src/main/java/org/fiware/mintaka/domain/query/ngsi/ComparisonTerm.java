@@ -21,7 +21,7 @@ import static org.fiware.mintaka.rest.TemporalApiController.WELL_KNOWN_ATTRIBUTE
 
 /**
  * Query term to reflect a comparison, according to the ngsi-ld api.
- * A terms looks like: <attribute> <operator> <value>, f.e. name=='name'
+ * A terms looks like: {attribute}{operator}{value}, f.e. name=='name'
  */
 @Getter
 @ToString
