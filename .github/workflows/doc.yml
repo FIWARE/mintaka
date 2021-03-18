@@ -18,9 +18,7 @@ jobs:
       - name: Build doc
         run: mvn javadoc:javadoc
 
-      - uses: avinal/github-pages-deploy-action@main
+      - uses: JamesIves/github-pages-deploy-action@4.1.0
         with:
-          GITHUB_TOKEN: ${{ github.token }}
-          LANGUAGE: "java"
-          PAGES_BRANCH: "gh-pages"
-          DOCS_FOLDER: "target/site/javadoc"
+          branch: gh-pages
+          folder: target/site/javadoc
