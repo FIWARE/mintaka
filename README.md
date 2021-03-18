@@ -3,6 +3,7 @@
 [![License badge](https://img.shields.io/github/license/FIWARE/context.Orion-LD.svg)](https://opensource.org/licenses/AGPL-3.0)
 [![Docker badge](https://img.shields.io/docker/pulls/fiware/mintaka.svg)](https://hub.docker.com/r/fiware/mintaka/)
 [![NGSI-LD badge](https://img.shields.io/badge/NGSI-LD-red.svg)](https://www.etsi.org/deliver/etsi_gs/CIM/001_099/009/01.04.01_60/gs_cim009v010401p.pdf)
+[![Coverage Status](https://coveralls.io/repos/github/FIWARE/mintaka/badge.svg)](https://coveralls.io/github/FIWARE/mintaka)
 <br>
 
 Mintaka is an implementation of the [NGSI-LD](https://www.etsi.org/deliver/etsi_gs/CIM/001_099/009/01.04.01_60/gs_cim009v010401p.pdf) temporal retrieval
@@ -13,7 +14,7 @@ The NGSI-LD specification is a living, changing document, and the latest Orion-L
 This project is part of [FIWARE](https://www.fiware.org/). For more information check the FIWARE Catalogue entry for
 [Core Context](https://github.com/Fiware/catalogue/tree/master/core).
 
-| :whale: [Docker Hub](https://hub.docker.com/r/fiware/mintaka/) |
+| :whale: [Docker Hub](https://hub.docker.com/r/fiware/mintaka/) | :: [Java Doc](https://fiware.github.io/mintaka/) | 
 
 ## Installation
 
