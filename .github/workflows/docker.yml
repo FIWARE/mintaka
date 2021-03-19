@@ -1,10 +1,10 @@
-name: Build&Push Pre Images
+name: Pre-Release
 
 on:
   pull_request:
 
 jobs:
-  push:
+  prerelease:
     runs-on: ubuntu-latest
 
     steps:
@@ -48,6 +48,3 @@ jobs:
           automatic_release_tag: ${{ steps.out.outputs.version }}
           prerelease: true
           title: ${{ steps.out.outputs.version }}
-          files: |
-            LICENSE.txt
-            *.jar
