@@ -11,12 +11,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+
       - uses: meeDamian/sync-readme@v1.0.6
         with:
           user: ${{ secrets.DOCKER_USERNAME }}
-          pass: ${{ secrets.DOCKER_PWD }}
+          pass: ${{ secrets.DOCKER_PASSWORD }}
           slug: fiware/mintaka
           readme: ./docker/description.md
+
   release:
     runs-on: ubuntu-latest
 
