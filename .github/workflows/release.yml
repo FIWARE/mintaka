@@ -6,6 +6,17 @@ on:
       - main
 
 jobs:
+  update-dockerhub-info:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: meeDamian/sync-readme@v1.0.6
+        with:
+          user: ${{ secrets.DOCKER_USERNAME }}
+          pass: ${{ secrets.DOCKER_PWD }}
+          slug: fiware/mintaka
+          readme: ./docker/description.md
   release:
     runs-on: ubuntu-latest
 
@@ -21,13 +32,6 @@ jobs:
         uses: actions-ecosystem/action-get-merged-pull-request@v1.0.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          
-      - uses: meeDamian/sync-readme@v1.0.6
-        with:
-          user: ${{ secrets.DOCKER_USERNAME }}
-          pass: ${{ secrets.DOCKER_PASSWORD }}
-          slug: fiware/mintaka
-          readme: ./docker/description.md
       
       - uses: zwaldowski/semver-release-action@v2
         with:
