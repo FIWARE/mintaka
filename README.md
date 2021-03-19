@@ -157,11 +157,4 @@ limits the number of returned instances and responds with Http-Status 206 "PARTI
 
 ## Contribution
 
-### Pull Request
-
-Since this project uses automatic versioning, please apply one of the following labels to your pull request:
-* patch - the PR contains a fix
-* minor - the PR contains a new feature/improvement
-* major - the PR contains a breaking change
-
-The changes will automatically be released after the PR was merged.
+Please check the [contribution documentation](/doc/CONTRIBUTION.md) for more information
