@@ -513,16 +513,27 @@
                         <goals>
                             <goal>build</goal>
                         </goals>
-                        <id>build-distroless</id>
+                        <id>build-distroless-versioned</id>
                         <configuration>
                             <to>
                                 <image>docker.io/${image.repository}/${artifactId}:${image.tag}-distroless</image>
+                            </to>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
+                        <id>build-distroless-latest</id>
+                        <configuration>
+                            <to>
                                 <image>docker.io/${image.repository}/${artifactId}:latest-distroless</image>
                             </to>
                         </configuration>
                     </execution>
                     <execution>
-                        <id>build-rhel</id>
+                        <id>build-rhel-versioned</id>
                         <phase>deploy</phase>
                         <goals>
                             <goal>build</goal>
@@ -530,6 +541,24 @@
                         <configuration>
                             <to>
                                 <image>docker.io/${image.repository}/${artifactId}:${image.tag}-rhel</image>
+                            </to>
+                            <from>
+                                <image>registry.redhat.io/openjdk/openjdk-11-rhel7</image>
+                                <auth>
+                                    <username>${rhel.username}</username>
+                                    <password>${rhel.password}</password>
+                                </auth>
+                            </from>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>build-rhel-latest</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
+                        <configuration>
+                            <to>
                                 <image>docker.io/${image.repository}/${artifactId}:latest-rhel</image>
                             </to>
                             <from>
@@ -542,7 +571,7 @@
                         </configuration>
                     </execution>
                     <execution>
-                        <id>build-default</id>
+                        <id>build-default-versioned</id>
                         <phase>deploy</phase>
                         <goals>
                             <goal>build</goal>
@@ -550,6 +579,17 @@
                         <configuration>
                             <to>
                                 <image>docker.io/${image.repository}/${artifactId}:${image.tag}</image>
+                            </to>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>build-default-latest</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
+                        <configuration>
+                            <to>
                                 <image>docker.io/${image.repository}/${artifactId}:latest</image>
                             </to>
                         </configuration>
