@@ -5,8 +5,7 @@
 [![Docker badge](https://img.shields.io/docker/pulls/fiware/mintaka.svg)](https://hub.docker.com/r/fiware/mintaka/)
 [![NGSI-LD badge](https://img.shields.io/badge/NGSI-LD-red.svg)](https://www.etsi.org/deliver/etsi_gs/CIM/001_099/009/01.04.01_60/gs_cim009v010401p.pdf)
 [![Coverage Status](https://coveralls.io/repos/github/FIWARE/mintaka/badge.svg)](https://coveralls.io/github/FIWARE/mintaka)
-[![CI](https://github.com/wistefan/mintaka/actions/workflows/release.yml/badge.svg)](https://github.com/wistefan/mintaka/actions/workflows/release.yml)
-<br>
+[![Test](https://github.com/FIWARE/mintaka/actions/workflows/test.yml/badge.svg)](https://github.com/FIWARE/mintaka/actions/workflows/test.yml)
 
 Mintaka is an implementation of the [NGSI-LD](https://www.etsi.org/deliver/etsi_gs/CIM/001_099/009/01.04.01_60/gs_cim009v010401p.pdf) temporal retrieval
 api. It relies on the [Orion-LD Context Broker](https://github.com/FIWARE/context.Orion-LD) to provide the underlying database.
@@ -50,12 +49,14 @@ In order to create a working jar file, run: ```mvn clean install```
 #### Docker
 
 For building a new [docker container](https://www.docker.com/), the usage of the 
-[jib-plugin](https://github.com/GoogleContainerTools/jib/tree/master/jib-maven-plugin) is recommended. 
+[jib-plugin](https://github.com/GoogleContainerTools/jib/tree/master/jib-maven-plugin) is recommended.
 Build the image locally via:
 ```mvn clean install jib:dockerBuild```
 
-If for some reasons required, a plain [dockerfile](docker/Dockerfile) can be used:
-```docker build -f docker/Dockerfile .```
+If for some reasons required, a plain [dockerfile](docker/Dockerfile) can be used to build:
+```docker build -t my-custom-image -f docker/Dockerfile .```
+and run:
+```docker run my-custom-image```
 
 ### Install
 
