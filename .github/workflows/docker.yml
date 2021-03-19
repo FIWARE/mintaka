@@ -33,7 +33,21 @@ jobs:
         id: pr_number
         run: echo "::set-output name=nr::$(echo $GITHUB_REF | awk 'BEGIN { FS = "/" } ; { print $3 }')"
 
+      - name: Set version output
+        id: out
+        run: echo "::set-output name=version::$(echo ${VERSION}-PRE-${{ steps.pr_number.outputs.nr }})"
+
       - name: Build image
         run: |
-          mvn versions:set -DnewVersion=${VERSION}-PRE-${{ steps.pr_number.outputs.nr }}
-          mvn clean install jib:build -DskipTests -Dimage.tag=${VERSION}-PRE-${{ steps.pr_number.outputs.nr }}
+          mvn versions:set -DnewVersion=${{ steps.out.outputs.version }}
+          mvn clean install jib:build -DskipTests -Dimage.tag=${{ steps.out.outputs.version }}
+
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: ${{ steps.out.outputs.version }}
+          prerelease: true
+          title: ${{ steps.out.outputs.version }}
+          files: |
+            LICENSE.txt
+            *.jar
