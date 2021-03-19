@@ -2,6 +2,17 @@
 
 Thanks for checking out FIWARE Mintaka. In order to contribute, please check the general [FIWARE development guidelines](https://fiware-requirements.readthedocs.io/en/latest/lifecycle/index.html).
 
+## Coding guidelines
+
+Your contributions should try to follow the [google java coding guidelines](https://google.github.io/styleguide/javaguide.html). The structure of your 
+code should fit the principles of [Domain Driven Design](https://martinfowler.com/bliki/DomainDrivenDesign.html) and use the DI-mechanisms of 
+[Mirconaut](https://docs.micronaut.io/2.1.3/guide/index.html). Be aware of the framework and make use of its functionalities wherever it makes sense.
+Additional tooling for code-generation is included in the project([lombok](https://projectlombok.org/), [openAPI-codegen](https://github.com/kokuwaio/micronaut-openapi-codegen),
+[mapstruct](https://mapstruct.org/)) in order to reduce boiler-plate code. The focus of Mintaka is on the temporal retrieval of entities according to 
+[NGSI-LD](https://www.etsi.org/deliver/etsi_gs/CIM/001_099/009/01.03.01_60/gs_cim009v010301p.pdf), therefore we encourage the usage of proper 
+libraries for all tasks that are not directly related to that.
+
+
 ## Pull Request
 
 Since this project uses automatic versioning, please apply one of the following labels to your pull request:
