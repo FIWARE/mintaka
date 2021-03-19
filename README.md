@@ -103,7 +103,7 @@ the health endpoint will be available at ```https://<MINTAKA_HOST>:9090/health``
 For all available options, please check the [framework documentation](https://docs.micronaut.io/latest/guide/index.html#management).
 
 ## Testing
-
+ 
 Since Mintaka relies on the database to be populated by [Orion-LD](https://github.com/FIWARE/context.Orion-LD), the testsuite is built around a 
 [docker-compose setup](src/test/resources/docker-compose/docker-compose-it.yml) including Orion-LD. The tests use 
 [testcontainers](https://www.testcontainers.org/) and [JUnit-5](https://junit.org/junit5/). 
