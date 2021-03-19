@@ -23,6 +23,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -120,7 +121,7 @@ public class LdContextCache {
 	 */
 	public Document getContextDocument(Object contextURLs) {
 		try {
-			return JsonDocument.of(new ByteArrayInputStream(OBJECT_MAPPER.writeValueAsString(getContext(contextURLs)).getBytes()));
+			return JsonDocument.of(new ByteArrayInputStream(OBJECT_MAPPER.writeValueAsString(getContext(contextURLs)).getBytes(StandardCharsets.UTF_8)));
 		} catch (JsonLdError | JsonProcessingException e) {
 			throw new IllegalArgumentException(String.format("No valid context available via %s", contextURLs), e);
 		}

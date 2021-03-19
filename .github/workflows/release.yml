@@ -6,6 +6,19 @@ on:
       - main
 
 jobs:
+  update-dockerhub-info:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: meeDamian/sync-readme@v1.0.6
+        with:
+          user: ${{ secrets.DOCKER_USERNAME }}
+          pass: ${{ secrets.DOCKER_PASSWORD }}
+          slug: fiware/mintaka
+          readme: ./docker/description.md
+
   release:
     runs-on: ubuntu-latest
 
@@ -21,7 +34,7 @@ jobs:
         uses: actions-ecosystem/action-get-merged-pull-request@v1.0.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          
+      
       - uses: zwaldowski/semver-release-action@v2
         with:
           dry_run: true
@@ -32,7 +45,9 @@ jobs:
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: Build image
-        run: mvn clean install jib:build -DskipTests -Dimage.tag=${VERSION}
+        run: |
+          mvn versions:set -DnewVersion=${VERSION}
+          mvn clean install deploy -DskipTests -Dimage.tag=${VERSION} -Drhel.username='${{ secrets.RHEL_USERNAME }}' -Drhel.password='${{ secrets.RHEL_PASSWORD }}'
 
       - name: Set version output
         id: out
@@ -44,3 +59,6 @@ jobs:
           automatic_release_tag: ${{ steps.out.outputs.version }}
           prerelease: false
           title: ${{ steps.out.outputs.version }}
+          files: |
+            LICENSE.txt
+            *.jar
