@@ -20,7 +20,11 @@ Since this project uses automatic versioning, please apply one of the following 
 * minor - the PR contains a new feature/improvement
 * major - the PR contains a breaking change
 
-The changes will automatically be released after the PR was merged.
+The PRs enforce squash merge. Please provide a proper description on your squash, it will be used for release notes.
+
+## Vulnerabilities
+
+Please report vulnerabilities as [bugs](#bug) or send an email to the authors as mentioned in the [project-file](/pom.xml#L50).
 
 ## Bugs & Enhancements
 
@@ -36,3 +40,4 @@ observed behaviour, your expectation and a description on how to reproduce it (b
 
 Create an issue including a proper description for the new feature. You can also start with a PR right away, but it would be easier to align on the details
 before and  save unnessary work if discussed before.
+If new functionality is added, the [testsuite](/src/test/java) needs to be extended.

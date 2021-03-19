@@ -89,7 +89,7 @@
         <spotbugs.reportFolder>${project.build.directory}/site/spotbugs</spotbugs.reportFolder>
 
         <!-- persistence -->
-        <version.org.postgresql>42.2.12</version.org.postgresql>
+        <version.org.postgresql>42.2.13</version.org.postgresql>
     </properties>
 
     <dependencies>
@@ -153,6 +153,7 @@
         <dependency>
             <groupId>io.micronaut.sql</groupId>
             <artifactId>micronaut-hibernate-jpa</artifactId>
+            <version>3.3.2</version>
         </dependency>
         <dependency>
             <groupId>io.micronaut</groupId>
