@@ -491,15 +491,6 @@
                 <version>2.7.1</version>
                 <executions>
                     <execution>
-                        <id>build-default</id>
-                        <configuration>
-                            <to>
-                                <image>docker.io/${image.repository}/${artifactId}:${image.tag}</image>
-                                <image>docker.io/${image.repository}/${artifactId}:latest</image>
-                            </to>
-                        </configuration>
-                    </execution>
-                    <execution>
                         <id>build-distroless</id>
                         <configuration>
                             <to>
@@ -525,6 +516,10 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <to>
+                        <image>docker.io/${image.repository}/${artifactId}:${image.tag}</image>
+                        <image>docker.io/${image.repository}/${artifactId}:latest</image>
+                    </to>
                     <container>
                         <labels>
                             <org.opencontainers.image.authors>${project.author.name} - ${project.author.email}</org.opencontainers.image.authors>
