@@ -596,9 +596,21 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <to>
-                        <image>docker.io/${image.repository}/${artifactId}</image>
-                    </to>
+                    <container>
+                        <labels>
+                            <org.opencontainers.image.authors>${project.author.name} - ${project.author.email}</org.opencontainers.image.authors>
+                            <org.opencontainers.image.description>${project.description}</org.opencontainers.image.description>
+                            <org.opencontainers.image.documentation>${project.url}</org.opencontainers.image.documentation>
+                            <org.opencontainers.image.licenses>${project.license.identifier}</org.opencontainers.image.licenses>
+                            <org.opencontainers.image.source>${project.url}</org.opencontainers.image.source>
+                            <org.opencontainers.image.title>${project.title}</org.opencontainers.image.title>
+                            <org.opencontainers.image.vendor>${project.vendor}</org.opencontainers.image.vendor>
+                            <org.opencontainers.image.version>${project.version}</org.opencontainers.image.version>
+                            <org.opencontainers.image.created>${maven.build.timestamp}</org.opencontainers.image.created>
+                            <org.fiware.contact.localpart>${project.contact.email}</org.fiware.contact.localpart>
+                            <org.fiware.contact.domain>${project.contact.domain}</org.fiware.contact.domain>
+                        </labels>
+                    </container>
                 </configuration>
             </plugin>
             <!-- copy project dependencies -->
