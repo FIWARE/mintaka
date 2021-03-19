@@ -14,6 +14,22 @@ The NGSI-LD specification is a living, changing document, and the latest Orion-L
 
 For more information on Mintaka, please refer to its [github repo](https://github.com/FIWARE/mintaka)
 
+## Tags
+
+All images are created using the [CI pipeline](https://github.com/FIWARE/mintaka/tree/main/.github/workflows). 
+We create the following types of tags:
+
+| Tag pattern | Example | Description |
+| ------ | ------ | ----- |
+| <SEM_VER> | 0.0.1 | Release version, equal to the github release |
+| latest | latest | Latest released image. Be careful, this is bleeding edge and not guranteed to be stable | 
+| <SEM_VER>-PRE-<PR_NUMBER> | 0.0.2-PRE-12 | Prerelease version. <SEM_VER> is the next release version, <PR_NUMBER> the number of the associated PR. |
+
+Each tag exists in 3 versions: 
+- no postfix: the default image, based on  ``gcr.io/distroless/java:11``
+- ```-distroless``` postfix: image based on ``gcr.io/distroless/java:11``, f.e. 0.0.1-distroless
+- ```-rhel``` postfix: image based on the [Redhat certified base-image](https://catalog.redhat.com/software/containers/explore) ```openjdk-11-rhel7```, f.e. 0.0.1-rhel
+
 ## How to use
 
 Mintaka relies on a [TimescaleDB](https://www.timescale.com/), that is populated by [Orion-LD](https://github.com/FIWARE/context.Orion-LD).

@@ -3,6 +3,7 @@ package org.fiware.mintaka.domain.query.ngsi;
 import lombok.Getter;
 import lombok.ToString;
 import org.fiware.mintaka.context.LdContextCache;
+import org.graalvm.compiler.options.SuppressFBWarnings;
 
 import java.net.URL;
 import java.text.DateFormat;
@@ -378,6 +379,7 @@ public class ComparisonTerm extends QueryTerm {
 		return getNumberValue(comparisonValue);
 	}
 
+	@SuppressFBWarnings(value = "STCAL_INVOKE_ON_STATIC_DATE_FORMAT_INSTANCE", justification = "No multi-threading risks here. ")
 	private Optional<String> getTimeValue(String toCheck) {
 		try {
 			TIME_FORMAT.parse(toCheck);
@@ -392,6 +394,7 @@ public class ComparisonTerm extends QueryTerm {
 		return getTimeValue(comparisonValue);
 	}
 
+	@SuppressFBWarnings(value = "STCAL_INVOKE_ON_STATIC_DATE_FORMAT_INSTANCE", justification = "No multi-threading risks here. ")
 	private Optional<String> getDateValue(String toCheck) {
 		try {
 			DATE_FORMAT.parse(toCheck);

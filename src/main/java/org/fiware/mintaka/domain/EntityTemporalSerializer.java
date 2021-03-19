@@ -31,6 +31,7 @@ import javax.inject.Singleton;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -85,13 +86,12 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 				jsonString = OBJECT_MAPPER.writeValueAsString(value);
 			}
 			Document context = ldContextCache.getContextDocument(contextObject);
-			CompactionApi compactionApi = JsonLd.compact(JsonDocument.of(new ByteArrayInputStream(jsonString.getBytes())), context);
+			CompactionApi compactionApi = JsonLd.compact(JsonDocument.of(new ByteArrayInputStream(jsonString.getBytes(StandardCharsets.UTF_8))), context);
 			JsonObject jsonObject = compactionApi.loader(documentLoader).get();
 
 			// create an builder for the compacted object
 			JsonObjectBuilder compactedJsonBuilder = Json.createObjectBuilder(jsonObject);
 
-			String serializedString;
 			switch (acceptType) {
 				case JSON:
 					compactedJsonBuilder.remove(CONTEXT_KEY);
