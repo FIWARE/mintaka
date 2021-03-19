@@ -491,6 +491,9 @@
                 <version>2.7.1</version>
                 <executions>
                     <execution>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
                         <id>build-distroless</id>
                         <configuration>
                             <to>
@@ -500,6 +503,9 @@
                         </configuration>
                     </execution>
                     <execution>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
                         <configuration>
                             <to>
                                 <image>docker.io/${image.repository}/${artifactId}:${image.tag}-rhel</image>
