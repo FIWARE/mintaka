@@ -47,7 +47,7 @@ jobs:
       - name: Build image
         run: |
           mvn versions:set -DnewVersion=${VERSION}
-          mvn clean install deploy -DskipTests -Dimage.tag=${VERSION}
+          mvn clean install deploy -DskipTests -Dimage.tag=${VERSION} -Drhel.username='${{ secrets.RHEL_USERNAME }}' -Drhel.password='${{ secrets.RHEL_PASSWORD }}'
 
       - name: Set version output
         id: out
