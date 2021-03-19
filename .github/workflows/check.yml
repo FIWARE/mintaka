@@ -37,8 +37,8 @@ jobs:
         uses: actions/checkout@v1
 
       - name: Comment PR
+        if: env.WORKFLOW_CONCLUSION == 'failure'
         uses: thollander/actions-comment-pull-request@master
         with:
           message: "Please apply one of the following labels to the PR: 'patch', 'minor', 'major'. For more information see: https://github.com/FIWARE/mintaka/doc/CONTRIBUTING.md"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: env.WORKFLOW_CONCLUSION == 'failure'

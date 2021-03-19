@@ -22,8 +22,12 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           
-      - id: test
-        run: echo ${{ steps.pr.outputs.labels }}
+      - uses: meeDamian/sync-readme@v1.0.6
+        with:
+          user: ${{ secrets.DOCKER_USERNAME }}
+          pass: ${{ secrets.DOCKER_PASSWORD }}
+          slug: fiware/mintaka
+          readme: ./docker/description.md
       
       - uses: zwaldowski/semver-release-action@v2
         with:
