@@ -8,4 +8,4 @@ Since this project uses automatic versioning, please apply one of the following 
 * minor - the PR contains a new feature/improvement
 * major - the PR contains a breaking change
 
-The changes will automatically be released after the PR was merged.
+The PRs enforce squash merge. Please provide a proper description on your squash, it will be used for release notes.
