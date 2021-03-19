@@ -49,12 +49,14 @@ In order to create a working jar file, run: ```mvn clean install```
 #### Docker
 
 For building a new [docker container](https://www.docker.com/), the usage of the 
-[jib-plugin](https://github.com/GoogleContainerTools/jib/tree/master/jib-maven-plugin) is recommended. 
+[jib-plugin](https://github.com/GoogleContainerTools/jib/tree/master/jib-maven-plugin) is recommended.
 Build the image locally via:
 ```mvn clean install jib:dockerBuild```
 
-If for some reasons required, a plain [dockerfile](docker/Dockerfile) can be used:
-```docker build -f docker/Dockerfile .```
+If for some reasons required, a plain [dockerfile](docker/Dockerfile) can be used to build:
+```docker build -t my-custom-image -f docker/Dockerfile .```
+and run:
+```docker run my-custom-image```
 
 ### Install
 
