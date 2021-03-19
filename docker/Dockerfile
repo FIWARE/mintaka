@@ -7,5 +7,6 @@ RUN mvn clean install -DskipTests
 
 FROM gcr.io/distroless/java:11
 
-COPY --from=maven-build /usr/src/target/mintaka-0.0.1.jar /
-CMD /mintaka-0.0.1.jar
+COPY --from=maven-build /usr/src/target/mintaka-0.0.1.jar /app
+WORKDIR /app
+CMD ["mintaka-0.0.1.jar"]

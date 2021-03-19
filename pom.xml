@@ -12,12 +12,42 @@
         <version>2.1.3</version>
     </parent>
 
+    <developers>
+        <developer>
+            <name>${project.author.name}</name>
+            <email>${project.author.email}</email>
+        </developer>
+    </developers>
+
+    <description>${project.description}</description>
+    <url>${project.url}</url>
+    <licenses>
+        <license>
+            <name>${project.license.name}</name>
+            <url>${project.license.url}</url>
+        </license>
+    </licenses>
+
+
     <properties>
         <jdk.version>11</jdk.version>
         <release.version>11</release.version>
         <micronaut.version>2.1.3</micronaut.version>
         <micronaut.data.version>2.1.1</micronaut.data.version>
         <micronaut.configuration.version>1.3.1</micronaut.configuration.version>
+
+        <!-- project info -->
+        <project.author.name>Stefan Wiedemann</project.author.name>
+        <project.author.email>stefan.wiedemann@fiware.org</project.author.email>
+        <project.description>Mintaka provides an implementation of the NGSI-LD temporal API, based on Orion-LDs temporal api</project.description>
+        <project.url>https://github.com/FIWARE/mintaka</project.url>
+        <project.license.name>GNU Affero General Public License v3.0</project.license.name>
+        <project.license.identifier>AGPL-3.0-only</project.license.identifier>
+        <project.license.url>https://www.gnu.org/licenses/agpl.txt</project.license.url>
+        <project.title>FIWARE Mintaka</project.title>
+        <project.vendor>FIWARE Foundation, e.V.</project.vendor>
+        <project.contact.domain>fiware.org</project.contact.domain>
+        <project.contact.email>stefan.wiedemann@fiware.org</project.contact.email>
 
         <!-- docker -->
         <exec.mainClass>org.fiware.mintaka.Application</exec.mainClass>
@@ -453,7 +483,23 @@
                 <configuration>
                     <to>
                         <image>docker.io/${image.repository}/${artifactId}:${image.tag}</image>
+                        <image>docker.io/${image.repository}/${artifactId}:latest</image>
                     </to>
+                    <container>
+                        <labels>
+                            <org.opencontainers.image.authors>${project.author.name} - ${project.author.email}</org.opencontainers.image.authors>
+                            <org.opencontainers.image.description>${project.description}</org.opencontainers.image.description>
+                            <org.opencontainers.image.documentation>${project.url}</org.opencontainers.image.documentation>
+                            <org.opencontainers.image.licenses>${project.license.identifier}</org.opencontainers.image.licenses>
+                            <org.opencontainers.image.source>${project.url}</org.opencontainers.image.source>
+                            <org.opencontainers.image.title>${project.title}</org.opencontainers.image.title>
+                            <org.opencontainers.image.vendor>${project.vendor}</org.opencontainers.image.vendor>
+                            <org.opencontainers.image.version>${project.version}</org.opencontainers.image.version>
+                            <org.opencontainers.image.created>${maven.build.timestamp}</org.opencontainers.image.created>
+                            <org.fiware.contact.localpart>${project.contact.email}</org.fiware.contact.localpart>
+                            <org.fiware.contact.domain>${project.contact.domain}</org.fiware.contact.domain>
+                        </labels>
+                    </container>
                 </configuration>
             </plugin>
             <!-- copy project dependencies -->

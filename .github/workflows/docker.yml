@@ -34,4 +34,6 @@ jobs:
         run: echo "::set-output name=nr::$(echo $GITHUB_REF | awk 'BEGIN { FS = "/" } ; { print $3 }')"
 
       - name: Build image
-        run: mvn clean install jib:build -DskipTests -Dimage.tag=${VERSION}-PRE-${{ steps.pr_number.outputs.nr }}
+        run: |
+          mvn versions:set -DnewVersion=${VERSION}-PRE-${{ steps.pr_number.outputs.nr }}
+          mvn clean install jib:build -DskipTests -Dimage.tag=${VERSION}-PRE-${{ steps.pr_number.outputs.nr }}
