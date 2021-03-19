@@ -53,6 +53,8 @@
         <exec.mainClass>org.fiware.mintaka.Application</exec.mainClass>
         <image.repository>fiware</image.repository>
         <image.tag>latest</image.tag>
+        <rhel.username>rhel-user</rhel.username>
+        <rhel.password>rhel-password</rhel.password>
 
         <!-- lazy dev -->
         <version.org.mapstruct>1.3.1.Final</version.org.mapstruct>
@@ -153,7 +155,6 @@
         <dependency>
             <groupId>io.micronaut.sql</groupId>
             <artifactId>micronaut-hibernate-jpa</artifactId>
-            <version>3.3.2</version>
         </dependency>
         <dependency>
             <groupId>io.micronaut</groupId>
@@ -172,6 +173,13 @@
             <groupId>io.micronaut.configuration</groupId>
             <artifactId>micronaut-micrometer-registry-prometheus</artifactId>
             <version>${micronaut.configuration.version}</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-core</artifactId>
+            <version>5.4.24.Final</version>
         </dependency>
 
         <!-- json -->
@@ -481,11 +489,42 @@
                 <groupId>com.google.cloud.tools</groupId>
                 <artifactId>jib-maven-plugin</artifactId>
                 <version>2.7.1</version>
+                <executions>
+                    <execution>
+                        <id>build-default</id>
+                        <configuration>
+                            <to>
+                                <image>docker.io/${image.repository}/${artifactId}:${image.tag}</image>
+                                <image>docker.io/${image.repository}/${artifactId}:latest</image>
+                            </to>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>build-distroless</id>
+                        <configuration>
+                            <to>
+                                <image>docker.io/${image.repository}/${artifactId}:${image.tag}-distroless</image>
+                                <image>docker.io/${image.repository}/${artifactId}:latest-distroless</image>
+                            </to>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <configuration>
+                            <to>
+                                <image>docker.io/${image.repository}/${artifactId}:${image.tag}-rhel</image>
+                                <image>docker.io/${image.repository}/${artifactId}:latest-rhel</image>
+                            </to>
+                            <from>
+                                <image>registry.redhat.io/openjdk/openjdk-11-rhel7</image>
+                                <auth>
+                                    <username>${rhel.username}</username>
+                                    <password>${rhel.password}</password>
+                                </auth>
+                            </from>
+                        </configuration>
+                    </execution>
+                </executions>
                 <configuration>
-                    <to>
-                        <image>docker.io/${image.repository}/${artifactId}:${image.tag}</image>
-                        <image>docker.io/${image.repository}/${artifactId}:latest</image>
-                    </to>
                     <container>
                         <labels>
                             <org.opencontainers.image.authors>${project.author.name} - ${project.author.email}</org.opencontainers.image.authors>
