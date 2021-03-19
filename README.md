@@ -13,7 +13,7 @@ The NGSI-LD specification is a living, changing document, and the latest Orion-L
 1.3.1 ETSI specification. 
 
 This project is part of [FIWARE](https://www.fiware.org/). For more information check the FIWARE Catalogue entry for
-[Core Context](https://github.com/Fiware/catalogue/tree/master/core).
+[Core Context](https://github.com/Fiware/catalogue/tree/master/core). 
 
 | :whale: [Docker Hub](https://hub.docker.com/r/fiware/mintaka/) | :books: [Java Doc](https://fiware.github.io/mintaka/) | 
 | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
