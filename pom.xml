@@ -92,7 +92,7 @@
         <spotbugs.reportFolder>${project.build.directory}/site/spotbugs</spotbugs.reportFolder>
 
         <!-- persistence -->
-        <version.org.postgresql>42.2.13</version.org.postgresql>
+        <version.org.postgresql>42.2.19.jre7</version.org.postgresql>
     </properties>
 
     <dependencies>
