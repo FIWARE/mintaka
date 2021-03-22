@@ -32,7 +32,7 @@ public class ComparisonTerm extends QueryTerm {
 	 * Date format to be used in mintaka:
 	 * calendar-year - month - day
 	 */
-	public static final String YEAR_MONTH_DAY_FORMAT = "yyyy-MM-DD";
+	public static final String YEAR_MONTH_DAY_FORMAT = "yyyy-MM-dd";
 
 	private static final char DOT_SEPERATOR = '.';
 	private static final String DOT_SEPERATOR_STRING = String.valueOf(DOT_SEPERATOR);
