@@ -508,6 +508,30 @@
                 <artifactId>jib-maven-plugin</artifactId>
                 <executions>
                     <execution>
+                        <id>build-default-versioned</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
+                        <configuration>
+                            <to>
+                                <image>docker.io/${image.repository}/${artifactId}:${image.tag}</image>
+                            </to>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>build-default-latest</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
+                        <configuration>
+                            <to>
+                                <image>docker.io/${image.repository}/${artifactId}:latest</image>
+                            </to>
+                        </configuration>
+                    </execution>
+                    <execution>
                         <phase>deploy</phase>
                         <goals>
                             <goal>build</goal>
@@ -567,30 +591,6 @@
                                     <password>${rhel.password}</password>
                                 </auth>
                             </from>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>build-default-versioned</id>
-                        <phase>deploy</phase>
-                        <goals>
-                            <goal>build</goal>
-                        </goals>
-                        <configuration>
-                            <to>
-                                <image>docker.io/${image.repository}/${artifactId}:${image.tag}</image>
-                            </to>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>build-default-latest</id>
-                        <phase>deploy</phase>
-                        <goals>
-                            <goal>build</goal>
-                        </goals>
-                        <configuration>
-                            <to>
-                                <image>docker.io/${image.repository}/${artifactId}:latest</image>
-                            </to>
                         </configuration>
                     </execution>
                 </executions>
