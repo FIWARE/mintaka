@@ -85,17 +85,17 @@ The following table concentrates on the most important configuration parameters 
 
 |  Property | Env-Var | Description | Default |
 | ----------------- | ----------------------------------- | ----------------------------------------------- | ------------------------ |
-| micronaut.server.port        | MICRONAUT_SERVER_PORT | Server port to be used for mintaka    | 8080  |
-| micronaut.metrics.enabled | MICRONAUT_METRICS_ENABLED | Enable the metrics gathering | true |
-| endpoints.all.port | ENDPOINTS_ALL_PORT | Port to provide the management endpoints | 8080 |
-| endpoints.metrics.enabled | ENDPOINTS_METRICS_ENABLED | Enable the metrics endpoint | true |
-| endpoints.health.enabled | ENDPOINTS_HEALTH_ENABLED | Enable the health endpoint | true | 
-| datasources.default.host | DATASOURCES_DEFAULT_HOST | Host of timescale | localhost |
-| datasources.default.port | DATASOURCES_DEFAULT_PORT | Port of timescale | 5432 |
-| datasources.default.database | DATASOURCES_DEFAULT_DATABASE | Name of the default database, needs to coincide with orion-ld | orion |
-| datasources.default.username | DATASOURCES_DEFAULT_USERNAME | Username to be used for db connections | orion | 
-| datasources.default.password | DATASOURCES_DEFAULT_PASSWORD | Password to be used for db connections | orion | 
-| loggers.levels.ROOT | LOGGERS_LEVELS_ROOT | Root log level of mintaka | ERROR |
+| `micronaut.server.port`        | `MICRONAUT_SERVER_PORT` | Server port to be used for mintaka    | 8080  |
+| `micronaut.metrics.enabled` | `MICRONAUT_METRICS_ENABLED` | Enable the metrics gathering | true |
+| `endpoints.all.port` | `ENDPOINTS_ALL_PORT` | Port to provide the management endpoints | 8080 |
+| `endpoints.metrics.enabled` | `ENDPOINTS_METRICS_ENABLED` | Enable the metrics endpoint | true |
+| `endpoints.health.enabled` | `ENDPOINTS_HEALTH_ENABLED` | Enable the health endpoint | true | 
+| `datasources.default.host` | `DATASOURCES_DEFAULT_HOST` | Host of timescale | localhost |
+| `datasources.default.port` | `DATASOURCES_DEFAULT_PORT` | Port of timescale | 5432 |
+| `datasources.default.database` | `DATASOURCES_DEFAULT_DATABASE` | Name of the default database, needs to coincide with orion-ld | orion |
+| `datasources.default.username` | `DATASOURCES_DEFAULT_USERNAME` | Username to be used for db connections | orion | 
+| `datasources.default.password` | `DATASOURCES_DEFAULT_PASSWORD` | Password to be used for db connections | orion | 
+| `loggers.levels.ROOT` | `LOGGERS_LEVELS_ROOT` | Root log level of mintaka | ERROR |
 
 #### Operations 
 
