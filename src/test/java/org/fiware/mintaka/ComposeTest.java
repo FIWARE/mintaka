@@ -21,9 +21,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.provider.Arguments;
 import org.testcontainers.containers.DockerComposeContainer;
 import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
-import org.testcontainers.containers.wait.strategy.WaitStrategy;
-import org.testcontainers.containers.wait.strategy.WaitStrategyTarget;
-import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import org.testcontainers.shaded.com.google.common.collect.Lists;
 
 import java.io.File;
@@ -38,8 +35,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -688,11 +683,13 @@ public abstract class ComposeTest {
 	// wait strategy for orion. Will wait and repeat after the first successful check to ensure its stable
 	class OrionWaitStrategy extends HttpWaitStrategy {
 
+		public static final int RETEST_WAIT_IN_MS = 30000;
+
 		@Override
 		protected void waitUntilReady() {
 			super.waitUntilReady();
 			try {
-				Thread.sleep(30000);
+				Thread.sleep(RETEST_WAIT_IN_MS);
 			} catch (InterruptedException e) {
 				log.info("Sleep interrupted.");
 			}
