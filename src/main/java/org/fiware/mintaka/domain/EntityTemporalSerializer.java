@@ -106,8 +106,8 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 					}
 					gen.writeRaw(compactedJsonBuilder.build().toString());
 					break;
-				// JSON is the default
 				case JSON:
+					// fallthrough, since JSON is the default
 				default:
 					compactedJsonBuilder.remove(CONTEXT_KEY);
 					gen.writeRaw(compactedJsonBuilder.build().toString());
