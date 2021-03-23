@@ -14,8 +14,8 @@ jobs:
 
       - uses: meeDamian/sync-readme@v1.0.6
         with:
-          user: ${{ secrets.DOCKER_USERNAME }}
-          pass: ${{ secrets.DOCKER_PASSWORD }}
+          user: ${{ secrets.FIWAREBOT_USERNAME }}
+          pass: ${{ secrets.FIWAREBOT_PASSWORD }}
           slug: fiware/mintaka
           readme: ./docker/description.md
 
@@ -47,7 +47,7 @@ jobs:
       - name: Build image
         run: |
           mvn versions:set -DnewVersion=${VERSION}
-          mvn clean install deploy -DskipTests -Dimage.tag=${VERSION} -Drhel.username='${{ secrets.RHEL_USERNAME }}' -Drhel.password='${{ secrets.RHEL_PASSWORD }}'
+          mvn clean install deploy -Pdocker -DskipTests -Dimage.tag=${VERSION} -Drhel.username='${{ secrets.RHEL_USERNAME }}' -Drhel.password='${{ secrets.RHEL_PASSWORD }}'
 
       - name: Set version output
         id: out
