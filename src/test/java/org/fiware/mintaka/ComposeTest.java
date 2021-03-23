@@ -21,6 +21,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.provider.Arguments;
 import org.testcontainers.containers.DockerComposeContainer;
 import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
+import org.testcontainers.containers.wait.strategy.WaitStrategy;
+import org.testcontainers.containers.wait.strategy.WaitStrategyTarget;
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import org.testcontainers.shaded.com.google.common.collect.Lists;
 
@@ -73,7 +75,7 @@ public abstract class ComposeTest {
 
 	{
 		synchronized (SETUP) {
-			DOCKER_COMPOSE_CONTAINER.waitingFor(ORION_LD_HOST, new HttpWaitStrategy()
+			DOCKER_COMPOSE_CONTAINER.waitingFor(ORION_LD_HOST, new OrionWaitStrategy()
 					.withReadTimeout(Duration.of(10, ChronoUnit.MINUTES)).forPort(ORION_LD_PORT).forPath("/version"));
 		}
 	}
@@ -82,8 +84,6 @@ public abstract class ComposeTest {
 	protected Clock clock;
 	protected static EmbeddedServer embeddedServer;
 	protected static ApplicationContext applicationContext;
-
-	protected static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 	protected HttpClient mintakaTestClient;
 	protected EntitiesApiTestClient entitiesApiTestClient;
@@ -684,5 +684,20 @@ public abstract class ComposeTest {
 		return multiLineStringVO;
 	}
 
+
+	// wait strategy for orion. Will wait and repeat after the first successful check to ensure its stable
+	class OrionWaitStrategy extends HttpWaitStrategy {
+
+		@Override
+		protected void waitUntilReady() {
+			super.waitUntilReady();
+			try {
+				Thread.sleep(30000);
+			} catch (InterruptedException e) {
+				log.info("Sleep interrupted.");
+			}
+			super.waitUntilReady();
+		}
+	}
 
 }
