@@ -6,6 +6,7 @@
 [![NGSI-LD badge](https://img.shields.io/badge/NGSI-LD-red.svg)](https://www.etsi.org/deliver/etsi_gs/CIM/001_099/009/01.04.01_60/gs_cim009v010401p.pdf)
 [![Coverage Status](https://coveralls.io/repos/github/FIWARE/mintaka/badge.svg)](https://coveralls.io/github/FIWARE/mintaka)
 [![Test](https://github.com/FIWARE/mintaka/actions/workflows/test.yml/badge.svg)](https://github.com/FIWARE/mintaka/actions/workflows/test.yml)
+[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/4751/badge)](https://bestpractices.coreinfrastructure.org/projects/4751)
 
 Mintaka is an implementation of the [NGSI-LD](https://www.etsi.org/deliver/etsi_gs/CIM/001_099/009/01.04.01_60/gs_cim009v010401p.pdf) temporal retrieval
 api. It relies on the [Orion-LD Context Broker](https://github.com/FIWARE/context.Orion-LD) to provide the underlying database.
@@ -84,17 +85,17 @@ The following table concentrates on the most important configuration parameters 
 
 |  Property | Env-Var | Description | Default |
 | ----------------- | ----------------------------------- | ----------------------------------------------- | ------------------------ |
-| micronaut.server.port        | MICRONAUT_SERVER_PORT | Server port to be used for mintaka    | 8080  |
-| micronaut.metrics.enabled | MICRONAUT_METRICS_ENABLED | Enable the metrics gathering | true |
-| endpoints.all.port | ENDPOINTS_ALL_PORT | Port to provide the management endpoints | 8080 |
-| endpoints.metrics.enabled | ENDPOINTS_METRICS_ENABLED | Enable the metrics endpoint | true |
-| endpoints.health.enabled | ENDPOINTS_HEALTH_ENABLED | Enable the health endpoint | true | 
-| datasources.default.host | DATASOURCES_DEFAULT_HOST | Host of timescale | localhost |
-| datasources.default.port | DATASOURCES_DEFAULT_PORT | Port of timescale | 5432 |
-| datasources.default.database | DATASOURCES_DEFAULT_DATABASE | Name of the default database, needs to coincide with orion-ld | orion |
-| datasources.default.username | DATASOURCES_DEFAULT_USERNAME | Username to be used for db connections | orion | 
-| datasources.default.password | DATASOURCES_DEFAULT_PASSWORD | Password to be used for db connections | orion | 
-| loggers.levels.ROOT | LOGGERS_LEVELS_ROOT | Root log level of mintaka | ERROR |
+| `micronaut.server.port`        | `MICRONAUT_SERVER_PORT` | Server port to be used for mintaka    | 8080  |
+| `micronaut.metrics.enabled` | `MICRONAUT_METRICS_ENABLED` | Enable the metrics gathering | true |
+| `endpoints.all.port` | `ENDPOINTS_ALL_PORT` | Port to provide the management endpoints | 8080 |
+| `endpoints.metrics.enabled` | `ENDPOINTS_METRICS_ENABLED` | Enable the metrics endpoint | true |
+| `endpoints.health.enabled` | `ENDPOINTS_HEALTH_ENABLED` | Enable the health endpoint | true | 
+| `datasources.default.host` | `DATASOURCES_DEFAULT_HOST` | Host of timescale | localhost |
+| `datasources.default.port` | `DATASOURCES_DEFAULT_PORT` | Port of timescale | 5432 |
+| `datasources.default.database` | `DATASOURCES_DEFAULT_DATABASE` | Name of the default database, needs to coincide with orion-ld | orion |
+| `datasources.default.username` | `DATASOURCES_DEFAULT_USERNAME` | Username to be used for db connections | orion | 
+| `datasources.default.password` | `DATASOURCES_DEFAULT_PASSWORD` | Password to be used for db connections | orion | 
+| `loggers.levels.ROOT` | `LOGGERS_LEVELS_ROOT` | Root log level of mintaka | ERROR |
 
 #### Operations 
 
@@ -157,11 +158,4 @@ limits the number of returned instances and responds with Http-Status 206 "PARTI
 
 ## Contribution
 
-### Pull Request
-
-Since this project uses automatic versioning, please apply one of the following labels to your pull request:
-* patch - the PR contains a fix
-* minor - the PR contains a new feature/improvement
-* major - the PR contains a breaking change
-
-The changes will automatically be released after the PR was merged.
+Please check the [contribution documentation](/doc/CONTRIBUTION.md) for more information

@@ -93,10 +93,6 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 			JsonObjectBuilder compactedJsonBuilder = Json.createObjectBuilder(jsonObject);
 
 			switch (acceptType) {
-				case JSON:
-					compactedJsonBuilder.remove(CONTEXT_KEY);
-					gen.writeRaw(compactedJsonBuilder.build().toString());
-					break;
 				case JSON_LD:
 					// add the context as URL instead of fully embed it.
 					if (contextObject instanceof URL) {
@@ -110,6 +106,13 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 					}
 					gen.writeRaw(compactedJsonBuilder.build().toString());
 					break;
+				case JSON:
+					// fallthrough, since JSON is the default
+				default:
+					compactedJsonBuilder.remove(CONTEXT_KEY);
+					gen.writeRaw(compactedJsonBuilder.build().toString());
+					break;
+
 			}
 		} catch (IOException e) {
 			log.error("Was not able to deserialize object", e);

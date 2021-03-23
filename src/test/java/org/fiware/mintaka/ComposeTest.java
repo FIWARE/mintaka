@@ -21,7 +21,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.provider.Arguments;
 import org.testcontainers.containers.DockerComposeContainer;
 import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
-import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import org.testcontainers.shaded.com.google.common.collect.Lists;
 
 import java.io.File;
@@ -36,8 +35,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -73,7 +70,7 @@ public abstract class ComposeTest {
 
 	{
 		synchronized (SETUP) {
-			DOCKER_COMPOSE_CONTAINER.waitingFor(ORION_LD_HOST, new HttpWaitStrategy()
+			DOCKER_COMPOSE_CONTAINER.waitingFor(ORION_LD_HOST, new OrionWaitStrategy()
 					.withReadTimeout(Duration.of(10, ChronoUnit.MINUTES)).forPort(ORION_LD_PORT).forPath("/version"));
 		}
 	}
@@ -82,8 +79,6 @@ public abstract class ComposeTest {
 	protected Clock clock;
 	protected static EmbeddedServer embeddedServer;
 	protected static ApplicationContext applicationContext;
-
-	protected static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 	protected HttpClient mintakaTestClient;
 	protected EntitiesApiTestClient entitiesApiTestClient;
@@ -684,5 +679,22 @@ public abstract class ComposeTest {
 		return multiLineStringVO;
 	}
 
+
+	// wait strategy for orion. Will wait and repeat after the first successful check to ensure its stable
+	class OrionWaitStrategy extends HttpWaitStrategy {
+
+		public static final int RETEST_WAIT_IN_MS = 30000;
+
+		@Override
+		protected void waitUntilReady() {
+			super.waitUntilReady();
+			try {
+				Thread.sleep(RETEST_WAIT_IN_MS);
+			} catch (InterruptedException e) {
+				log.info("Sleep interrupted.");
+			}
+			super.waitUntilReady();
+		}
+	}
 
 }
