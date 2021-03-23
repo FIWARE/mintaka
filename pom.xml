@@ -94,7 +94,6 @@
         <!-- persistence -->
         <version.org.postgresql>42.2.13</version.org.postgresql>
 
-        <micronaut-maven-plugin.version>1.1.8-SNAPSHOT</micronaut-maven-plugin.version>
     </properties>
 
     <dependencies>
