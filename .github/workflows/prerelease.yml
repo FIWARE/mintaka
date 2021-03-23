@@ -41,7 +41,7 @@ jobs:
       - name: Build image
         run: |
           mvn versions:set -DnewVersion=${{ steps.out.outputs.version }}
-          mvn clean install deploy -DskipTests -Dimage.tag=${{ steps.out.outputs.version }} -Drhel.username='${{ secrets.RHEL_USERNAME }}' -Drhel.password='${{ secrets.RHEL_PASSWORD }}'
+          mvn clean install deploy -DskipTests -Pdocker -Dimage.tag=${{ steps.out.outputs.version }} -Drhel.username='${{ secrets.RHEL_USERNAME }}' -Drhel.password='${{ secrets.RHEL_PASSWORD }}'
 
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
