@@ -75,7 +75,7 @@ public class EntityTemporalService {
 		int limitPerEntity = entityRepository.getLimit(tempResultsMap.keySet().size(), expandedAttributes.size(), lastN);
 
 		tempResultsMap.entrySet().forEach(entry -> {
-			if (lastN == null || lastN > 0) {
+			if (lastN != null && lastN > 0) {
 				entry.getValue().sort(Comparator.comparing(EntityIdTempResults::getStartTime).reversed());
 			} else {
 				entry.getValue().sort(Comparator.comparing(EntityIdTempResults::getStartTime));
