@@ -18,6 +18,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -29,8 +30,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class QueryingTest extends ComposeTest {
 
 	@DisplayName("Test running a temporal query including geo querying without timerel.")
-	@Test
-	public void testTempWithGeoQueryInTempValues() {
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	public void testTempWithGeoQueryInTempValues(boolean setLastN) {
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
 		getRequest.getParameters()
 				.add("options", "temporalValues")
@@ -39,6 +41,10 @@ public class QueryingTest extends ComposeTest {
 				.add("georel", "near;maxDistance==300000")
 				.add("geometry", "LineString")
 				.add("coordinates", "[[5,5],[7,7]]");
+
+		if (setLastN) {
+			getRequest.getParameters().add("lastN", "10");
+		}
 
 		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
 		// we expect the two cars to be inside the area two times each, between 00:04 and 00:08 and again between 06:32 and 06.36
@@ -119,8 +125,9 @@ public class QueryingTest extends ComposeTest {
 	}
 
 	@DisplayName("Test running a temporal query including ngsi querying.")
-	@Test
-	public void testTempWithNgsiQueryInTempValues() {
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	public void testTempWithNgsiQueryInTempValues(boolean setLastN) {
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
 		getRequest.getParameters()
 				.add("options", "temporalValues")
@@ -131,6 +138,10 @@ public class QueryingTest extends ComposeTest {
 				.add("timerel", "between")
 				.add("timeAt", "1970-01-01T00:01:00Z")
 				.add("endTimeAt", "1970-01-01T07:30:00Z");
+
+		if (setLastN) {
+			getRequest.getParameters().add("lastN", "199");
+		}
 
 		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
 		// temp should only be high enough until
@@ -227,8 +238,9 @@ public class QueryingTest extends ComposeTest {
 	}
 
 	@DisplayName("Test running a temporal query including ngsi OR querying.")
-	@Test
-	public void testTempWithNgsiORQueryInTempValues() {
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	public void testTempWithNgsiORQueryInTempValues(boolean setLastN) {
 
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
 		getRequest.getParameters()
@@ -240,6 +252,11 @@ public class QueryingTest extends ComposeTest {
 				.add("timerel", "between")
 				.add("timeAt", "1970-01-01T00:01:00Z")
 				.add("endTimeAt", "1970-01-01T07:30:00Z");
+
+		if (setLastN) {
+			getRequest.getParameters().add("lastN", "299");
+		}
+
 		// get car when radio was of or temp was above 20 -> first ~3/4 of the drive
 		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
 		assertEquals(2, entryList.size(), "Both matching entities should have been returned.");
@@ -537,7 +554,6 @@ public class QueryingTest extends ComposeTest {
 		HttpResponse<List<Map<String, Object>>> entryListResponse = mintakaTestClient.toBlocking().exchange(getRequest, List.class);
 		assertEquals(HttpStatus.PARTIAL_CONTENT, entryListResponse.getStatus(), "Only parts of the history should be returned.");
 		assertEquals(expectedRangeHeader, entryListResponse.getHeaders().get("Content-Range"), "The range should have been limited to the first 166 entries.");
-
 	}
 
 
