@@ -2,6 +2,12 @@ name: Check PR
 
 on:
   pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+      - unlabeled
     branches:
       - main
 
@@ -18,15 +24,14 @@ jobs:
           java-package: jdk
 
       - id: bump
-        uses: shioyang/check-pr-labels-on-push-action@v1.0.3
+        uses: zwaldowski/match-label-action@v1
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          labels: '["major", "minor", "patch"]'
+          allowed: major,minor,patch
 
       - uses: zwaldowski/semver-release-action@v2
         with:
           dry_run: true
-          bump: ${{ steps.bump.outputs.result }}
+          bump: ${{ steps.bump.outputs.match }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
   comment:
