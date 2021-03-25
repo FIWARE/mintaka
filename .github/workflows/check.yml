@@ -18,14 +18,15 @@ jobs:
           java-package: jdk
 
       - id: bump
-        uses: zwaldowski/match-label-action@v1
+        uses: shioyang/check-pr-labels-on-push-action@v1.0.3
         with:
-          allowed: major,minor,patch
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          labels: '["major", "minor", "patch"]'
 
       - uses: zwaldowski/semver-release-action@v2
         with:
           dry_run: true
-          bump: ${{ steps.bump.outputs.match }}
+          bump: ${{ steps.bump.outputs.result }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
   comment:
