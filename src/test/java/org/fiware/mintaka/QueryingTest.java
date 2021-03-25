@@ -498,6 +498,22 @@ public class QueryingTest extends ComposeTest {
 		});
 	}
 
+	@DisplayName("Test count option")
+	@Test
+	public void testCountOptionSet() {
+		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
+		getRequest.getParameters()
+				.add("options", "temporalValues")
+				.add("idPattern", ".*")
+				.add("attrs", "temperature")
+				.add("options", "count")
+				.add("pageSize", "2");
+		HttpResponse<List<Map<String, Object>>> entryListResponse = mintakaTestClient.toBlocking().exchange(getRequest, List.class);
+		assertEquals(HttpStatus.OK, entryListResponse.getStatus(), "The request should succeed.");
+		assertNull(entryListResponse.getHeaders().get("NGSILD-Total-Count"), "First page should have no previous");
+		assertEquals(5, entryListResponse.getHeaders().get("NGSILD-Total-Count"), "5 entites should match.");
+	}
+
 	@DisplayName("Retrieve query results with entity pagination")
 	@Test
 	public void testEntityPagination() {
