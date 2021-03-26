@@ -72,7 +72,7 @@ public class LdContextCache {
 		} catch (IOException e) {
 			throw new ContextRetrievalException(String.format("Was not able to retrieve context from %s.", url), e, url.toString());
 		} catch (URISyntaxException uriSyntaxException) {
-			throw new ContextRetrievalException(String.format("Received an invalid url: %s", url), uriSyntaxException, url.toString());
+			throw new IllegalArgumentException(String.format("Received an invalid url: %s", url), uriSyntaxException);
 		}
 	}
 
@@ -121,7 +121,8 @@ public class LdContextCache {
 	 */
 	public Document getContextDocument(Object contextURLs) {
 		try {
-			return JsonDocument.of(new ByteArrayInputStream(OBJECT_MAPPER.writeValueAsString(getContext(contextURLs)).getBytes(StandardCharsets.UTF_8)));
+			Object context = getContext(contextURLs);
+			return JsonDocument.of(new ByteArrayInputStream(OBJECT_MAPPER.writeValueAsString(context).getBytes(StandardCharsets.UTF_8)));
 		} catch (JsonLdError | JsonProcessingException e) {
 			throw new IllegalArgumentException(String.format("No valid context available via %s", contextURLs), e);
 		}
@@ -185,7 +186,7 @@ public class LdContextCache {
 					try {
 						return new URL(lCS);
 					} catch (MalformedURLException e) {
-						throw new ContextRetrievalException("Was not able to get context url from the Link-header.", e, lCS);
+						throw new IllegalArgumentException("Context url is invalid.", e);
 					}
 				})
 				.map(url -> List.of(url, coreContextUrl)).orElse(List.of(coreContextUrl));

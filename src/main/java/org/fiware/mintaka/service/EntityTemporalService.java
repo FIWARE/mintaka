@@ -3,7 +3,6 @@ package org.fiware.mintaka.service;
 import io.micronaut.transaction.annotation.ReadOnly;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.nullness.Opt;
 import org.fiware.mintaka.domain.AttributePropertyVOMapper;
 import org.fiware.mintaka.domain.EntityIdTempResults;
 import org.fiware.mintaka.domain.PaginationInformation;
@@ -14,6 +13,7 @@ import org.fiware.mintaka.domain.query.ngsi.QueryTerm;
 import org.fiware.mintaka.persistence.AbstractAttribute;
 import org.fiware.mintaka.persistence.Attribute;
 import org.fiware.mintaka.persistence.EntityRepository;
+import org.fiware.mintaka.persistence.TimescaleBackedEntityRepository;
 import org.fiware.mintaka.persistence.LimitableResult;
 import org.fiware.mintaka.persistence.NgsiEntity;
 import org.fiware.ngsi.model.EntityTemporalVO;
@@ -75,7 +75,7 @@ public class EntityTemporalService {
 		int limitPerEntity = entityRepository.getLimit(tempResultsMap.keySet().size(), expandedAttributes.size(), lastN);
 
 		tempResultsMap.entrySet().forEach(entry -> {
-			if (lastN == null || lastN > 0) {
+			if (lastN != null && lastN > 0) {
 				entry.getValue().sort(Comparator.comparing(EntityIdTempResults::getStartTime).reversed());
 			} else {
 				entry.getValue().sort(Comparator.comparing(EntityIdTempResults::getStartTime));
