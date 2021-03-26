@@ -128,7 +128,10 @@ public class QueryingTest extends ComposeTest {
 			List timeList;
 			if (sysAttrs.isPresent()) {
 				List<Map> properties = (List<Map>) entry.get("temperature");
-				timeList = properties.stream().map(property -> property.get("observedAt")).sorted().collect(Collectors.toList());
+				timeList = properties.stream()
+						.peek(property -> assertNotNull(property.get("createdAt")))
+						.peek(property -> assertNotNull(property.get("modifiedAt")))
+						.map(property -> property.get("observedAt")).sorted().collect(Collectors.toList());
 			} else {
 				Map<String, List> property = (Map<String, List>) entry.get("temperature");
 				List<List> temporalValuesList = property.get("values");
@@ -209,7 +212,10 @@ public class QueryingTest extends ComposeTest {
 			List timeList;
 			if (sysAttrs.isPresent()) {
 				List<Map> properties = (List<Map>) entry.get("temperature");
-				timeList = properties.stream().map(property -> property.get("observedAt")).sorted().collect(Collectors.toList());
+				timeList = properties.stream()
+						.peek(property -> assertNotNull(property.get("createdAt")))
+						.peek(property -> assertNotNull(property.get("modifiedAt")))
+						.map(property -> property.get("observedAt")).sorted().collect(Collectors.toList());
 			} else {
 				Map<String, List> property = (Map<String, List>) entry.get("temperature");
 				List<List> temporalValuesList = property.get("values");
@@ -261,7 +267,10 @@ public class QueryingTest extends ComposeTest {
 			List timeList;
 			if (sysAttrs.isPresent()) {
 				List<Map> properties = (List<Map>) entry.get("temperature");
-				timeList = properties.stream().map(property -> property.get("observedAt")).sorted().collect(Collectors.toList());
+				timeList = properties.stream()
+						.peek(property -> assertNotNull(property.get("createdAt")))
+						.peek(property -> assertNotNull(property.get("modifiedAt")))
+						.map(property -> property.get("observedAt")).sorted().collect(Collectors.toList());
 			} else {
 				Map<String, List> property = (Map<String, List>) entry.get("temperature");
 				List<List> temporalValuesList = property.get("values");
@@ -346,7 +355,10 @@ public class QueryingTest extends ComposeTest {
 			List timeList;
 			if (sysAttrs.isPresent()) {
 				List<Map> properties = (List<Map>) entry.get("temperature");
-				timeList = properties.stream().map(property -> property.get("observedAt")).sorted().collect(Collectors.toList());
+				timeList = properties.stream()
+						.peek(property -> assertNotNull(property.get("createdAt")))
+						.peek(property -> assertNotNull(property.get("modifiedAt")))
+						.map(property -> property.get("observedAt")).sorted().collect(Collectors.toList());
 			} else {
 				Map<String, List> property = (Map<String, List>) entry.get("temperature");
 				List<List> temporalValuesList = property.get("values");
@@ -396,7 +408,10 @@ public class QueryingTest extends ComposeTest {
 			List timeList;
 			if (sysAttrs.isPresent()) {
 				List<Map> properties = (List<Map>) entry.get("temperature");
-				timeList = properties.stream().map(property -> property.get("observedAt")).sorted().collect(Collectors.toList());
+				timeList = properties.stream()
+						.peek(property -> assertNotNull(property.get("createdAt")))
+						.peek(property -> assertNotNull(property.get("modifiedAt")))
+						.map(property -> property.get("observedAt")).sorted().collect(Collectors.toList());
 			} else {
 				Map<String, List> property = (Map<String, List>) entry.get("temperature");
 				List<List> temporalValuesList = property.get("values");
@@ -443,7 +458,10 @@ public class QueryingTest extends ComposeTest {
 			List timeList;
 			if (sysAttrs.isPresent()) {
 				List<Map> properties = (List<Map>) entry.get("motor");
-				timeList = properties.stream().map(property -> property.get("observedAt")).sorted().collect(Collectors.toList());
+				timeList = properties.stream()
+						.peek(property -> assertNotNull(property.get("createdAt")))
+						.peek(property -> assertNotNull(property.get("modifiedAt")))
+						.map(property -> property.get("observedAt")).sorted().collect(Collectors.toList());
 			} else {
 				Map<String, List> property = (Map<String, List>) entry.get("motor");
 				List<List> temporalValuesList = property.get("values");
@@ -494,7 +512,10 @@ public class QueryingTest extends ComposeTest {
 			List timeList;
 			if (sysAttrs.isPresent()) {
 				List<Map> properties = (List<Map>) entry.get("driver");
-				timeList = properties.stream().map(property -> property.get("observedAt")).sorted().collect(Collectors.toList());
+				timeList = properties.stream()
+						.peek(property -> assertNotNull(property.get("createdAt")))
+						.peek(property -> assertNotNull(property.get("modifiedAt")))
+						.map(property -> property.get("observedAt")).sorted().collect(Collectors.toList());
 			} else {
 				Map<String, List> driverProperty = (Map<String, List>) entry.get("driver");
 				List<List> temporalValuesList = driverProperty.get("values");
