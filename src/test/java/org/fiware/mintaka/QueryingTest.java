@@ -674,6 +674,16 @@ public class QueryingTest extends ComposeTest {
 		assertEquals(expectedRangeHeader, entryListResponse.getHeaders().get("Content-Range"), "The range should have been limited to the first 166 entries.");
 	}
 
+	@DisplayName("Query for non existing values")
+	@Test
+	public void testQueryForNonExisting() {
+		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
+		getRequest.getParameters()
+				.add("type", "doesNotExist");
+		HttpResponse<List> entryListResponse = mintakaTestClient.toBlocking().exchange(getRequest, List.class);
+		assertEquals(HttpStatus.OK, entryListResponse.getStatus(), "The result should be ok.");
+		assertTrue(entryListResponse.getBody().get().isEmpty(), "The result should be an empty list.");
+	}
 
 	private static Stream<Arguments> getRelationsBetweenAndAfter() {
 		return Stream.of(Arguments.of(TimeRelation.BETWEEN), Arguments.of(TimeRelation.AFTER));
