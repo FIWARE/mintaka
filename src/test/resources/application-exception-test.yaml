@@ -1,0 +1,17 @@
+micronaut:
+
+loggers:
+  level:
+    root: ERROR
+    org:
+      fiware:
+        mintaka:
+          persistence: DEBUG
+
+test:
+  clientId:
+
+datasources:
+  default:
+    url: jdbc:h2:mem:default;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driverClassName: org.h2.Driver
