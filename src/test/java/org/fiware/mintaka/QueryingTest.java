@@ -4,6 +4,7 @@ import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.MutableHttpRequest;
+import org.checkerframework.checker.nullness.Opt;
 import org.fiware.mintaka.domain.query.temporal.TimeRelation;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -25,12 +27,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class QueryingTest extends ComposeTest {
 
 	@DisplayName("Test running a temporal query including geo querying without timerel.")
-	@Test
-	public void testTempWithGeoQueryInTempValues() {
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	public void testTempWithGeoQueryInTempValues(boolean setLastN) {
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
 		getRequest.getParameters()
 				.add("options", "temporalValues")
@@ -39,6 +43,10 @@ public class QueryingTest extends ComposeTest {
 				.add("georel", "near;maxDistance==300000")
 				.add("geometry", "LineString")
 				.add("coordinates", "[[5,5],[7,7]]");
+
+		if (setLastN) {
+			getRequest.getParameters().add("lastN", "10");
+		}
 
 		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
 		// we expect the two cars to be inside the area two times each, between 00:04 and 00:08 and again between 06:32 and 06.36
@@ -82,15 +90,20 @@ public class QueryingTest extends ComposeTest {
 	@DisplayName("Test running a temporal query including geo querying.")
 	@ParameterizedTest
 	@MethodSource("getRelationsBetweenAndBefore")
-	public void testTempWithGeoQueryInTempValues(TimeRelation timeRelation) {
+	public void testTempWithGeoQueryInTempValues(TimeRelation timeRelation, Optional<String> sysAttrs) {
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
 		getRequest.getParameters()
-				.add("options", "temporalValues")
 				.add("idPattern", ".*")
 				.add("type", "car")
 				.add("georel", "near;maxDistance==300000")
 				.add("geometry", "LineString")
 				.add("coordinates", "[[5,5],[7,7]]");
+
+		if (sysAttrs.isPresent()) {
+			getRequest.getParameters().add("options", sysAttrs.get());
+		} else {
+			getRequest.getParameters().add("options", "temporalValues");
+		}
 
 		if (timeRelation == TimeRelation.BEFORE) {
 			getRequest.getParameters()
@@ -112,15 +125,26 @@ public class QueryingTest extends ComposeTest {
 		assertEquals(2, entryList.size(), "Both matching entities should have been returned.");
 		entryList.forEach(entry -> {
 			assertTrue(entry.containsKey("temperature"), "The temperature property should be present.");
-			Map<String, List> temperaturePropertyMap = (Map<String, List>) entry.get("temperature");
-			List<List> temporalValuesList = temperaturePropertyMap.get("values");
-			assertEquals(expectedValues, temporalValuesList.stream().map(list -> list.get(1)).sorted().collect(Collectors.toList()), "All time elements should be present.");
+			List timeList;
+			if (sysAttrs.isPresent()) {
+				List<Map> properties = (List<Map>) entry.get("temperature");
+				timeList = properties.stream()
+						.peek(property -> assertNotNull(property.get("createdAt")))
+						.peek(property -> assertNotNull(property.get("modifiedAt")))
+						.map(property -> property.get("observedAt")).sorted().collect(Collectors.toList());
+			} else {
+				Map<String, List> property = (Map<String, List>) entry.get("temperature");
+				List<List> temporalValuesList = property.get("values");
+				timeList = temporalValuesList.stream().map(list -> list.get(1)).sorted().collect(Collectors.toList());
+			}
+			assertEquals(expectedValues, timeList, "All time elements should be present.");
 		});
 	}
 
 	@DisplayName("Test running a temporal query including ngsi querying.")
-	@Test
-	public void testTempWithNgsiQueryInTempValues() {
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	public void testTempWithNgsiQueryInTempValues(boolean setLastN) {
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
 		getRequest.getParameters()
 				.add("options", "temporalValues")
@@ -131,6 +155,10 @@ public class QueryingTest extends ComposeTest {
 				.add("timerel", "between")
 				.add("timeAt", "1970-01-01T00:01:00Z")
 				.add("endTimeAt", "1970-01-01T07:30:00Z");
+
+		if (setLastN) {
+			getRequest.getParameters().add("lastN", "199");
+		}
 
 		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
 		// temp should only be high enough until
@@ -149,15 +177,20 @@ public class QueryingTest extends ComposeTest {
 	@DisplayName("Test running a temporal query including ngsi AND querying.")
 	@ParameterizedTest
 	@MethodSource("getRelationsBetweenAndBefore")
-	public void testTempWithNgsiAndQueryInTempValues(TimeRelation timeRelation) {
+	public void testTempWithNgsiAndQueryInTempValues(TimeRelation timeRelation, Optional<String> sysAttrs) {
 
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
 		getRequest.getParameters()
-				.add("options", "temporalValues")
 				.add("attrs", "temperature,radio")
 				.add("idPattern", ".*")
 				.add("type", "car")
 				.add("q", "temperature<18;radio==true");
+
+		if (sysAttrs.isPresent()) {
+			getRequest.getParameters().add("options", sysAttrs.get());
+		} else {
+			getRequest.getParameters().add("options", "temporalValues");
+		}
 
 		if (timeRelation == TimeRelation.BEFORE) {
 			getRequest.getParameters()
@@ -176,9 +209,18 @@ public class QueryingTest extends ComposeTest {
 		entryList.forEach(entry -> {
 			assertTrue(entry.containsKey("temperature"), "The temperature property should be present.");
 			assertTrue(entry.containsKey("radio"), "The radio property should be present.");
-			Map<String, List> temperaturePropertyMap = (Map<String, List>) entry.get("temperature");
-			List<List> temporalValuesList = temperaturePropertyMap.get("values");
-			List timeList = temporalValuesList.stream().map(list -> list.get(1)).sorted().collect(Collectors.toList());
+			List timeList;
+			if (sysAttrs.isPresent()) {
+				List<Map> properties = (List<Map>) entry.get("temperature");
+				timeList = properties.stream()
+						.peek(property -> assertNotNull(property.get("createdAt")))
+						.peek(property -> assertNotNull(property.get("modifiedAt")))
+						.map(property -> property.get("observedAt")).sorted().collect(Collectors.toList());
+			} else {
+				Map<String, List> property = (Map<String, List>) entry.get("temperature");
+				List<List> temporalValuesList = property.get("values");
+				timeList = temporalValuesList.stream().map(list -> list.get(1)).sorted().collect(Collectors.toList());
+			}
 			assertEquals(100, timeList.size(), "All expected times should be present");
 			assertEquals("1970-01-01T06:40:00Z", timeList.get(99), "Last time should be at the half");
 			assertEquals("1970-01-01T05:01:00Z", timeList.get(0), "First time should be radio on at the end part");
@@ -188,17 +230,22 @@ public class QueryingTest extends ComposeTest {
 	@DisplayName("Test running a temporal query including ngsi AND querying and geo query.")
 	@ParameterizedTest
 	@MethodSource("getRelationsBetweenAndBefore")
-	public void testTempWithNgsiAndQueryAndGeoInTempValues(TimeRelation timeRelation) {
+	public void testTempWithNgsiAndQueryAndGeoInTempValues(TimeRelation timeRelation, Optional<String> sysAttrs) {
 
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
 		getRequest.getParameters()
-				.add("options", "temporalValues")
 				.add("idPattern", ".*")
 				.add("type", "car")
 				.add("q", "temperature<18;radio==true")
 				.add("georel", "near;maxDistance==300000")
 				.add("geometry", "LineString")
 				.add("coordinates", "[[5,5],[7,7]]");
+
+		if (sysAttrs.isPresent()) {
+			getRequest.getParameters().add("options", sysAttrs.get());
+		} else {
+			getRequest.getParameters().add("options", "temporalValues");
+		}
 
 		if (timeRelation == TimeRelation.BEFORE) {
 			getRequest.getParameters()
@@ -217,9 +264,18 @@ public class QueryingTest extends ComposeTest {
 		entryList.forEach(entry -> {
 			assertTrue(entry.containsKey("temperature"), "The temperature property should be present.");
 			assertTrue(entry.containsKey("radio"), "The radio property should be present.");
-			Map<String, List> temperaturePropertyMap = (Map<String, List>) entry.get("temperature");
-			List<List> temporalValuesList = temperaturePropertyMap.get("values");
-			List timeList = temporalValuesList.stream().map(list -> list.get(1)).sorted().collect(Collectors.toList());
+			List timeList;
+			if (sysAttrs.isPresent()) {
+				List<Map> properties = (List<Map>) entry.get("temperature");
+				timeList = properties.stream()
+						.peek(property -> assertNotNull(property.get("createdAt")))
+						.peek(property -> assertNotNull(property.get("modifiedAt")))
+						.map(property -> property.get("observedAt")).sorted().collect(Collectors.toList());
+			} else {
+				Map<String, List> property = (Map<String, List>) entry.get("temperature");
+				List<List> temporalValuesList = property.get("values");
+				timeList = temporalValuesList.stream().map(list -> list.get(1)).sorted().collect(Collectors.toList());
+			}
 			assertEquals(5, timeList.size(), "All expected times should be present");
 			assertEquals("1970-01-01T06:37:00Z", timeList.get(4), "Last time should be at the half");
 			assertEquals("1970-01-01T06:33:00Z", timeList.get(0), "First time should be radio on at the end part");
@@ -227,8 +283,9 @@ public class QueryingTest extends ComposeTest {
 	}
 
 	@DisplayName("Test running a temporal query including ngsi OR querying.")
-	@Test
-	public void testTempWithNgsiORQueryInTempValues() {
+	@ParameterizedTest
+	@ValueSource(booleans = {true, false})
+	public void testTempWithNgsiORQueryInTempValues(boolean setLastN) {
 
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
 		getRequest.getParameters()
@@ -240,6 +297,11 @@ public class QueryingTest extends ComposeTest {
 				.add("timerel", "between")
 				.add("timeAt", "1970-01-01T00:01:00Z")
 				.add("endTimeAt", "1970-01-01T07:30:00Z");
+
+		if (setLastN) {
+			getRequest.getParameters().add("lastN", "299");
+		}
+
 		// get car when radio was of or temp was above 20 -> first ~3/4 of the drive
 		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
 		assertEquals(2, entryList.size(), "Both matching entities should have been returned.");
@@ -257,15 +319,20 @@ public class QueryingTest extends ComposeTest {
 	@DisplayName("Test running a temporal query including ngsi OR and AND querying.")
 	@ParameterizedTest
 	@MethodSource("getRelationsBetweenAndBefore")
-	public void testTempWithNgsiORandANDQueryInTempValues(TimeRelation timeRelation) {
+	public void testTempWithNgsiORandANDQueryInTempValues(TimeRelation timeRelation, Optional<String> sysAttrs) {
 
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
 		getRequest.getParameters()
-				.add("options", "temporalValues")
 				.add("idPattern", ".*")
 				.add("attrs", "temperature,radio,driver")
 				.add("type", "car")
 				.add("q", "(temperature>20|radio==false);driver==\"Mira\"");
+
+		if (sysAttrs.isPresent()) {
+			getRequest.getParameters().add("options", sysAttrs.get());
+		} else {
+			getRequest.getParameters().add("options", "temporalValues");
+		}
 
 		if (timeRelation == TimeRelation.BEFORE) {
 			getRequest.getParameters()
@@ -285,9 +352,18 @@ public class QueryingTest extends ComposeTest {
 			assertTrue(entry.containsKey("temperature"), "The temperature property should be present.");
 			assertTrue(entry.containsKey("radio"), "The radio property should be present.");
 			assertTrue(entry.containsKey("driver"), "The driver property should be present.");
-			Map<String, List> temperaturePropertyMap = (Map<String, List>) entry.get("temperature");
-			List<List> temporalValuesList = temperaturePropertyMap.get("values");
-			List timeList = temporalValuesList.stream().map(list -> list.get(1)).sorted().collect(Collectors.toList());
+			List timeList;
+			if (sysAttrs.isPresent()) {
+				List<Map> properties = (List<Map>) entry.get("temperature");
+				timeList = properties.stream()
+						.peek(property -> assertNotNull(property.get("createdAt")))
+						.peek(property -> assertNotNull(property.get("modifiedAt")))
+						.map(property -> property.get("observedAt")).sorted().collect(Collectors.toList());
+			} else {
+				Map<String, List> property = (Map<String, List>) entry.get("temperature");
+				List<List> temporalValuesList = property.get("values");
+				timeList = temporalValuesList.stream().map(list -> list.get(1)).sorted().collect(Collectors.toList());
+			}
 			assertEquals(100, timeList.size(), "All expected times should be present");
 			assertEquals("1970-01-01T03:20:00Z", timeList.get(99), "Last time should be at the half");
 			assertEquals("1970-01-01T01:41:00Z", timeList.get(0), "First time should be radio on at the end part");
@@ -297,13 +373,18 @@ public class QueryingTest extends ComposeTest {
 	@DisplayName("Test running a temporal query including ngsi OR and AND querying with subattrs.")
 	@ParameterizedTest
 	@MethodSource("getRelationsBetweenAndBefore")
-	public void testTempWithNgsiORandANDQueryWithSubAttrsInTempValues(TimeRelation timeRelation) {
+	public void testTempWithNgsiORandANDQueryWithSubAttrsInTempValues(TimeRelation timeRelation, Optional<String> sysAttrs) {
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
 		getRequest.getParameters()
-				.add("options", "temporalValues")
 				.add("idPattern", ".*")
 				.add("type", "car")
 				.add("q", "(temperature>20|radio==false);driver==\"Mira\";motor.fuel!=0.7");
+
+		if (sysAttrs.isPresent()) {
+			getRequest.getParameters().add("options", sysAttrs.get());
+		} else {
+			getRequest.getParameters().add("options", "temporalValues");
+		}
 
 		if (timeRelation == TimeRelation.BEFORE) {
 			getRequest.getParameters()
@@ -324,9 +405,18 @@ public class QueryingTest extends ComposeTest {
 			assertTrue(entry.containsKey("radio"), "The radio property should be present.");
 			assertTrue(entry.containsKey("driver"), "The driver property should be present.");
 			assertTrue(entry.containsKey("motor"), "The motor property should be present.");
-			Map<String, List> temperaturePropertyMap = (Map<String, List>) entry.get("temperature");
-			List<List> temporalValuesList = temperaturePropertyMap.get("values");
-			List timeList = temporalValuesList.stream().map(list -> list.get(1)).sorted().collect(Collectors.toList());
+			List timeList;
+			if (sysAttrs.isPresent()) {
+				List<Map> properties = (List<Map>) entry.get("temperature");
+				timeList = properties.stream()
+						.peek(property -> assertNotNull(property.get("createdAt")))
+						.peek(property -> assertNotNull(property.get("modifiedAt")))
+						.map(property -> property.get("observedAt")).sorted().collect(Collectors.toList());
+			} else {
+				Map<String, List> property = (Map<String, List>) entry.get("temperature");
+				List<List> temporalValuesList = property.get("values");
+				timeList = temporalValuesList.stream().map(list -> list.get(1)).sorted().collect(Collectors.toList());
+			}
 			assertEquals(50, timeList.size(), "All expected times should be present");
 			assertEquals("1970-01-01T02:30:00Z", timeList.get(49), "Last time should be at the half of the second quarter");
 			assertEquals("1970-01-01T01:41:00Z", timeList.get(0), "First time should be radio on at the end part");
@@ -336,14 +426,19 @@ public class QueryingTest extends ComposeTest {
 	@DisplayName("Test running a temporal query with ngsi range.")
 	@ParameterizedTest
 	@MethodSource("getRelationsBetweenAndBefore")
-	public void testTempWithNgsiRangeInTempValues(TimeRelation timeRelation) {
+	public void testTempWithNgsiRangeInTempValues(TimeRelation timeRelation, Optional<String> sysAttrs) {
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
 		getRequest.getParameters()
-				.add("options", "temporalValues")
 				.add("idPattern", ".*")
 				.add("attrs", "driver,motor")
 				.add("type", "car")
 				.add("q", "motor.fuel==0.6..0.8");
+
+		if (sysAttrs.isPresent()) {
+			getRequest.getParameters().add("options", sysAttrs.get());
+		} else {
+			getRequest.getParameters().add("options", "temporalValues");
+		}
 
 		if (timeRelation == TimeRelation.BEFORE) {
 			getRequest.getParameters()
@@ -360,11 +455,18 @@ public class QueryingTest extends ComposeTest {
 		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
 		assertEquals(2, entryList.size(), "Both matching entities should have been returned.");
 		entryList.forEach(entry -> {
-			assertTrue(entry.containsKey("driver"), "The driver property should be present.");
-			assertTrue(entry.containsKey("motor"), "The motor property should be present.");
-			Map<String, List> temperaturePropertyMap = (Map<String, List>) entry.get("motor");
-			List<List> driverValuesList = temperaturePropertyMap.get("values");
-			List timeList = driverValuesList.stream().map(list -> list.get(1)).sorted().collect(Collectors.toList());
+			List timeList;
+			if (sysAttrs.isPresent()) {
+				List<Map> properties = (List<Map>) entry.get("motor");
+				timeList = properties.stream()
+						.peek(property -> assertNotNull(property.get("createdAt")))
+						.peek(property -> assertNotNull(property.get("modifiedAt")))
+						.map(property -> property.get("observedAt")).sorted().collect(Collectors.toList());
+			} else {
+				Map<String, List> property = (Map<String, List>) entry.get("motor");
+				List<List> temporalValuesList = property.get("values");
+				timeList = temporalValuesList.stream().map(list -> list.get(1)).sorted().collect(Collectors.toList());
+			}
 			assertEquals(200, timeList.size(), "All expected times should be present");
 			assertEquals("1970-01-01T05:00:00Z", timeList.get(199), "Last time should be at the half of the end of 3rd quarter");
 			assertEquals("1970-01-01T01:41:00Z", timeList.get(0), "First time should be at the start at 2nd quarter");
@@ -374,15 +476,19 @@ public class QueryingTest extends ComposeTest {
 	@DisplayName("Test running a temporal query with ngsi list.")
 	@ParameterizedTest
 	@MethodSource("getRelationsBetweenAndBefore")
-	public void testTempWithNgsiListInTempValues(TimeRelation timeRelation) {
+	public void testTempWithNgsiListInTempValues(TimeRelation timeRelation, Optional<String> sysAttrs) {
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
 		getRequest.getParameters()
-				.add("options", "temporalValues")
 				.add("idPattern", ".*")
 				.add("attrs", "driver,motor")
 				.add("type", "car")
-				.add("q", "driver==[true,\"Mira\",\"Franzi\"]");
+				.add("q", "driver==[\"Mira\",\"Franzi\"]");
 
+		if (sysAttrs.isPresent()) {
+			getRequest.getParameters().add("options", sysAttrs.get());
+		} else {
+			getRequest.getParameters().add("options", "temporalValues");
+		}
 		if (timeRelation == TimeRelation.BEFORE) {
 			getRequest.getParameters()
 					.add("timerel", "before")
@@ -394,26 +500,39 @@ public class QueryingTest extends ComposeTest {
 					.add("timeAt", "1970-01-01T00:01:00Z")
 					.add("endTimeAt", "1970-01-01T07:30:00Z");
 		}
+
 		// get car when the requested drivers where set -> the 200 entries for Franzi, 100 for Mira
 		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
 		assertEquals(2, entryList.size(), "Both matching entities should have been returned.");
+
 		entryList.forEach(entry -> {
 			assertTrue(entry.containsKey("driver"), "The driver property should be present.");
 			assertTrue(entry.containsKey("motor"), "The motor property should be present.");
-			Map<String, List> temperaturePropertyMap = (Map<String, List>) entry.get("motor");
-			List<List> temporalValuesList = temperaturePropertyMap.get("values");
-			String driverName = temporalValuesList.stream().map(list -> (String) list.get(0)).findFirst().get();
-			List timeList = temporalValuesList.stream().map(list -> list.get(1)).sorted().collect(Collectors.toList());
+			String entityId = (String) entry.get("id");
+			List timeList;
+			if (sysAttrs.isPresent()) {
+				List<Map> properties = (List<Map>) entry.get("driver");
+				timeList = properties.stream()
+						.peek(property -> assertNotNull(property.get("createdAt")))
+						.peek(property -> assertNotNull(property.get("modifiedAt")))
+						.map(property -> property.get("observedAt")).sorted().collect(Collectors.toList());
+			} else {
+				Map<String, List> driverProperty = (Map<String, List>) entry.get("driver");
+				List<List> temporalValuesList = driverProperty.get("values");
+				timeList = temporalValuesList.stream().map(list -> list.get(1)).sorted().collect(Collectors.toList());
+			}
 			assertEquals("1970-01-01T01:41:00Z", timeList.get(0), "First time should be at the start at 2nd quarter");
-			if (driverName.equals("Mira")) {
+			if (entityId.equals(CAR_2_ID.toString())) {
 				assertEquals(100, timeList.size(), "All expected times should be present");
 				assertEquals("1970-01-01T03:20:00Z", timeList.get(99), "Last time should be at the half of the end of 3rd quarter");
-			} else if (driverName.equals("Franzi")) {
-
+			} else if (entityId.equals(CAR_1_ID.toString())) {
 				assertEquals(200, timeList.size(), "All expected times should be present");
 				assertEquals("1970-01-01T05:00:00Z", timeList.get(199), "Last time should be at the half of the end of 3rd quarter");
+			} else {
+				fail("No other entity should have been returned.");
 			}
 		});
+
 	}
 
 	@DisplayName("Test running a temporal query with ngsi json value.")
@@ -481,6 +600,22 @@ public class QueryingTest extends ComposeTest {
 		});
 	}
 
+	@DisplayName("Test count option")
+	@Test
+	public void testCountOptionSet() {
+		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
+		getRequest.getParameters()
+				.add("options", "temporalValues")
+				.add("idPattern", ".*")
+				.add("attrs", "temperature")
+				.add("options", "count")
+				.add("pageSize", "2");
+		HttpResponse<List<Map<String, Object>>> entryListResponse = mintakaTestClient.toBlocking().exchange(getRequest, List.class);
+		assertEquals(HttpStatus.OK, entryListResponse.getStatus(), "The request should succeed.");
+		assertNotNull(entryListResponse.getHeaders().get("NGSILD-Total-Count"), "Count should be present");
+		assertEquals("5", entryListResponse.getHeaders().get("NGSILD-Total-Count"), "5 entites should match.");
+	}
+
 	@DisplayName("Retrieve query results with entity pagination")
 	@Test
 	public void testEntityPagination() {
@@ -537,16 +672,29 @@ public class QueryingTest extends ComposeTest {
 		HttpResponse<List<Map<String, Object>>> entryListResponse = mintakaTestClient.toBlocking().exchange(getRequest, List.class);
 		assertEquals(HttpStatus.PARTIAL_CONTENT, entryListResponse.getStatus(), "Only parts of the history should be returned.");
 		assertEquals(expectedRangeHeader, entryListResponse.getHeaders().get("Content-Range"), "The range should have been limited to the first 166 entries.");
-
 	}
 
+	@DisplayName("Query for non existing values")
+	@Test
+	public void testQueryForNonExisting() {
+		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
+		getRequest.getParameters()
+				.add("type", "doesNotExist");
+		HttpResponse<List> entryListResponse = mintakaTestClient.toBlocking().exchange(getRequest, List.class);
+		assertEquals(HttpStatus.OK, entryListResponse.getStatus(), "The result should be ok.");
+		assertTrue(entryListResponse.getBody().get().isEmpty(), "The result should be an empty list.");
+	}
 
 	private static Stream<Arguments> getRelationsBetweenAndAfter() {
 		return Stream.of(Arguments.of(TimeRelation.BETWEEN), Arguments.of(TimeRelation.AFTER));
 	}
 
 	private static Stream<Arguments> getRelationsBetweenAndBefore() {
-		return Stream.of(Arguments.of(TimeRelation.BETWEEN), Arguments.of(TimeRelation.BEFORE));
+		return Stream.of(
+				Arguments.of(TimeRelation.BETWEEN, Optional.of("sysAttrs")),
+				Arguments.of(TimeRelation.BEFORE, Optional.of("sysAttrs")),
+				Arguments.of(TimeRelation.BETWEEN, Optional.empty()),
+				Arguments.of(TimeRelation.BEFORE, Optional.empty()));
 	}
 
 	private static Stream<Arguments> provideCarIds() {

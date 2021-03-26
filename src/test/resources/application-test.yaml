@@ -19,6 +19,7 @@ loggers:
 
 test:
   clientId: entities
+
 datasources:
   default:
     host: localhost
