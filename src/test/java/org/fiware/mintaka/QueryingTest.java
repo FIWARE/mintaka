@@ -1,22 +1,31 @@
 package org.fiware.mintaka;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.MutableHttpRequest;
-import org.checkerframework.checker.nullness.Opt;
 import org.fiware.mintaka.domain.query.temporal.TimeRelation;
+import org.fiware.ngsi.model.QueryVO;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mapstruct.Mapping;
-import org.testcontainers.shaded.com.fasterxml.jackson.core.JsonProcessingException;
 
 import java.net.URI;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,16 +42,26 @@ public class QueryingTest extends ComposeTest {
 
 	@DisplayName("Test running a temporal query including geo querying without timerel.")
 	@ParameterizedTest
-	@ValueSource(booleans = {true, false})
-	public void testTempWithGeoQueryInTempValues(boolean setLastN) {
-		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
+	@MethodSource("provideBooleanValues")
+	public void testTempWithGeoQueryInTempValues(RequestType requestType, boolean setLastN) {
+
+		MutableHttpRequest getRequest = getRequest(
+				requestType,
+				Optional.empty(),
+				Optional.of(".*"),
+				Optional.of("car"),
+				Optional.empty(),
+				Optional.empty(),
+				Optional.of("near;maxDistance==300000"),
+				Optional.of("LineString"),
+				Optional.of("[[5,5],[7,7]]"),
+				Optional.empty(),
+				Optional.empty(),
+				Optional.empty(),
+				Optional.empty());
+
 		getRequest.getParameters()
-				.add("options", "temporalValues")
-				.add("idPattern", ".*")
-				.add("type", "car")
-				.add("georel", "near;maxDistance==300000")
-				.add("geometry", "LineString")
-				.add("coordinates", "[[5,5],[7,7]]");
+				.add("options", "temporalValues");
 
 		if (setLastN) {
 			getRequest.getParameters().add("lastN", "10");
@@ -62,18 +81,44 @@ public class QueryingTest extends ComposeTest {
 		});
 	}
 
-	@DisplayName("Test running a temporal query including an ids and type.")
+	@DisplayName("Test running a temporal query including an id and type.")
 	@ParameterizedTest
 	@MethodSource("provideCarIds")
-	public void testTempWithIdAndTypeInTempValues(List<URI> ids) {
-		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
-		getRequest.getParameters()
-				.add("options", "temporalValues")
-				.add("id", ids.stream().map(Object::toString).collect(Collectors.joining(",")))
-				.add("type", "car")
-				.add("attrs", "driver");
+	public void testTempWithIdAndTypeInTempValues(RequestType requestType, List<URI> ids) {
 
-		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
+		MutableHttpRequest request;
+		if (requestType == RequestType.GET) {
+			request = getGetRequest(Optional.of(ids.stream().map(Object::toString).collect(Collectors.joining(","))),
+					Optional.empty(),
+					Optional.of("car"),
+					Optional.of("driver"),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty());
+		} else {
+			request = getPostRequest(Optional.of(ids),
+					Optional.empty(),
+					Optional.of("car"),
+					Optional.of("driver"),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty());
+		}
+
+		request.getParameters()
+				.add("options", "temporalValues");
+
+		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(request, List.class);
 
 		assertEquals(ids.size(), entryList.size(), "The matching entity should have been returned.");
 		entryList.forEach(entry -> {
@@ -90,31 +135,46 @@ public class QueryingTest extends ComposeTest {
 	@DisplayName("Test running a temporal query including geo querying.")
 	@ParameterizedTest
 	@MethodSource("getRelationsBetweenAndBefore")
-	public void testTempWithGeoQueryInTempValues(TimeRelation timeRelation, Optional<String> sysAttrs) {
-		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
-		getRequest.getParameters()
-				.add("idPattern", ".*")
-				.add("type", "car")
-				.add("georel", "near;maxDistance==300000")
-				.add("geometry", "LineString")
-				.add("coordinates", "[[5,5],[7,7]]");
+	public void testTempWithGeoQueryInTempValues(RequestType requestType, TimeRelation timeRelation, Optional<String> sysAttrs) {
 
+		MutableHttpRequest getRequest = null;
+
+		if (timeRelation == TimeRelation.BEFORE) {
+			getRequest = getRequest(
+					requestType,
+					Optional.empty(),
+					Optional.of(".*"),
+					Optional.of("car"),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.of("near;maxDistance==300000"),
+					Optional.of("LineString"),
+					Optional.of("[[5,5],[7,7]]"),
+					Optional.of("before"),
+					Optional.of("1970-01-01T07:30:00Z"),
+					Optional.empty(),
+					Optional.empty());
+		}
+		if (timeRelation == TimeRelation.BETWEEN) {
+			getRequest = getRequest(
+					requestType,
+					Optional.empty(),
+					Optional.of(".*"),
+					Optional.of("car"),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.of("near;maxDistance==300000"),
+					Optional.of("LineString"),
+					Optional.of("[[5,5],[7,7]]"),
+					Optional.of("between"),
+					Optional.of("1970-01-01T00:01:00Z"),
+					Optional.of("1970-01-01T07:30:00Z"),
+					Optional.empty());
+		}
 		if (sysAttrs.isPresent()) {
 			getRequest.getParameters().add("options", sysAttrs.get());
 		} else {
 			getRequest.getParameters().add("options", "temporalValues");
-		}
-
-		if (timeRelation == TimeRelation.BEFORE) {
-			getRequest.getParameters()
-					.add("timerel", "before")
-					.add("timeAt", "1970-01-01T07:30:00Z");
-		}
-		if (timeRelation == TimeRelation.BETWEEN) {
-			getRequest.getParameters()
-					.add("timerel", "between")
-					.add("timeAt", "1970-01-01T00:01:00Z")
-					.add("endTimeAt", "1970-01-01T07:30:00Z");
 		}
 
 		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
@@ -143,18 +203,25 @@ public class QueryingTest extends ComposeTest {
 
 	@DisplayName("Test running a temporal query including ngsi querying.")
 	@ParameterizedTest
-	@ValueSource(booleans = {true, false})
-	public void testTempWithNgsiQueryInTempValues(boolean setLastN) {
-		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
+	@MethodSource("provideBooleanValues")
+	public void testTempWithNgsiQueryInTempValues(RequestType requestType, boolean setLastN) {
+		MutableHttpRequest getRequest = getRequest(
+				requestType,
+				Optional.empty(),
+				Optional.of(".*"),
+				Optional.of("car"),
+				Optional.of("temperature,driver"),
+				Optional.of("temperature>20"),
+				Optional.empty(),
+				Optional.empty(),
+				Optional.empty(),
+				Optional.of("between"),
+				Optional.of("1970-01-01T00:01:00Z"),
+				Optional.of("1970-01-01T07:30:00Z"),
+				Optional.empty());
+
 		getRequest.getParameters()
-				.add("options", "temporalValues")
-				.add("idPattern", ".*")
-				.add("type", "car")
-				.add("attrs", "temperature,driver")
-				.add("q", "temperature>20")
-				.add("timerel", "between")
-				.add("timeAt", "1970-01-01T00:01:00Z")
-				.add("endTimeAt", "1970-01-01T07:30:00Z");
+				.add("options", "temporalValues");
 
 		if (setLastN) {
 			getRequest.getParameters().add("lastN", "199");
@@ -177,31 +244,46 @@ public class QueryingTest extends ComposeTest {
 	@DisplayName("Test running a temporal query including ngsi AND querying.")
 	@ParameterizedTest
 	@MethodSource("getRelationsBetweenAndBefore")
-	public void testTempWithNgsiAndQueryInTempValues(TimeRelation timeRelation, Optional<String> sysAttrs) {
+	public void testTempWithNgsiAndQueryInTempValues(RequestType requestType, TimeRelation timeRelation, Optional<String> sysAttrs) {
 
-		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
-		getRequest.getParameters()
-				.add("attrs", "temperature,radio")
-				.add("idPattern", ".*")
-				.add("type", "car")
-				.add("q", "temperature<18;radio==true");
+		MutableHttpRequest getRequest = null;
 
+		if (timeRelation == TimeRelation.BEFORE) {
+			getRequest = getRequest(
+					requestType,
+					Optional.empty(),
+					Optional.of(".*"),
+					Optional.of("car"),
+					Optional.of("temperature,radio"),
+					Optional.of("temperature<18;radio==true"),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.of("before"),
+					Optional.of("1970-01-01T07:30:00Z"),
+					Optional.empty(),
+					Optional.empty());
+		}
+		if (timeRelation == TimeRelation.BETWEEN) {
+			getRequest = getRequest(
+					requestType,
+					Optional.empty(),
+					Optional.of(".*"),
+					Optional.of("car"),
+					Optional.of("temperature,radio"),
+					Optional.of("temperature<18;radio==true"),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.of("between"),
+					Optional.of("1970-01-01T00:01:00Z"),
+					Optional.of("1970-01-01T07:30:00Z"),
+					Optional.empty());
+		}
 		if (sysAttrs.isPresent()) {
 			getRequest.getParameters().add("options", sysAttrs.get());
 		} else {
 			getRequest.getParameters().add("options", "temporalValues");
-		}
-
-		if (timeRelation == TimeRelation.BEFORE) {
-			getRequest.getParameters()
-					.add("timerel", "before")
-					.add("timeAt", "1970-01-01T07:30:00Z");
-		}
-		if (timeRelation == TimeRelation.BETWEEN) {
-			getRequest.getParameters()
-					.add("timerel", "between")
-					.add("timeAt", "1970-01-01T00:01:00Z")
-					.add("endTimeAt", "1970-01-01T07:30:00Z");
 		}
 		// get car when radio was on and temp was below 18 -> only the time at the end of the time window
 		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
@@ -230,16 +312,43 @@ public class QueryingTest extends ComposeTest {
 	@DisplayName("Test running a temporal query including ngsi AND querying and geo query.")
 	@ParameterizedTest
 	@MethodSource("getRelationsBetweenAndBefore")
-	public void testTempWithNgsiAndQueryAndGeoInTempValues(TimeRelation timeRelation, Optional<String> sysAttrs) {
+	public void testTempWithNgsiAndQueryAndGeoInTempValues(RequestType requestType, TimeRelation timeRelation, Optional<String> sysAttrs) {
 
-		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
-		getRequest.getParameters()
-				.add("idPattern", ".*")
-				.add("type", "car")
-				.add("q", "temperature<18;radio==true")
-				.add("georel", "near;maxDistance==300000")
-				.add("geometry", "LineString")
-				.add("coordinates", "[[5,5],[7,7]]");
+		MutableHttpRequest getRequest = null;
+
+		if (timeRelation == TimeRelation.BEFORE) {
+			getRequest = getRequest(
+					requestType,
+					Optional.empty(),
+					Optional.of(".*"),
+					Optional.of("car"),
+					Optional.empty(),
+					Optional.of("temperature<18;radio==true"),
+					Optional.of("near;maxDistance==300000"),
+					Optional.of("LineString"),
+					Optional.of("[[5,5],[7,7]]"),
+					Optional.of("before"),
+					Optional.of("1970-01-01T07:30:00Z"),
+					Optional.empty(),
+					Optional.empty());
+
+		}
+		if (timeRelation == TimeRelation.BETWEEN) {
+			getRequest = getRequest(
+					requestType,
+					Optional.empty(),
+					Optional.of(".*"),
+					Optional.of("car"),
+					Optional.empty(),
+					Optional.of("temperature<18;radio==true"),
+					Optional.of("near;maxDistance==300000"),
+					Optional.of("LineString"),
+					Optional.of("[[5,5],[7,7]]"),
+					Optional.of("between"),
+					Optional.of("1970-01-01T00:01:00Z"),
+					Optional.of("1970-01-01T07:30:00Z"),
+					Optional.empty());
+		}
 
 		if (sysAttrs.isPresent()) {
 			getRequest.getParameters().add("options", sysAttrs.get());
@@ -247,17 +356,6 @@ public class QueryingTest extends ComposeTest {
 			getRequest.getParameters().add("options", "temporalValues");
 		}
 
-		if (timeRelation == TimeRelation.BEFORE) {
-			getRequest.getParameters()
-					.add("timerel", "before")
-					.add("timeAt", "1970-01-01T07:30:00Z");
-		}
-		if (timeRelation == TimeRelation.BETWEEN) {
-			getRequest.getParameters()
-					.add("timerel", "between")
-					.add("timeAt", "1970-01-01T00:01:00Z")
-					.add("endTimeAt", "1970-01-01T07:30:00Z");
-		}
 		// get car when radio was on and temp was below 18 and ts near [[5,5],[7,7]]-> only the short time frame at the end of the time window
 		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
 		assertEquals(2, entryList.size(), "Both matching entities should have been returned.");
@@ -284,19 +382,26 @@ public class QueryingTest extends ComposeTest {
 
 	@DisplayName("Test running a temporal query including ngsi OR querying.")
 	@ParameterizedTest
-	@ValueSource(booleans = {true, false})
-	public void testTempWithNgsiORQueryInTempValues(boolean setLastN) {
+	@MethodSource("provideBooleanValues")
+	public void testTempWithNgsiORQueryInTempValues(RequestType requestType, boolean setLastN) {
 
-		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
+		MutableHttpRequest getRequest = getRequest(
+				requestType,
+				Optional.empty(),
+				Optional.of(".*"),
+				Optional.of("car"),
+				Optional.of("temperature"),
+				Optional.of("temperature>20|radio==false"),
+				Optional.empty(),
+				Optional.empty(),
+				Optional.empty(),
+				Optional.of("between"),
+				Optional.of("1970-01-01T00:01:00Z"),
+				Optional.of("1970-01-01T07:30:00Z"),
+				Optional.empty());
+
 		getRequest.getParameters()
-				.add("options", "temporalValues")
-				.add("idPattern", ".*")
-				.add("type", "car")
-				.add("attrs", "temperature")
-				.add("q", "temperature>20|radio==false")
-				.add("timerel", "between")
-				.add("timeAt", "1970-01-01T00:01:00Z")
-				.add("endTimeAt", "1970-01-01T07:30:00Z");
+				.add("options", "temporalValues");
 
 		if (setLastN) {
 			getRequest.getParameters().add("lastN", "299");
@@ -319,14 +424,42 @@ public class QueryingTest extends ComposeTest {
 	@DisplayName("Test running a temporal query including ngsi OR and AND querying.")
 	@ParameterizedTest
 	@MethodSource("getRelationsBetweenAndBefore")
-	public void testTempWithNgsiORandANDQueryInTempValues(TimeRelation timeRelation, Optional<String> sysAttrs) {
+	public void testTempWithNgsiORandANDQueryInTempValues(RequestType requestType, TimeRelation timeRelation, Optional<String> sysAttrs) {
 
-		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
-		getRequest.getParameters()
-				.add("idPattern", ".*")
-				.add("attrs", "temperature,radio,driver")
-				.add("type", "car")
-				.add("q", "(temperature>20|radio==false);driver==\"Mira\"");
+		MutableHttpRequest getRequest = null;
+
+		if (timeRelation == TimeRelation.BEFORE) {
+			getRequest = getRequest(
+					requestType,
+					Optional.empty(),
+					Optional.of(".*"),
+					Optional.of("car"),
+					Optional.of("temperature,radio,driver"),
+					Optional.of("(temperature>20|radio==false);driver==\"Mira\""),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.of("before"),
+					Optional.of("1970-01-01T07:30:00Z"),
+					Optional.empty(),
+					Optional.empty());
+		}
+		if (timeRelation == TimeRelation.BETWEEN) {
+			getRequest = getRequest(
+					requestType,
+					Optional.empty(),
+					Optional.of(".*"),
+					Optional.of("car"),
+					Optional.of("temperature,radio,driver"),
+					Optional.of("(temperature>20|radio==false);driver==\"Mira\""),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.of("between"),
+					Optional.of("1970-01-01T00:01:00Z"),
+					Optional.of("1970-01-01T07:30:00Z"),
+					Optional.empty());
+		}
 
 		if (sysAttrs.isPresent()) {
 			getRequest.getParameters().add("options", sysAttrs.get());
@@ -334,17 +467,6 @@ public class QueryingTest extends ComposeTest {
 			getRequest.getParameters().add("options", "temporalValues");
 		}
 
-		if (timeRelation == TimeRelation.BEFORE) {
-			getRequest.getParameters()
-					.add("timerel", "before")
-					.add("timeAt", "1970-01-01T07:30:00Z");
-		}
-		if (timeRelation == TimeRelation.BETWEEN) {
-			getRequest.getParameters()
-					.add("timerel", "between")
-					.add("timeAt", "1970-01-01T00:01:00Z")
-					.add("endTimeAt", "1970-01-01T07:30:00Z");
-		}
 		// get car when radio was of or temp was above 20 and the driver was "mira" -> second quarter of the drive
 		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
 		assertEquals(2, entryList.size(), "Both matching entities should have been returned.");
@@ -373,12 +495,42 @@ public class QueryingTest extends ComposeTest {
 	@DisplayName("Test running a temporal query including ngsi OR and AND querying with subattrs.")
 	@ParameterizedTest
 	@MethodSource("getRelationsBetweenAndBefore")
-	public void testTempWithNgsiORandANDQueryWithSubAttrsInTempValues(TimeRelation timeRelation, Optional<String> sysAttrs) {
-		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
-		getRequest.getParameters()
-				.add("idPattern", ".*")
-				.add("type", "car")
-				.add("q", "(temperature>20|radio==false);driver==\"Mira\";motor.fuel!=0.7");
+	public void testTempWithNgsiORandANDQueryWithSubAttrsInTempValues(RequestType requestType, TimeRelation timeRelation, Optional<String> sysAttrs) {
+		MutableHttpRequest getRequest = null;
+
+		if (timeRelation == TimeRelation.BEFORE) {
+			getRequest = getRequest(
+					requestType,
+					Optional.empty(),
+					Optional.of(".*"),
+					Optional.of("car"),
+					Optional.empty(),
+					Optional.of("(temperature>20|radio==false);driver==\"Mira\";motor.fuel!=0.7"),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.of("before"),
+					Optional.of("1970-01-01T07:30:00Z"),
+					Optional.empty(),
+					Optional.empty());
+		}
+		if (timeRelation == TimeRelation.BETWEEN) {
+			getRequest = getRequest(
+					requestType,
+					Optional.empty(),
+					Optional.of(".*"),
+					Optional.of("car"),
+					Optional.empty(),
+					Optional.of("(temperature>20|radio==false);driver==\"Mira\";motor.fuel!=0.7"),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.of("between"),
+					Optional.of("1970-01-01T00:01:00Z"),
+					Optional.of("1970-01-01T07:30:00Z"),
+					Optional.empty());
+		}
+
 
 		if (sysAttrs.isPresent()) {
 			getRequest.getParameters().add("options", sysAttrs.get());
@@ -386,17 +538,7 @@ public class QueryingTest extends ComposeTest {
 			getRequest.getParameters().add("options", "temporalValues");
 		}
 
-		if (timeRelation == TimeRelation.BEFORE) {
-			getRequest.getParameters()
-					.add("timerel", "before")
-					.add("timeAt", "1970-01-01T07:30:00Z");
-		}
-		if (timeRelation == TimeRelation.BETWEEN) {
-			getRequest.getParameters()
-					.add("timerel", "between")
-					.add("timeAt", "1970-01-01T00:01:00Z")
-					.add("endTimeAt", "1970-01-01T07:30:00Z");
-		}
+
 		// get car when radio was off or temp was above 20 and the driver was "mira" and fuel was not 0.7 -> entry 100-150
 		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
 		assertEquals(2, entryList.size(), "Both matching entities should have been returned.");
@@ -426,30 +568,45 @@ public class QueryingTest extends ComposeTest {
 	@DisplayName("Test running a temporal query with ngsi range.")
 	@ParameterizedTest
 	@MethodSource("getRelationsBetweenAndBefore")
-	public void testTempWithNgsiRangeInTempValues(TimeRelation timeRelation, Optional<String> sysAttrs) {
-		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
-		getRequest.getParameters()
-				.add("idPattern", ".*")
-				.add("attrs", "driver,motor")
-				.add("type", "car")
-				.add("q", "motor.fuel==0.6..0.8");
+	public void testTempWithNgsiRangeInTempValues(RequestType requestType, TimeRelation timeRelation, Optional<String> sysAttrs) {
+		MutableHttpRequest getRequest = null;
 
+		if (timeRelation == TimeRelation.BEFORE) {
+			getRequest = getRequest(
+					requestType,
+					Optional.empty(),
+					Optional.of(".*"),
+					Optional.of("car"),
+					Optional.of("driver,motor"),
+					Optional.of("motor.fuel==0.6..0.8"),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.of("before"),
+					Optional.of("1970-01-01T07:30:00Z"),
+					Optional.empty(),
+					Optional.empty());
+		}
+		if (timeRelation == TimeRelation.BETWEEN) {
+			getRequest = getRequest(
+					requestType,
+					Optional.empty(),
+					Optional.of(".*"),
+					Optional.of("car"),
+					Optional.of("driver,motor"),
+					Optional.of("motor.fuel==0.6..0.8"),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.of("between"),
+					Optional.of("1970-01-01T00:01:00Z"),
+					Optional.of("1970-01-01T07:30:00Z"),
+					Optional.empty());
+		}
 		if (sysAttrs.isPresent()) {
 			getRequest.getParameters().add("options", sysAttrs.get());
 		} else {
 			getRequest.getParameters().add("options", "temporalValues");
-		}
-
-		if (timeRelation == TimeRelation.BEFORE) {
-			getRequest.getParameters()
-					.add("timerel", "before")
-					.add("timeAt", "1970-01-01T07:30:00Z");
-		}
-		if (timeRelation == TimeRelation.BETWEEN) {
-			getRequest.getParameters()
-					.add("timerel", "between")
-					.add("timeAt", "1970-01-01T00:01:00Z")
-					.add("endTimeAt", "1970-01-01T07:30:00Z");
 		}
 		// get car when fuel is between 0.6 and 0.8 -> the 200 entries in the middle
 		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
@@ -476,29 +633,46 @@ public class QueryingTest extends ComposeTest {
 	@DisplayName("Test running a temporal query with ngsi list.")
 	@ParameterizedTest
 	@MethodSource("getRelationsBetweenAndBefore")
-	public void testTempWithNgsiListInTempValues(TimeRelation timeRelation, Optional<String> sysAttrs) {
-		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
-		getRequest.getParameters()
-				.add("idPattern", ".*")
-				.add("attrs", "driver,motor")
-				.add("type", "car")
-				.add("q", "driver==[\"Mira\",\"Franzi\"]");
+	public void testTempWithNgsiListInTempValues(RequestType requestType, TimeRelation timeRelation, Optional<String> sysAttrs) {
+		MutableHttpRequest getRequest = null;
+
+		if (timeRelation == TimeRelation.BEFORE) {
+			getRequest = getRequest(
+					requestType,
+					Optional.empty(),
+					Optional.of(".*"),
+					Optional.of("car"),
+					Optional.of("driver,motor"),
+					Optional.of("driver==[\"Mira\",\"Franzi\"]"),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.of("before"),
+					Optional.of("1970-01-01T07:30:00Z"),
+					Optional.empty(),
+					Optional.empty());
+		}
+		if (timeRelation == TimeRelation.BETWEEN) {
+			getRequest = getRequest(
+					requestType,
+					Optional.empty(),
+					Optional.of(".*"),
+					Optional.of("car"),
+					Optional.of("driver,motor"),
+					Optional.of("driver==[\"Mira\",\"Franzi\"]"),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.of("between"),
+					Optional.of("1970-01-01T00:01:00Z"),
+					Optional.of("1970-01-01T07:30:00Z"),
+					Optional.empty());
+		}
 
 		if (sysAttrs.isPresent()) {
 			getRequest.getParameters().add("options", sysAttrs.get());
 		} else {
 			getRequest.getParameters().add("options", "temporalValues");
-		}
-		if (timeRelation == TimeRelation.BEFORE) {
-			getRequest.getParameters()
-					.add("timerel", "before")
-					.add("timeAt", "1970-01-01T07:30:00Z");
-		}
-		if (timeRelation == TimeRelation.BETWEEN) {
-			getRequest.getParameters()
-					.add("timerel", "between")
-					.add("timeAt", "1970-01-01T00:01:00Z")
-					.add("endTimeAt", "1970-01-01T07:30:00Z");
 		}
 
 		// get car when the requested drivers where set -> the 200 entries for Franzi, 100 for Mira
@@ -536,18 +710,27 @@ public class QueryingTest extends ComposeTest {
 	}
 
 	@DisplayName("Test running a temporal query with ngsi json value.")
-	@Test
-	public void testTempWithNgsiJsonInTempValues() {
-		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
+	@ParameterizedTest
+	@EnumSource(RequestType.class)
+	public void testTempWithNgsiJsonInTempValues(RequestType requestType) {
+		MutableHttpRequest getRequest = getRequest(
+				requestType,
+				Optional.empty(),
+				Optional.of(".*"),
+				Optional.of("car"),
+				Optional.of("driver,motor"),
+				Optional.of("trunk[cases]==3"),
+				Optional.empty(),
+				Optional.empty(),
+				Optional.empty(),
+				Optional.of("between"),
+				Optional.of("1970-01-01T00:01:00Z"),
+				Optional.of("1970-01-01T07:30:00Z"),
+				Optional.empty());
+
 		getRequest.getParameters()
-				.add("options", "temporalValues")
-				.add("idPattern", ".*")
-				.add("attrs", "driver,motor")
-				.add("type", "car")
-				.add("q", "trunk[cases]==3")
-				.add("timerel", "between")
-				.add("timeAt", "1970-01-01T00:01:00Z")
-				.add("endTimeAt", "1970-01-01T07:30:00Z");
+				.add("options", "temporalValues");
+
 		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
 		assertEquals(2, entryList.size(), "Both matching entities should have been returned.");
 		entryList.forEach(entry -> {
@@ -565,26 +748,45 @@ public class QueryingTest extends ComposeTest {
 	@DisplayName("Test running a temporal query with without attribute present in the req timeframe.")
 	@ParameterizedTest
 	@MethodSource("getRelationsBetweenAndAfter")
-	public void testTempWithNgsiQueryNoAttrInReqTimeFrameInTempValues(TimeRelation relation) {
-		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
-		getRequest.getParameters()
-				.add("options", "temporalValues")
-				.add("idPattern", ".*")
-				.add("attrs", "driver,motor")
-				.add("type", "car")
-				.add("q", "driver==\"Franzi\"");
+	public void testTempWithNgsiQueryNoAttrInReqTimeFrameInTempValues(RequestType requestType, TimeRelation relation) {
+		MutableHttpRequest getRequest = null;
+
 
 		if (relation == TimeRelation.AFTER) {
-			getRequest.getParameters()
-					.add("timerel", "after")
-					.add("timeAt", "1970-01-01T03:30:00Z");
+			getRequest = getRequest(
+					requestType,
+					Optional.empty(),
+					Optional.of(".*"),
+					Optional.of("car"),
+					Optional.of("driver,motor"),
+					Optional.of("driver==\"Franzi\""),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.of("after"),
+					Optional.of("1970-01-01T03:30:00Z"),
+					Optional.empty(),
+					Optional.empty());
 		}
 		if (relation == TimeRelation.BETWEEN) {
-			getRequest.getParameters()
-					.add("timerel", "between")
-					.add("timeAt", "1970-01-01T03:30:00Z")
-					.add("endTimeAt", "1970-01-01T07:30:00Z");
+			getRequest = getRequest(
+					requestType,
+					Optional.empty(),
+					Optional.of(".*"),
+					Optional.of("car"),
+					Optional.of("driver,motor"),
+					Optional.of("driver==\"Franzi\""),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.empty(),
+					Optional.of("between"),
+					Optional.of("1970-01-01T03:30:00Z"),
+					Optional.of("1970-01-01T07:30:00Z"),
+					Optional.empty());
 		}
+
+		getRequest.getParameters()
+				.add("options", "temporalValues");
 
 		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
 		assertEquals(1, entryList.size(), "Only the entity with driver 'Franzi' should have been returned.");
@@ -603,13 +805,24 @@ public class QueryingTest extends ComposeTest {
 	@DisplayName("Test count option")
 	@Test
 	public void testCountOptionSet() {
-		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
+		MutableHttpRequest getRequest = getGetRequest(
+				Optional.empty(),
+				Optional.of(".*"),
+				Optional.empty(),
+				Optional.of("temperature"),
+				Optional.empty(),
+				Optional.empty(),
+				Optional.empty(),
+				Optional.empty(),
+				Optional.empty(),
+				Optional.empty(),
+				Optional.empty(),
+				Optional.empty());
+
 		getRequest.getParameters()
-				.add("options", "temporalValues")
-				.add("idPattern", ".*")
-				.add("attrs", "temperature")
 				.add("options", "count")
 				.add("pageSize", "2");
+
 		HttpResponse<List<Map<String, Object>>> entryListResponse = mintakaTestClient.toBlocking().exchange(getRequest, List.class);
 		assertEquals(HttpStatus.OK, entryListResponse.getStatus(), "The request should succeed.");
 		assertNotNull(entryListResponse.getHeaders().get("NGSILD-Total-Count"), "Count should be present");
@@ -685,19 +898,166 @@ public class QueryingTest extends ComposeTest {
 		assertTrue(entryListResponse.getBody().get().isEmpty(), "The result should be an empty list.");
 	}
 
+	private MutableHttpRequest getPostRequest(
+			// entityInfo
+			Optional<List<URI>> id,
+			Optional<String> idPattern,
+			Optional<String> type,
+			// attrs
+			Optional<String> attrs,
+			// q
+			Optional<String> q,
+			// geo query
+			Optional<String> georel,
+			Optional<String> geometry,
+			Optional<String> coordinates,
+			// temporal query
+			Optional<String> timerel,
+			Optional<String> timeAt,
+			Optional<String> endTimeAt,
+			Optional<String> timeProperty) {
+
+		QueryVO queryVO = new QueryVO();
+		if (id.isPresent()) {
+			List<URI> idList = id.get();
+			if (idList.size() == 1) {
+				queryVO.entities().id(idList.get(0).toString());
+			} else {
+				queryVO.entities().id(idList.stream().map(URI::toString).collect(Collectors.toList()));
+			}
+		}
+		idPattern.ifPresent(queryVO.entities()::idPattern);
+		type.ifPresent(queryVO.entities()::type);
+		q.ifPresent(queryVO::q);
+
+		if (attrs.isPresent()) {
+			queryVO.attrs(Arrays.stream(attrs.get().split(",")).collect(Collectors.toList()));
+		}
+
+		georel.ifPresent(queryVO.geoQ()::georel);
+		geometry.ifPresent(queryVO.geoQ()::geometry);
+		if (coordinates.isPresent()) {
+			queryVO.geoQ().coordinates(Arrays.stream(coordinates.get().split(",")).collect(Collectors.toList()));
+		}
+
+		timerel.ifPresent(queryVO.temporalQ()::timerel);
+		if (timeAt.isPresent()) {
+			queryVO.temporalQ().timeAt(Instant.parse(timeAt.get()));
+		}
+		if (endTimeAt.isPresent()) {
+			queryVO.temporalQ().endTimeAt(Instant.parse(endTimeAt.get()));
+		}
+		timeProperty.ifPresent(queryVO.temporalQ()::timeproperty);
+
+		ObjectMapper objectMapper = new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+		objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+		objectMapper.registerModule(new JavaTimeModule());
+		try {
+			return HttpRequest.POST("/temporal/entityOperations/query", objectMapper.writeValueAsString(queryVO));
+		} catch (JsonProcessingException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	private MutableHttpRequest getRequest(
+			RequestType requestType,
+			// entityInfo
+			Optional<List<URI>> id,
+			Optional<String> idPattern,
+			Optional<String> type,
+			// attrs
+			Optional<String> attrs,
+			// q
+			Optional<String> q,
+			// geo query
+			Optional<String> georel,
+			Optional<String> geometry,
+			Optional<String> coordinates,
+			// temporal query
+			Optional<String> timerel,
+			Optional<String> timeAt,
+			Optional<String> endTimeAt,
+			Optional<String> timeProperty) {
+		switch (requestType) {
+			case GET:
+				String ids = null;
+				if (id.isPresent()) {
+					ids = id.get().stream().map(URI::toString).collect(Collectors.joining(","));
+				}
+				return getGetRequest(Optional.ofNullable(ids), idPattern, type, attrs, q, georel, geometry, coordinates, timerel, timeAt, endTimeAt, timeProperty);
+			case POST:
+			default:
+				return getPostRequest(id, idPattern, type, attrs, q, georel, geometry, coordinates, timerel, timeAt, endTimeAt, timeProperty);
+		}
+	}
+
+	private MutableHttpRequest getGetRequest(
+			// entityInfo
+			Optional<String> id,
+			Optional<String> idPattern,
+			Optional<String> type,
+			// attrs
+			Optional<String> attrs,
+			// q
+			Optional<String> q,
+			// geo query
+			Optional<String> georel,
+			Optional<String> geometry,
+			Optional<String> coordinates,
+			// temporal query
+			Optional<String> timerel,
+			Optional<String> timeAt,
+			Optional<String> endTimeAt,
+			Optional<String> timeProperty) {
+		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
+
+		id.ifPresent(idString -> getRequest.getParameters().add("id", idString));
+		idPattern.ifPresent(idPatternString -> getRequest.getParameters().add("idPattern", idPatternString));
+		type.ifPresent(typeString -> getRequest.getParameters().add("type", typeString));
+		attrs.ifPresent(attrsString -> getRequest.getParameters().add("attrs", attrsString));
+		q.ifPresent(qString -> getRequest.getParameters().add("q", qString));
+		georel.ifPresent(georelString -> getRequest.getParameters().add("georel", georelString));
+		geometry.ifPresent(geometryString -> getRequest.getParameters().add("geometry", geometryString));
+		coordinates.ifPresent(coordinatesString -> getRequest.getParameters().add("coordinates", coordinatesString));
+		timerel.ifPresent(timerelString -> getRequest.getParameters().add("timerel", timerelString));
+		timeAt.ifPresent(timeAtString -> getRequest.getParameters().add("timeAt", timeAtString));
+		endTimeAt.ifPresent(endTimeAtString -> getRequest.getParameters().add("endTimeAt", endTimeAtString));
+		timeProperty.ifPresent(timePropertyString -> getRequest.getParameters().add("timeproperty", timePropertyString));
+		return getRequest;
+	}
+
 	private static Stream<Arguments> getRelationsBetweenAndAfter() {
-		return Stream.of(Arguments.of(TimeRelation.BETWEEN), Arguments.of(TimeRelation.AFTER));
+		return Stream.of(
+				Arguments.of(RequestType.POST, TimeRelation.BETWEEN), Arguments.of(RequestType.POST, TimeRelation.AFTER),
+				Arguments.of(RequestType.GET, TimeRelation.BETWEEN), Arguments.of(RequestType.GET, TimeRelation.AFTER));
 	}
 
 	private static Stream<Arguments> getRelationsBetweenAndBefore() {
 		return Stream.of(
-				Arguments.of(TimeRelation.BETWEEN, Optional.of("sysAttrs")),
-				Arguments.of(TimeRelation.BEFORE, Optional.of("sysAttrs")),
-				Arguments.of(TimeRelation.BETWEEN, Optional.empty()),
-				Arguments.of(TimeRelation.BEFORE, Optional.empty()));
+				Arguments.of(RequestType.POST, TimeRelation.BETWEEN, Optional.of("sysAttrs")),
+				Arguments.of(RequestType.POST, TimeRelation.BEFORE, Optional.of("sysAttrs")),
+				Arguments.of(RequestType.POST, TimeRelation.BETWEEN, Optional.empty()),
+				Arguments.of(RequestType.POST, TimeRelation.BEFORE, Optional.empty()),
+				Arguments.of(RequestType.GET, TimeRelation.BETWEEN, Optional.of("sysAttrs")),
+				Arguments.of(RequestType.GET, TimeRelation.BEFORE, Optional.of("sysAttrs")),
+				Arguments.of(RequestType.GET, TimeRelation.BETWEEN, Optional.empty()),
+				Arguments.of(RequestType.GET, TimeRelation.BEFORE, Optional.empty()));
 	}
 
 	private static Stream<Arguments> provideCarIds() {
-		return Stream.of(Arguments.of(List.of(CAR_1_ID, CAR_2_ID)), Arguments.of(List.of(CAR_1_ID)), Arguments.of(List.of(CAR_2_ID)));
+		return Stream.of(
+				Arguments.of(RequestType.POST, List.of(CAR_1_ID, CAR_2_ID)), Arguments.of(RequestType.POST, List.of(CAR_1_ID)), Arguments.of(RequestType.POST, List.of(CAR_2_ID)),
+				Arguments.of(RequestType.GET, List.of(CAR_1_ID, CAR_2_ID)), Arguments.of(RequestType.GET, List.of(CAR_1_ID)), Arguments.of(RequestType.GET, List.of(CAR_2_ID)));
+	}
+
+	private static Stream<Arguments> provideBooleanValues() {
+		return Stream.of(
+				Arguments.of(RequestType.POST, true), Arguments.of(RequestType.POST, false),
+				Arguments.of(RequestType.GET, true), Arguments.of(RequestType.GET, false));
+	}
+
+	enum RequestType {
+		POST,
+		GET;
 	}
 }

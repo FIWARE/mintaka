@@ -336,7 +336,7 @@
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <inputSpec>${project.basedir}/api/full_api.json</inputSpec>
+                            <inputSpec>${project.basedir}/api/full_api.yaml</inputSpec>
                             <apiPackage>org.fiware.ngsi.api</apiPackage>
                             <strictSpec>true</strictSpec>
                             <modelPackage>org.fiware.ngsi.model</modelPackage>
@@ -351,6 +351,7 @@
                                 <useReferencedSchemaAsDefault>true</useReferencedSchemaAsDefault>
                                 <useLombokGenerated>true</useLombokGenerated>
                                 <introspected>true</introspected>
+                                <useBeanValidation>false</useBeanValidation>
                                 <jacksonDatabindNullable>false</jacksonDatabindNullable>
                                 <supportsAdditionalPropertiesWithComposedSchema>true</supportsAdditionalPropertiesWithComposedSchema>
                             </configOptions>
