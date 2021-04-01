@@ -15,6 +15,9 @@ import org.fiware.ngsi.model.TemporalQueryVO;
 import java.io.IOException;
 import java.util.Optional;
 
+/**
+ * Dedicated deserializer for QueryVOs, to cleanup empty objects.
+ */
 @Slf4j
 public class QueryVODeserializer extends StdDeserializer<QueryVO> implements ResolvableDeserializer {
 
