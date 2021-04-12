@@ -1,11 +1,13 @@
 package org.fiware.mintaka.rest;
 
+import io.micronaut.core.annotation.Introspected;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.MutableHttpResponse;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.context.ServerRequestContext;
+import io.micronaut.validation.Validated;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.fiware.mintaka.context.LdContextCache;
@@ -24,15 +26,22 @@ import org.fiware.mintaka.exception.PersistenceRetrievalException;
 import org.fiware.mintaka.persistence.LimitableResult;
 import org.fiware.mintaka.service.EntityTemporalService;
 import org.fiware.ngsi.api.TemporalRetrievalApi;
+import org.fiware.ngsi.model.EntityInfoVO;
 import org.fiware.ngsi.model.EntityTemporalListVO;
 import org.fiware.ngsi.model.EntityTemporalVO;
 import org.fiware.ngsi.model.GeoPropertyVO;
+import org.fiware.ngsi.model.GeoQueryVO;
 import org.fiware.ngsi.model.PropertyVO;
+import org.fiware.ngsi.model.QueryVO;
 import org.fiware.ngsi.model.RelationshipVO;
+import org.fiware.ngsi.model.TemporalQueryVO;
 import org.fiware.ngsi.model.TimerelVO;
 
 import javax.annotation.Nullable;
+import javax.validation.Valid;
+import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 import java.net.URI;
@@ -163,6 +172,47 @@ public class TemporalApiController implements TemporalRetrievalApi {
 			mutableHttpResponse.header("Link", getLinkHeader(contextUrls));
 		}
 		return mutableHttpResponse;
+	}
+
+	@Override
+	public HttpResponse<Object> queryTemporalEntitiesOnPost(
+			@NotNull QueryVO queryVO,
+			@Nullable String link,
+			@Nullable @Min(1) @Max(100) Integer pageSize,
+			@Nullable URI pageAnchor,
+			@Nullable String options,
+			@Nullable @Min(1) Integer lastN) {
+
+		Optional<EntityInfoVO> entityInfoVO = Optional.ofNullable(queryVO.entities());
+		Optional<GeoQueryVO> geoQueryVO = Optional.ofNullable(queryVO.geoQ());
+		Optional<TemporalQueryVO> temporalQueryVO = Optional.ofNullable(queryVO.temporalQ());
+		return queryTemporalEntities(link,
+				entityInfoVO.map(EntityInfoVO::getId).map(this::idToString).orElse(null),
+				entityInfoVO.map(EntityInfoVO::getIdPattern).orElse(null),
+				entityInfoVO.map(EntityInfoVO::type).orElse(null),
+				Optional.ofNullable(queryVO.attrs()).map(attrsList -> attrsList.stream().collect(Collectors.joining(","))).orElse(null), queryVO.q(),
+				geoQueryVO.map(GeoQueryVO::georel).orElse(null),
+				geoQueryVO.map(GeoQueryVO::geometry).orElse(null),
+				geoQueryVO.map(GeoQueryVO::coordinates).map(this::coordinatesToString).orElse(null),
+				geoQueryVO.map(GeoQueryVO::geoproperty).orElse(null),
+				temporalQueryVO.map(TemporalQueryVO::getTimerel).map(TimerelVO::toEnum).orElse(null),
+				temporalQueryVO.map(TemporalQueryVO::getTimeproperty).orElse(null),
+				temporalQueryVO.map(TemporalQueryVO::timeAt).orElse(null),
+				temporalQueryVO.map(TemporalQueryVO::endTimeAt).orElse(null),
+				queryVO.csf(), pageSize, pageAnchor, options, lastN);
+	}
+
+	private String idToString(Object id) {
+		if (id instanceof List) {
+			return ((List<?>) id).stream().map(Object::toString).collect(Collectors.joining(","));
+		} else if (id instanceof URI) {
+			return ((URI) id).toString();
+		}
+		return id.toString();
+	}
+
+	private String coordinatesToString(List<Object> coordinates) {
+		return coordinates.stream().map(Object::toString).collect(Collectors.joining(","));
 	}
 
 	@Override

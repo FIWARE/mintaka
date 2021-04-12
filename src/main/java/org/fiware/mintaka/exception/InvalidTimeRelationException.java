@@ -9,7 +9,4 @@ public class InvalidTimeRelationException extends RuntimeException {
 		super(message);
 	}
 
-	public InvalidTimeRelationException(String message, Throwable cause) {
-		super(message, cause);
-	}
 }
