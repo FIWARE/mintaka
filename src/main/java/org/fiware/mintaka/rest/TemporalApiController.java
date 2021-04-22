@@ -1,13 +1,11 @@
 package org.fiware.mintaka.rest;
 
-import io.micronaut.core.annotation.Introspected;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.MutableHttpResponse;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.context.ServerRequestContext;
-import io.micronaut.validation.Validated;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.fiware.mintaka.context.LdContextCache;
@@ -38,7 +36,6 @@ import org.fiware.ngsi.model.TemporalQueryVO;
 import org.fiware.ngsi.model.TimerelVO;
 
 import javax.annotation.Nullable;
-import javax.validation.Valid;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
@@ -289,24 +286,24 @@ public class TemporalApiController implements TemporalRetrievalApi {
 		timeStampList.addAll(Optional.ofNullable(entityTemporalVO.getObservationSpace())
 				.stream()
 				.flatMap(List::stream)
-				.map(geoPropertyVO -> getTimestampFromGeoProperty(geoPropertyVO, timeQuery.getTimeStampType()))
+				.map(geoPropertyVO -> Optional.ofNullable(getTimestampFromGeoProperty(geoPropertyVO, timeQuery.getTimeStampType())).orElse(Instant.ofEpochMilli(0)))
 				.collect(Collectors.toList()));
 		timeStampList.addAll(Optional.ofNullable(entityTemporalVO.getOperationSpace())
 				.stream()
 				.flatMap(List::stream)
-				.map(geoPropertyVO -> getTimestampFromGeoProperty(geoPropertyVO, timeQuery.getTimeStampType()))
+				.map(geoPropertyVO -> Optional.ofNullable(getTimestampFromGeoProperty(geoPropertyVO, timeQuery.getTimeStampType())).orElse(Instant.ofEpochMilli(0)))
 				.collect(Collectors.toList()));
 		timeStampList.addAll(Optional.ofNullable(entityTemporalVO.getLocation())
 				.stream()
 				.flatMap(List::stream)
-				.map(geoPropertyVO -> getTimestampFromGeoProperty(geoPropertyVO, timeQuery.getTimeStampType()))
+				.map(geoPropertyVO -> Optional.ofNullable(getTimestampFromGeoProperty(geoPropertyVO, timeQuery.getTimeStampType())).orElse(Instant.ofEpochMilli(0)))
 				.collect(Collectors.toList()));
 		timeStampList.addAll(Optional.ofNullable(entityTemporalVO.getAdditionalProperties())
 				.stream()
 				.map(Map::values)
 				.flatMap(Collection::stream)
 				.flatMap(instanceList -> ((List<Object>) instanceList).stream())
-				.map(propertyObject -> getTimestampFromPropertyObject(propertyObject, timeQuery.getTimeStampType()))
+				.map(propertyObject -> Optional.ofNullable(getTimestampFromPropertyObject(propertyObject, timeQuery.getTimeStampType())).orElse(Instant.ofEpochMilli(0)))
 				.collect(Collectors.toList()));
 		return timeStampList;
 	}
