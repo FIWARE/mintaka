@@ -71,9 +71,14 @@ public class TemporalApiController implements TemporalRetrievalApi {
 	private static final String TEMPORAL_VALUES_OPTION = "temporalValues";
 	private static final String COUNT_OPTION = "count";
 	private static final String LINK_HEADER_TEMPLATE = "<%s>; rel=\"http://www.w3.org/ns/json-ld#context\"; type=\"application/ld+json\"";
+	private static final String NGSILD_RESULTS_COUNT_HEADER = "NGSILD-Results-Count";
+	private static final String PAGE_SIZE_HEADER = "Page-Size";
+	private static final String NEXT_PAGE_HEADER = "Next-Page";
+	private static final String PREVIOUS_PAGE_HEADER = "Previous-Page";
+	private static final String LINK_HEADER = "Link";
+
 	public static final String COMMA_SEPERATOR = ",";
 	public static final String TIMERELATION_ERROR_MSG_TEMPLATE = "The given timestamp type is not supported: %s";
-
 
 	private final EntityTemporalService entityTemporalService;
 	private final LdContextCache contextCache;
@@ -99,6 +104,7 @@ public class TemporalApiController implements TemporalRetrievalApi {
 			@Nullable @Size(min = 1) String csf,
 			Integer pageSize,
 			URI pageAnchor,
+			Integer limit,
 			@Nullable String options,
 			@Nullable @Min(1) Integer lastN) {
 
@@ -117,6 +123,8 @@ public class TemporalApiController implements TemporalRetrievalApi {
 		Optional<QueryTerm> optionalQuery = Optional.ofNullable(q).map(queryString -> queryParser.toTerm(queryString, contextUrls));
 		Optional<GeoQuery> optionalGeoQuery = getGeometryQuery(georel, geometry, coordinates, expandedGeoProperty);
 
+		// if pagesize is null, set it to limit, even though limit might also be null.
+		pageSize = getPageSize(pageSize, limit);
 
 		LimitableResult<List<EntityTemporalVO>> limitableResult = entityTemporalService.getEntitiesWithQuery(
 				optionalIdList,
@@ -155,20 +163,25 @@ public class TemporalApiController implements TemporalRetrievalApi {
 			mutableHttpResponse = HttpResponse.ok(entityTemporalListVO);
 		}
 		paginationInformation.ifPresent(pi -> {
-			mutableHttpResponse.header("Page-Size", String.valueOf(pi.getPageSize()));
-			pi.getNextPage().ifPresent(np -> mutableHttpResponse.header("Next-Page", np));
-			pi.getPreviousPage().ifPresent(pp -> mutableHttpResponse.header("Previous-Page", pp));
+			mutableHttpResponse.header(PAGE_SIZE_HEADER, String.valueOf(pi.getPageSize()));
+			pi.getNextPage().ifPresent(np -> mutableHttpResponse.header(NEXT_PAGE_HEADER, np));
+			pi.getPreviousPage().ifPresent(pp -> mutableHttpResponse.header(PREVIOUS_PAGE_HEADER, pp));
 		});
 
 		if (isCountOptionSet(options)) {
 			Number totalCount = entityTemporalService.countMatchingEntities(optionalIdList, optionalIdPattern, expandedTypes, optionalQuery, optionalGeoQuery, timeQuery);
-			mutableHttpResponse.header("NGSILD-Total-Count", totalCount.toString());
+			mutableHttpResponse.header(NGSILD_RESULTS_COUNT_HEADER, totalCount.toString());
 		}
 
 		if (acceptType == AcceptType.JSON) {
-			mutableHttpResponse.header("Link", getLinkHeader(contextUrls));
+			mutableHttpResponse.header(LINK_HEADER, getLinkHeader(contextUrls));
 		}
 		return mutableHttpResponse;
+	}
+
+	private Integer getPageSize(Integer pageSize, Integer limit) {
+		Integer requestedPageSize = Optional.ofNullable(pageSize).orElse(limit);
+		return Optional.ofNullable(requestedPageSize).orElse(DEFAULT_LIMIT);
 	}
 
 	@Override
@@ -177,12 +190,14 @@ public class TemporalApiController implements TemporalRetrievalApi {
 			@Nullable String link,
 			@Nullable @Min(1) @Max(100) Integer pageSize,
 			@Nullable URI pageAnchor,
+			@Nullable @Min(1) @Max(100) Integer limit,
 			@Nullable String options,
 			@Nullable @Min(1) Integer lastN) {
 
 		Optional<EntityInfoVO> entityInfoVO = Optional.ofNullable(queryVO.entities());
 		Optional<GeoQueryVO> geoQueryVO = Optional.ofNullable(queryVO.geoQ());
 		Optional<TemporalQueryVO> temporalQueryVO = Optional.ofNullable(queryVO.temporalQ());
+
 		return queryTemporalEntities(link,
 				entityInfoVO.map(EntityInfoVO::getId).map(this::idToString).orElse(null),
 				entityInfoVO.map(EntityInfoVO::getIdPattern).orElse(null),
@@ -196,7 +211,7 @@ public class TemporalApiController implements TemporalRetrievalApi {
 				temporalQueryVO.map(TemporalQueryVO::getTimeproperty).orElse(null),
 				temporalQueryVO.map(TemporalQueryVO::timeAt).orElse(null),
 				temporalQueryVO.map(TemporalQueryVO::endTimeAt).orElse(null),
-				queryVO.csf(), pageSize, pageAnchor, options, lastN);
+				queryVO.csf(), pageSize, pageAnchor, limit, options, lastN);
 	}
 
 	private String idToString(Object id) {
