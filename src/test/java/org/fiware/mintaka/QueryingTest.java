@@ -803,8 +803,9 @@ public class QueryingTest extends ComposeTest {
 	}
 
 	@DisplayName("Test count option")
-	@Test
-	public void testCountOptionSet() {
+	@ParameterizedTest
+	@ValueSource(strings = {"pageSize", "limit"})
+	public void testCountOptionSet(String paginationParameterName) {
 		MutableHttpRequest getRequest = getGetRequest(
 				Optional.empty(),
 				Optional.of(".*"),
@@ -821,23 +822,24 @@ public class QueryingTest extends ComposeTest {
 
 		getRequest.getParameters()
 				.add("options", "count")
-				.add("pageSize", "2");
+				.add(paginationParameterName, "2");
 
 		HttpResponse<List<Map<String, Object>>> entryListResponse = mintakaTestClient.toBlocking().exchange(getRequest, List.class);
 		assertEquals(HttpStatus.OK, entryListResponse.getStatus(), "The request should succeed.");
-		assertNotNull(entryListResponse.getHeaders().get("NGSILD-Total-Count"), "Count should be present");
-		assertEquals("5", entryListResponse.getHeaders().get("NGSILD-Total-Count"), "5 entites should match.");
+		assertNotNull(entryListResponse.getHeaders().get("NGSILD-Results-Count"), "Count should be present");
+		assertEquals("5", entryListResponse.getHeaders().get("NGSILD-Results-Count"), "5 entites should match.");
 	}
 
 	@DisplayName("Retrieve query results with entity pagination")
-	@Test
-	public void testEntityPagination() {
+	@ParameterizedTest
+	@ValueSource(strings = {"pageSize", "limit"})
+	public void testEntityPagination(String paginationParameterName) {
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
 		getRequest.getParameters()
 				.add("options", "temporalValues")
 				.add("idPattern", ".*")
 				.add("attrs", "temperature")
-				.add("pageSize", "2");
+				.add(paginationParameterName, "2");
 		List<String> allReturnedEntities = new ArrayList<>();
 		HttpResponse<List<Map<String, Object>>> entryListResponse = mintakaTestClient.toBlocking().exchange(getRequest, List.class);
 		assertEquals(HttpStatus.OK, entryListResponse.getStatus(), "The request should succeed.");
@@ -862,7 +864,7 @@ public class QueryingTest extends ComposeTest {
 				.add("options", "temporalValues")
 				.add("idPattern", ".*")
 				.add("attrs", "temperature")
-				.add("pageSize", "2")
+				.add(paginationParameterName, "2")
 				.add("pageAnchor", nextPageAnchor);
 		entryListResponse = mintakaTestClient.toBlocking().exchange(getRequest, List.class);
 		assertEquals(HttpStatus.OK, entryListResponse.getStatus(), "The request should succeed.");

@@ -820,6 +820,7 @@ paths:
         - $ref: '#/components/parameters/csf'
         - $ref: '#/components/parameters/pageSize'
         - $ref: '#/components/parameters/pageAnchor'
+        - $ref: '#/components/parameters/limit'
         - $ref: '#/components/parameters/components-parameters-options'
         - $ref: '#/components/parameters/lastN'
       responses:
@@ -1070,6 +1071,7 @@ paths:
         - $ref: '#/components/parameters/link'
         - $ref: '#/components/parameters/pageSize'
         - $ref: '#/components/parameters/pageAnchor'
+        - $ref: '#/components/parameters/limit'
         - $ref: '#/components/parameters/components-parameters-options'
         - $ref: '#/components/parameters/lastN'
       requestBody:
@@ -1185,7 +1187,6 @@ components:
         type: integer
         minimum: 1
         maximum: 100
-        default: 100
     pageAnchor:
       name: pageAnchor
       description: Size of the page to be returned
@@ -1203,7 +1204,6 @@ components:
         type: integer
         minimum: 1
         maximum: 100
-        default: 100
     offset:
       name: offset
       description: Pagination offset
@@ -1485,7 +1485,7 @@ components:
             - type: array
               items:
                 oneOf:
-                  - type: string)
+                  - type: string
                   - type: number
                   - type: boolean
                   - type: object
