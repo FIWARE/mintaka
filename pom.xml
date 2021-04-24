@@ -59,7 +59,7 @@
         <!-- lazy dev -->
 
         <version.org.mapstruct>1.4.2.Final</version.org.mapstruct>
-        <version.org.projectlombok>1.18.18</version.org.projectlombok>
+        <version.org.projectlombok>1.18.20</version.org.projectlombok>
 
         <!-- logging -->
         <version.ch.qos.logback>1.2.3</version.ch.qos.logback>
