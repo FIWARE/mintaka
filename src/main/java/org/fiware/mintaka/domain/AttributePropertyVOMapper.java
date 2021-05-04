@@ -22,6 +22,8 @@ import java.util.stream.Collectors;
 @Mapper(componentModel = "jsr330")
 public interface AttributePropertyVOMapper {
 
+	// datasetId is included in the primary key and therefore cannot be null. In NGSI-LD, a datasetId is not required, thus orion sets it to "None" in case
+	// no datasetId was defined.
 	static String DATASET_ID_NONE = "None";
 
 	// value types the denote a {@link GeoPropertyVO}
