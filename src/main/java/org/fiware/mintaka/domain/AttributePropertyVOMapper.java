@@ -22,6 +22,8 @@ import java.util.stream.Collectors;
 @Mapper(componentModel = "jsr330")
 public interface AttributePropertyVOMapper {
 
+	static String DATASET_ID_NONE = "None";
+
 	// value types the denote a {@link GeoPropertyVO}
 	Set<ValueType> GEO_TYPES = Set.of(ValueType.GeoLineString, ValueType.GeoMultiLineString, ValueType.GeoMultiPolygon, ValueType.GeoPoint, ValueType.GeoPolygon);
 
@@ -71,7 +73,7 @@ public interface AttributePropertyVOMapper {
 
 		Optional.ofNullable(attribute.getObservedAt()).ifPresent(oa -> relationshipVO.observedAt(oa.toInstant(ZoneOffset.UTC)));
 		if (attribute instanceof Attribute) {
-			Optional.ofNullable(((Attribute) attribute).getDatasetId()).ifPresent(di -> relationshipVO.datasetId(URI.create(di)));
+			Optional.ofNullable(((Attribute) attribute).getDatasetId()).filter(id -> !id.equals(DATASET_ID_NONE)).ifPresent(di -> relationshipVO.datasetId(URI.create(di)));
 		}
 
 		return relationshipVO;
@@ -105,7 +107,7 @@ public interface AttributePropertyVOMapper {
 
 		Optional.ofNullable(attribute.getObservedAt()).ifPresent(oa -> geoPropertyVO.observedAt(oa.toInstant(ZoneOffset.UTC)));
 		if (attribute instanceof Attribute) {
-			Optional.ofNullable(((Attribute) attribute).getDatasetId()).ifPresent(di -> geoPropertyVO.datasetId(URI.create(di)));
+			Optional.ofNullable(((Attribute) attribute).getDatasetId()).filter(id -> !id.equals(DATASET_ID_NONE)).ifPresent(di -> geoPropertyVO.datasetId(URI.create(di)));
 		}
 		switch (attribute.getValueType()) {
 			case GeoPoint:
@@ -188,7 +190,7 @@ public interface AttributePropertyVOMapper {
 
 		Optional.ofNullable(attribute.getObservedAt()).ifPresent(oa -> propertyVO.observedAt(oa.toInstant(ZoneOffset.UTC)));
 		if (attribute instanceof Attribute) {
-			Optional.ofNullable(((Attribute) attribute).getDatasetId()).ifPresent(di -> propertyVO.datasetId(URI.create(di)));
+			Optional.ofNullable(((Attribute) attribute).getDatasetId()).filter(id -> !id.equals(DATASET_ID_NONE)).ifPresent(di -> propertyVO.datasetId(URI.create(di)));
 		}
 
 		switch (attribute.getValueType()) {
