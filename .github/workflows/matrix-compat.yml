@@ -25,8 +25,8 @@ jobs:
           repository: fiware/context.Orion-LD
 
     outputs:
-      - mintaka-matrix: ['0.3.9', '0.2.1', '0.1.1', '0.0.12']
-      - orion-matrix: ['0.7.0']
+      mintaka-matrix: "['0.3.9', '0.2.1', '0.1.1', '0.0.12']"
+      orion-matrix: "['0.7.0']"
 
   test-compatibility:
     needs: create-version-matrix
