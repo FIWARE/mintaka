@@ -36,8 +36,18 @@ jobs:
         orion: ${{fromJson(needs.create-version-matrix.outputs.orion-matrix)}}
         mintaka: ${{fromJson(needs.create-version-matrix.outputs.mintaka-matrix)}}
     steps:
-      - name: test print
-        run: |
-            echo "${{ matrix.orion }} - ${{ matrix.mintaka}}"
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ matrix.mintaka }}
+
+      - uses: actions/setup-java@v1
+        with:
+          java-version: '11'
+          java-package: jdk
+
+      - name: Run tests
+        run: mvn clean test
+        env:
+          ORION_IMAGE: fiware/orion-ld:${{ matrix.orion }}
 
 
