@@ -47,20 +47,19 @@ jobs:
           java-package: jdk
 
       - name: Run tests
+        id: runTest
+        continue-on-error: true
         run: mvn clean test
         env:
           ORION_IMAGE: fiware/orion-ld:${{ matrix.orion }}
 
-      - uses: technote-space/workflow-conclusion-action@v2
-        if: always()
-
       - name: Publish success
-        if: env.WORKFLOW_CONCLUSION == 'failure'
+        if: steps.runTest.outcome == 'success'
         run: |
           echo "| ${{ matrix.orion }} | ${{ matrix.mintaka }} | :heavy_check_mark: |" > ${{ matrix.orion }}-${{ matrix.mintaka }}.res
 
       - name: Publish failure
-        if: env.WORKFLOW_CONCLUSION == 'failure'
+        if: steps.runTest.outcome == 'failure'
         run: |
           echo "| ${{ matrix.orion }} | ${{ matrix.mintaka }} | :x: |" > ${{ matrix.orion }}-${{ matrix.mintaka }}.res
 
