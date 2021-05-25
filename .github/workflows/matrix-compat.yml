@@ -44,12 +44,7 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: '11'
-          java-package: jdk steps:
-    - uses: actions/checkout@v2
-
-    - uses: actions/download-artifact@v2
-      with:
-        path: path/to/artifacts
+          java-package: jdk
 
       - name: Run tests
         run: mvn clean test
@@ -58,7 +53,6 @@ jobs:
 
       - uses: technote-space/workflow-conclusion-action@v2
         if: always()
-
 
       - name: Publish success
         if: env.WORKFLOW_CONCLUSION == 'failure'
