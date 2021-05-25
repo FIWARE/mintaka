@@ -16,6 +16,6 @@ jobs:
           repository: fiware/mintaka
 
       - name: print
-        run:
+        run: |
           echo 'The versions are: ${{ steps.orion-version.outputs.releases }}'
 
