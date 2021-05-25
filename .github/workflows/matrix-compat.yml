@@ -44,11 +44,58 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: '11'
-          java-package: jdk
+          java-package: jdk steps:
+    - uses: actions/checkout@v2
+
+    - uses: actions/download-artifact@v2
+      with:
+        path: path/to/artifacts
 
       - name: Run tests
         run: mvn clean test
         env:
           ORION_IMAGE: fiware/orion-ld:${{ matrix.orion }}
 
+      - uses: technote-space/workflow-conclusion-action@v2
+        if: always()
 
+
+      - name: Publish success
+        if: env.WORKFLOW_CONCLUSION == 'failure'
+        run: |
+          echo "| ${{ matrix.orion }} | ${{ matrix.mintaka }} | :heavy_check_mark: |" > ${{ matrix.orion }}-${{ matrix.mintaka }}.res
+
+      - name: Publish failure
+        if: env.WORKFLOW_CONCLUSION == 'failure'
+        run: |
+          echo "| ${{ matrix.orion }} | ${{ matrix.mintaka }} | :x: |" > ${{ matrix.orion }}-${{ matrix.mintaka }}.res
+
+      - name: Upload coverage-report
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.orion }}-${{ matrix.mintaka }}.res
+          path: result/${{ matrix.orion }}-${{ matrix.mintaka }}.res
+
+  publish-result:
+    needs:  test-compatibility
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/download-artifact@v2
+        with:
+          path: results/
+
+      - name: combine-results
+        run: |
+          echo "| Orion | Mintaka | Compatible |" > compatibility.md
+          for resfile in results/*.res; do
+            cat $resfile >> compatibility.md
+          done
+
+      - name: Upload report
+        uses: actions/upload-artifact@v2
+        with:
+          name: compatibility.md
+          path: result/compatibility.md
