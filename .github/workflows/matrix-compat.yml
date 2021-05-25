@@ -78,7 +78,7 @@ jobs:
 
       - uses: actions/download-artifact@v2
         with:
-          path: results/
+          path: results
 
       - name: combine-results
         run: |
