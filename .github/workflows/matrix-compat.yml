@@ -1,0 +1,16 @@
+name: Matrix compat
+
+on:
+  push:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
+    steps:
+      - id: orion-version
+        uses: wistefan/get-releases-by-pattern@master
+        with:
+          pattern: ""
+          repository: fiware/mintaka
