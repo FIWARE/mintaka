@@ -12,5 +12,5 @@ jobs:
       - id: orion-version
         uses: wistefan/get-releases-by-pattern@master
         with:
-          pattern: ""
+          include: "MAJOR"
           repository: fiware/mintaka
