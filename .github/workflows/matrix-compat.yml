@@ -4,18 +4,40 @@ on:
   push:
 
 jobs:
-  test:
+  create-version-matrix:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
 
     steps:
-      - id: orion-version
+      - id: mintaka-version
         uses: wistefan/get-releases-by-pattern@master
         with:
           include: "MINOR"
           repository: fiware/mintaka
 
-      - name: print
+
+      - id: orion-version
+        uses: wistefan/get-releases-by-pattern@master
+        with:
+          include: "MINOR"
+          minMinor: "6"
+          versionField: "TAG-NAME"
+          repository: fiware/context.Orion-LD
+
+    outputs:
+      mintaka-matrix: ${{ steps.mintaka-version.outputs.releases }}
+      orion-matrix: ${{ steps.orion-version.outputs.releases }}
+
+  test-compatibility:
+    needs: create-version-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        orion: ${{ needs.create-version-matrix.outputs.orion-matrix }}
+        mintaka: ${{ needs.create-version-matrix.outputs.mintaka-matrix }}
+    steps:
+      - name: test print
         run: |
-          echo 'The versions are: ${{ steps.orion-version.outputs.releases }}'
+            echo "${{ matrix.orion }} - ${{ matrix.mintaka}}"
+
 
