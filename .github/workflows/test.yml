@@ -26,4 +26,4 @@ jobs:
       - name: Run tests
         run: mvn clean test coveralls:jacoco -Dcoveralls.token=${{ secrets.COVERALLS_TOKEN }}
         env:
-          ORION_IMAGE=fiware/orion-ld:${{ steps.orion-version.outputs.release }}
+          ORION_IMAGE="fiware/orion-ld:${{ steps.orion-version.outputs.release }}"
