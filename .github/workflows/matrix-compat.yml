@@ -32,6 +32,7 @@ jobs:
     needs: create-version-matrix
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         orion: ${{fromJson(needs.create-version-matrix.outputs.orion-matrix)}}
         mintaka: ${{fromJson(needs.create-version-matrix.outputs.mintaka-matrix)}}
