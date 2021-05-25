@@ -67,7 +67,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: ${{ matrix.orion }}-${{ matrix.mintaka }}.res
-          path: result/
+          path: results
 
   publish-result:
     needs:  test-compatibility
