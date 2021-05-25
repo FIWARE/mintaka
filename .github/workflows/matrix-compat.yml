@@ -25,16 +25,16 @@ jobs:
           repository: fiware/context.Orion-LD
 
     outputs:
-      mintaka-matrix: "['0.3.9', '0.2.1', '0.1.1', '0.0.12']"
-      orion-matrix: "['0.7.0']"
+      mintaka-matrix: ${{ steps.mintaka-version.outputs.releases }}
+      orion-matrix: ${{ steps.orion-version.outputs.releases }}
 
   test-compatibility:
     needs: create-version-matrix
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        orion: ${{ needs.create-version-matrix.outputs.orion-matrix }}
-        mintaka: ${{ needs.create-version-matrix.outputs.mintaka-matrix }}
+        orion: ${{fromJson(needs.create-version-matrix.outputs.orion-matrix)}}
+        mintaka: ${{fromJson(needs.create-version-matrix.outputs.mintaka-matrix)}}
     steps:
       - name: test print
         run: |
