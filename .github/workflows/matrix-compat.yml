@@ -122,6 +122,14 @@ jobs:
         run: |
           jq -s '[.[]]' temp-compat.json doc/compatibility/compatibility.json > doc/compatibility/compatibility.json
 
+      - uses: wistefan/check-compatibility@master
+        id: create-markdown
+        with:
+          operation: "MARKDOWN"
+          componentOne: "orion"
+          componentTwo: "mintaka"
+          compatibilityFile: doc/compatibility/compatibility.json
+
       - uses: EndBug/add-and-commit@v7
         with:
-          add: 'doc/compatibility/compatibility.json'
+          add: 'doc/compatibility'
