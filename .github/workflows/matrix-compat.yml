@@ -80,6 +80,9 @@ jobs:
         with:
           path: results
 
+      - run: |
+          ls -l
+
       - name: combine-results
         run: |
           echo "| Orion | Mintaka | Compatible |" > compatibility.md
