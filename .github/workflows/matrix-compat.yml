@@ -1,7 +1,9 @@
 name: Matrix compat
 
 on:
-  push:
+  schedule:
+    # every night at one
+    - cron:  '* 1 * * *'
 
 jobs:
   create-version-matrix:
