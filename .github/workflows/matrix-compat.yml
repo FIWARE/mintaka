@@ -57,11 +57,13 @@ jobs:
         if: steps.runTest.outcome == 'success'
         run: |
           echo "| ${{ matrix.orion }} | ${{ matrix.mintaka }} | :heavy_check_mark: |" > ${{ matrix.orion }}-${{ matrix.mintaka }}.res
+          ls
 
       - name: Publish failure
         if: steps.runTest.outcome == 'failure'
         run: |
           echo "| ${{ matrix.orion }} | ${{ matrix.mintaka }} | :x: |" > ${{ matrix.orion }}-${{ matrix.mintaka }}.res
+          ls
 
       - name: Upload coverage-report
         uses: actions/upload-artifact@v2
