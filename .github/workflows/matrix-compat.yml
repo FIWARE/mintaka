@@ -58,16 +58,6 @@ jobs:
         with:
           ref: ${{ matrix.mintaka }}
 
-      - uses: wistefan/check-compatibility@master
-        id: check-compatibility
-        continue-on-error: true
-        with:
-          componentOne: "orion"
-          componentTwo: "mintaka"
-          versionOne: ${{ matrix.orion }}
-          versionTwo: ${{ matrix.mintaka }}
-          compatibilityFile: doc/compatibility/compatibility.json
-
       - name: Run tests
         id: runTest
         if: steps.check-compatibility.outcome == 'failure'
