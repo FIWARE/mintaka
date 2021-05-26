@@ -28,6 +28,14 @@ jobs:
       mintaka-matrix: ${{ steps.mintaka-version.outputs.releases }}
       orion-matrix: ${{ steps.orion-version.outputs.releases }}
 
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Copy to disk
+        run:
+          cp doc/compatibility/compatibility.json /github/home/compatibility.json
+
   test-compatibility:
     needs: create-version-matrix
     runs-on: ubuntu-latest
@@ -41,16 +49,14 @@ jobs:
         with:
           ref: ${{ matrix.mintaka }}
 
+      - name: Copy to disk
+        run:
+          cp /github/home/compatibility.json doc/compatibility/compatibility.json
+
       - uses: actions/setup-java@v1
         with:
           java-version: '11'
           java-package: jdk
-
-      - id: cache-json
-        uses: actions/cache@v2
-        with:
-          path: doc/compatibility/compatibility.json
-          key: json-cache
 
       - uses: wistefan/check-compatibility@master
         id: check-compatibility
