@@ -73,7 +73,7 @@ jobs:
           componentTwo: "mintaka"
           versionOne: ${{ matrix.orion }}
           versionTwo: ${{ matrix.mintaka }}
-          compatibilityFile: doc/compatibility/compatibility.json
+          compatibilityFile: compatibility.json
           compatible: "True"
 
 
@@ -86,14 +86,14 @@ jobs:
           componentTwo: "mintaka"
           versionOne: ${{ matrix.orion }}
           versionTwo: ${{ matrix.mintaka }}
-          compatibilityFile: doc/compatibility/compatibility.json
+          compatibilityFile: compatibility.json
           compatible: "False"
 
       - name: Upload report
         uses: actions/upload-artifact@v2
         with:
           name: compatibility.json
-          path: doc/compatibility/compatibility.json
+          path: compatibility.json
 
   publish-result:
     needs:  test-compatibility
