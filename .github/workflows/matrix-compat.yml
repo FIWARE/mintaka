@@ -38,19 +38,25 @@ jobs:
         mintaka: ${{fromJson(needs.create-version-matrix.outputs.mintaka-matrix)}}
     steps:
       - uses: actions/checkout@v2
+
+      - uses: wistefan/check-compatibility@master
+        id: check-compatibility
+        continue-on-error: true
         with:
-          ref: ${{ matrix.mintaka }}
+          componentOne: "orion"
+          componentTwo: "mintaka"
+          versionOne: ${{ matrix.orion }}
+          versionTwo: ${{ matrix.mintaka }}
+          compatibilityFile: doc/compatibility/compatibility.json
 
       - uses: actions/setup-java@v1
         with:
           java-version: '11'
           java-package: jdk
 
-      - id: cache-json
-        uses: actions/cache@v2
+      - uses: actions/checkout@v2
         with:
-          path: doc/compatibility/compatibility.json
-          key: json-cache
+          ref: ${{ matrix.mintaka }}
 
       - uses: wistefan/check-compatibility@master
         id: check-compatibility
