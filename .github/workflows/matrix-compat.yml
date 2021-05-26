@@ -102,8 +102,13 @@ jobs:
     if: github.event_name == 'push'
     steps:
       - uses: actions/download-artifact@v2
+        with:
+          path: results
 
       - run: |
-          for file in /**/compatibility.json; do
+          ls -R
+
+      - run: |
+          for file in /results/*/compatibility.json; do
             cat $file
           done
