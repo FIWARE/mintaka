@@ -120,7 +120,7 @@ jobs:
 
       - id: merge
         run: |
-          jq -s '[.[]]' temp-compat.json doc/compatibility/compatibility.json
+          jq -s '[.[]]' temp-compat.json doc/compatibility/compatibility.json > doc/compatibility/compatibility.json
 
       - uses: EndBug/add-and-commit@v7
         with:
