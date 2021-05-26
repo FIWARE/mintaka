@@ -95,7 +95,13 @@ jobs:
           compatibilityFile: compatibility.json
           compatible: "False"
 
-  prepare-result-step:
+    - name: Upload report
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ matrix.orion }}-${{ matrix.mintaka }}
+        path: compatibility.json
+
+  result-step:
     needs:  test-compatibility
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
