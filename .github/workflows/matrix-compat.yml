@@ -46,6 +46,12 @@ jobs:
           java-version: '11'
           java-package: jdk
 
+      - id: cache-json
+        uses: actions/cache@v2
+        with:
+          path: doc/compatibility/compatibility.json
+          key: json-cache
+
       - uses: wistefan/check-compatibility@master
         id: check-compatibility
         continue-on-error: true
@@ -55,7 +61,6 @@ jobs:
           versionOne: ${{ matrix.orion }}
           versionTwo: ${{ matrix.mintaka }}
           compatibilityFile: doc/compatibility/compatibility.json
-
 
       - name: Run tests
         id: runTest
@@ -90,25 +95,19 @@ jobs:
           compatibilityFile: compatibility.json
           compatible: "False"
 
-      - name: Upload report
-        uses: actions/upload-artifact@v2
-        with:
-          name: ${{ matrix.orion }}-${{ matrix.mintaka }}
-          path: compatibility.json
-
   publish-result:
     needs:  test-compatibility
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     steps:
-      - uses: actions/download-artifact@v2
+      - id: cache-json
+        uses: actions/cache@v2
         with:
-          path: results
+          path: doc/compatibility/compatibility.json
+          key: json-cache
 
       - run: |
           ls -R
 
       - run: |
-          for file in ./results/**/compatibility.json; do
-            cat $file
-          done
+          jq -s '[.[][0]]' ./results/**/compatibility.json
