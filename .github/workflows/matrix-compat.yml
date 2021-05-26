@@ -113,9 +113,6 @@ jobs:
 
       - id: merge
         run: |
-          cat temp-compat.json
-          echo "next file"
-          cat doc/compatibility/compatibility.json
           jq -s '[.[][]]|unique' temp-compat.json doc/compatibility/compatibility.json > doc/compatibility/compatibility.json
 
       - uses: wistefan/check-compatibility@master
