@@ -84,7 +84,7 @@ jobs:
       - name: combine-results
         run: |
           echo "| Orion | Mintaka | Compatible |" > compatibility.md
-          for resfile in results/*.res; do
+          for resfile in ./*.res; do
             cat $resfile >> compatibility.md
           done
 
