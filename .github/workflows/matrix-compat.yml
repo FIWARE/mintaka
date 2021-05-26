@@ -66,6 +66,7 @@ jobs:
           ORION_IMAGE: fiware/orion-ld:${{ matrix.orion }}
 
       - name: Publish success
+        if: steps.runTest.outcome == 'success'
         uses: wistefan/check-compatibility@master
         with:
           operation: "PERSIST_INFO"
@@ -92,7 +93,7 @@ jobs:
       - name: Upload report
         uses: actions/upload-artifact@v2
         with:
-          name: compatibility.json
+          name: ${{ matrix.orion }}-${{ matrix.mintaka }}
           path: compatibility.json
 
   publish-result:
