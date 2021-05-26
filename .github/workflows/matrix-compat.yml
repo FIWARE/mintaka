@@ -110,4 +110,4 @@ jobs:
           ls -R
 
       - run: |
-          jq -s '[.[][0]]' ./results/**/compatibility.json
+          cat doc/compatibility/compatibility.json
