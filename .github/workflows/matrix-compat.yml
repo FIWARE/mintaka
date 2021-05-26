@@ -101,9 +101,9 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     steps:
-      - uses: actions/checkout@v2
-
       - uses: actions/download-artifact@v2
 
       - run: |
-          ls -R
+          for file in /**/compatibility.json; do
+            cat $file
+          done
