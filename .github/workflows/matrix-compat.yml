@@ -68,6 +68,7 @@ jobs:
       - name: Publish success
         uses: wistefan/check-compatibility@master
         with:
+          operation: "PERSIST_INFO"
           componentOne: "orion"
           componentTwo: "mintaka"
           versionOne: ${{ matrix.orion }}
@@ -80,6 +81,7 @@ jobs:
         if: steps.runTest.outcome == 'failure'
         uses: wistefan/check-compatibility@master
         with:
+          operation: "PERSIST_INFO"
           componentOne: "orion"
           componentTwo: "mintaka"
           versionOne: ${{ matrix.orion }}
