@@ -74,7 +74,7 @@ jobs:
           versionOne: ${{ matrix.orion }}
           versionTwo: ${{ matrix.mintaka }}
           compatibilityFile: doc/compatibility/compatibility.json
-          compatible: True
+          compatible: "True"
 
 
       - name: Publish failure
@@ -87,7 +87,7 @@ jobs:
           versionOne: ${{ matrix.orion }}
           versionTwo: ${{ matrix.mintaka }}
           compatibilityFile: doc/compatibility/compatibility.json
-          compatible: False
+          compatible: "False"
 
       - name: Upload report
         uses: actions/upload-artifact@v2
