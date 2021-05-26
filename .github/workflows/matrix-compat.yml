@@ -109,6 +109,6 @@ jobs:
           ls -R
 
       - run: |
-          for file in /results/*/compatibility.json; do
+          for file in ./results/**/compatibility.json; do
             cat $file
           done
