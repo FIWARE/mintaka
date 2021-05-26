@@ -113,7 +113,8 @@ jobs:
 
       - id: merge
         run: |
-          jq -s '[.[][]]|unique' temp-compat.json doc/compatibility/compatibility.json > doc/compatibility/compatibility.json
+          jq -s '[.[][]]|unique' temp-compat.json doc/compatibility/compatibility.json > merged-compat.json
+          cp merged-compat.json doc/compatibility/compatibility.json
 
       - uses: wistefan/check-compatibility@master
         id: create-markdown
