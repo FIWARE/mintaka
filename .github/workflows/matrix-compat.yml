@@ -107,17 +107,16 @@ jobs:
         with:
           path: results
 
-      - run: |
-          ls -R
-
       - id: prepare-results
         run: |
           jq -s '[.[][0]]' ./results/**/compatibility.json > temp-compat.json
-          cat temp-compat.json
 
       - id: merge
         run: |
-          jq -s '.[]' temp-compat.json doc/compatibility/compatibility.json > doc/compatibility/compatibility.json
+          cat temp-compat.json
+          echo "next file"
+          cat doc/compatibility/compatibility.json
+          jq -s '[.[][]]|unique' temp-compat.json doc/compatibility/compatibility.json > doc/compatibility/compatibility.json
 
       - uses: wistefan/check-compatibility@master
         id: create-markdown
