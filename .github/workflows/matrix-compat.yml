@@ -10,14 +10,14 @@ jobs:
 
     steps:
       - id: mintaka-version
-        uses: wistefan/get-releases-by-pattern@master
+        uses: wistefan/get-releases-by-semver@master
         with:
           include: "MINOR"
           repository: fiware/mintaka
 
 
       - id: orion-version
-        uses: wistefan/get-releases-by-pattern@master
+        uses: wistefan/get-releases-by-semver@master
         with:
           include: "MINOR"
           minMinor: "6"
@@ -46,28 +46,52 @@ jobs:
           java-version: '11'
           java-package: jdk
 
+      - uses: wistefan/check-compatibility@master
+        id: check-compatibility
+        continue-on-error: true
+        with:
+          componentOne: "orion"
+          componentTwo: "mintaka"
+          versionOne: ${{ matrix.orion }}
+          versionTwo: ${{ matrix.mintaka }}
+          compatibilityFile: doc/compatibility/compatibility.json
+
+
       - name: Run tests
         id: runTest
+        if: steps.check-compatibility.outcome == 'failure'
         continue-on-error: true
         run: mvn clean test
         env:
           ORION_IMAGE: fiware/orion-ld:${{ matrix.orion }}
 
       - name: Publish success
-        if: steps.runTest.outcome == 'success'
-        run: |
-          echo "| ${{ matrix.orion }} | ${{ matrix.mintaka }} | :heavy_check_mark: |" > ${{ matrix.orion }}-${{ matrix.mintaka }}.res
+        uses: wistefan/check-compatibility@master
+        with:
+          componentOne: "orion"
+          componentTwo: "mintaka"
+          versionOne: ${{ matrix.orion }}
+          versionTwo: ${{ matrix.mintaka }}
+          compatibilityFile: doc/compatibility/compatibility.json
+          compatible: True
+
 
       - name: Publish failure
         if: steps.runTest.outcome == 'failure'
-        run: |
-          echo "| ${{ matrix.orion }} | ${{ matrix.mintaka }} | :x: |" > ${{ matrix.orion }}-${{ matrix.mintaka }}.res
+        uses: wistefan/check-compatibility@master
+        with:
+          componentOne: "orion"
+          componentTwo: "mintaka"
+          versionOne: ${{ matrix.orion }}
+          versionTwo: ${{ matrix.mintaka }}
+          compatibilityFile: doc/compatibility/compatibility.json
+          compatible: False
 
-      - name: Upload coverage-report
+      - name: Upload report
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ matrix.orion }}-${{ matrix.mintaka }}.res
-          path: ./${{ matrix.orion }}-${{ matrix.mintaka }}.res
+          name: compatibility.json
+          path: doc/compatibility/compatibility.json
 
   publish-result:
     needs:  test-compatibility
@@ -79,17 +103,4 @@ jobs:
       - uses: actions/download-artifact@v2
 
       - run: |
-          ls -l
-
-      - name: combine-results
-        run: |
-          echo "| Orion | Mintaka | Compatible |" > compatibility.md
-          for resfile in ./*.res; do
-            cat $resfile >> compatibility.md
-          done
-
-      - name: Upload report
-        uses: actions/upload-artifact@v2
-        with:
-          name: compatibility.md
-          path: result/compatibility.md
+          ls -R
