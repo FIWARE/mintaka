@@ -10,7 +10,10 @@
 [![Known Vulnerabilities](https://snyk.io/test/github/fiware/mintaka/badge.svg)](https://snyk.io/test/github/fiware/mintaka)
 
 Mintaka is an implementation of the [NGSI-LD](https://www.etsi.org/deliver/etsi_gs/CIM/001_099/009/01.04.01_60/gs_cim009v010401p.pdf) temporal retrieval
-api. It relies on the [Orion-LD Context Broker](https://github.com/FIWARE/context.Orion-LD) to provide the underlying database.
+api. It relies on the [Orion-LD Context Broker](https://github.com/FIWARE/context.Orion-LD) to provide the underlying database. 
+
+> :warning:  See the [Compatibility-Matrix](./doc/compatibility/compatibility.md) for information about compatible Orion and Mintaka versions.
+
 The NGSI-LD specification is a living, changing document, and the latest Orion-LD beta release is nearly feature complete to the
 1.3.1 ETSI specification. 
 
