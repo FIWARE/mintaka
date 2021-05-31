@@ -1,13 +1,14 @@
 name: Matrix compat
 
 on:
-  push:
+  schedule:
+    # every night at one
+    - cron:  '0 1 * * *' 
   workflow_dispatch:
 
 jobs:
   create-version-matrix:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
 
     steps:
       - id: mintaka-version
@@ -103,7 +104,6 @@ jobs:
   result-step:
     needs:  test-compatibility
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
     steps:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
