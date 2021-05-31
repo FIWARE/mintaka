@@ -40,8 +40,6 @@ jobs:
         mintaka: ${{fromJson(needs.create-version-matrix.outputs.mintaka-matrix)}}
     steps:
       - uses: actions/checkout@v2
-        with:
-          ref: master
 
       - uses: wistefan/check-compatibility@master
         id: check-compatibility
