@@ -1,6 +1,7 @@
 name: Matrix compat
 
 on:
+  push:
   workflow_dispatch:
 
 jobs:
