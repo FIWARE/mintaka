@@ -3,7 +3,8 @@ name: Matrix compat
 on:
   schedule:
     # every night at one
-    - cron:  '* 1 * * *'
+    - cron:  '0 1 * * *' 
+  workflow_dispatch:
 
 jobs:
   create-version-matrix:
