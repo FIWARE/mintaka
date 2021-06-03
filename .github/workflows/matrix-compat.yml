@@ -107,8 +107,7 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           path: results
-          with:
-            token: ${{ secrets.ADMIN_TOKEN }}
+          token: ${{ secrets.ADMIN_TOKEN }}
 
       - id: prepare-results
         run: |
