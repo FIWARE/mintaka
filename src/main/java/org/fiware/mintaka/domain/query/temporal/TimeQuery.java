@@ -83,7 +83,7 @@ public class TimeQuery {
 		} else if (TimeStampType.CREATED_AT.value().equals(timeProperty)) {
 			timePropertyQuery += String.format(" %s.opMode='", dbEntityType) + OpMode.Create.name() + String.format("' and %s.ts", dbEntityType);
 		} else if (TimeStampType.MODIFIED_AT.value().equals(timeProperty)) {
-			timePropertyQuery += String.format(" %s.opMode!='", dbEntityType) + OpMode.Create.name() + String.format("' and %s.ts", dbEntityType);
+			timePropertyQuery += String.format("%s.ts", dbEntityType);
 		} else if (TimeStampType.TS.value().equals(timeProperty)) {
 			timePropertyQuery += String.format("%s.ts", dbEntityType);
 		} else {
