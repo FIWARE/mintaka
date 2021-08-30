@@ -44,7 +44,7 @@ jobs:
 
       - name: Comment PR
         if: env.WORKFLOW_CONCLUSION == 'failure'
-        uses: thollander/actions-comment-pull-request@master
+        uses: thollander/actions-comment-pull-request@1.0.2
         with:
           message: "Please apply one of the following labels to the PR: 'patch', 'minor', 'major'. For more information see: https://github.com/FIWARE/mintaka/doc/CONTRIBUTING.md"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
