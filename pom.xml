@@ -805,6 +805,27 @@
                             </container>
                         </configuration>
                     </plugin>
+                    <plugin>
+                        <groupId>com.rodiontsev.maven.plugins</groupId>
+                        <artifactId>build-info-maven-plugin</artifactId>
+                        <version>1.2</version>
+                        <configuration>
+                            <filename>classes/META-INF/build-info.properties</filename>
+                            <projectProperties>
+                                <projectProperty>project.groupId</projectProperty>
+                                <projectProperty>project.artifactId</projectProperty>
+                                <projectProperty>project.version</projectProperty>
+                            </projectProperties>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <phase>prepare-package</phase>
+                                <goals>
+                                    <goal>extract</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
                 </plugins>
             </build>
         </profile>
