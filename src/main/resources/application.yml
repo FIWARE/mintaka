@@ -25,7 +25,9 @@ endpoints:
     enabled: true
   health:
     enabled: true
-
+  info:
+    enabled: true
+    sensitive: false
 ---
 datasources:
   default:
