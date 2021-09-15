@@ -2,7 +2,7 @@ version: "3.5"
 services:
   # Orion is the context broker
   orion:
-    image: fiware/orion-ld:0.8-PRE-143
+    image: fiware/orion-ld:v0.8.1
     hostname: orion
     container_name: fiware-orion
     # sometimes the initial startup fails due to a weird timescale behaviour
@@ -47,7 +47,7 @@ services:
       interval: 5s
 
   timescale:
-    image: timescale/timescaledb-postgis:latest-pg12
+    image: timescale/timescaledb-postgis:1.7.5-pg12
     hostname: timescale
     container_name: timescale
     healthcheck:
