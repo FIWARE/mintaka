@@ -74,9 +74,6 @@ public class TimeQuery {
 			dbEntityType = "attribute";
 		}
 
-		if (timeRelation == null && timeAt == null && endTime == null) {
-			return "";
-		}
 		String timePropertyQuery = "";
 		if (TimeStampType.OBSERVED_AT.value().equals(timeProperty)) {
 			timePropertyQuery += String.format("%s.observedAt", dbEntityType);
@@ -88,6 +85,10 @@ public class TimeQuery {
 			timePropertyQuery += String.format("%s.ts", dbEntityType);
 		} else {
 			throw new PersistenceRetrievalException(String.format("Querying by %s is currently not supported.", timeProperty));
+		}
+
+		if (timeRelation == null && timeAt == null && endTime == null) {
+			return String.format("and %s IS NOT NULL ", timePropertyQuery);
 		}
 
 		LocalDateTime timeAtLDT = LocalDateTime.ofInstant(timeAt, ZoneOffset.UTC);
