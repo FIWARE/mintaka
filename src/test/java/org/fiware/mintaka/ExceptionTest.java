@@ -57,6 +57,8 @@ public class ExceptionTest {
 		when(entityTemporalService.getEntitiesWithQuery(any(), any(), anyList(), anyList(), any(), any(), any(), anyInt(), anyBoolean(), anyBoolean(), anyInt(), any()))
 				.thenReturn(new LimitableResult<List<EntityTemporalVO>>(List.of(new EntityTemporalVO().id(URI.create("my:entity"))), false));
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
+		getRequest.getParameters().add("timeAt", "1960-01-01T03:30:00Z");
+		getRequest.getParameters().add("timerel", "after");
 		getRequest.getHeaders()
 				.add("Link", String.format("<%s>; rel=\"http://www.w3.org/ns/json-ld#context\"; type=\"application/ld+json", invalidContext));
 		try {
@@ -89,6 +91,8 @@ public class ExceptionTest {
 				.thenThrow(new RuntimeException());
 
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
+		getRequest.getParameters().add("timeAt", "1960-01-01T03:30:00Z");
+		getRequest.getParameters().add("timerel", "after");
 		try {
 			mintakaTestClient.toBlocking().retrieve(getRequest);
 			fail("In case of db errors, the retrieval should respond an error.");
