@@ -55,8 +55,8 @@ public class QueryingTest extends ComposeTest {
 				Optional.of("near;maxDistance==300000"),
 				Optional.of("LineString"),
 				Optional.of("[[5,5],[7,7]]"),
-				Optional.empty(),
-				Optional.empty(),
+				Optional.of("before"),
+				Optional.of("1990-01-01T07:30:00Z"),
 				Optional.empty(),
 				Optional.empty());
 
@@ -96,8 +96,8 @@ public class QueryingTest extends ComposeTest {
 					Optional.empty(),
 					Optional.empty(),
 					Optional.empty(),
-					Optional.empty(),
-					Optional.empty(),
+					Optional.of("before"),
+					Optional.of("1990-01-01T07:30:00Z"),
 					Optional.empty(),
 					Optional.empty());
 		} else {
@@ -109,8 +109,8 @@ public class QueryingTest extends ComposeTest {
 					Optional.empty(),
 					Optional.empty(),
 					Optional.empty(),
-					Optional.empty(),
-					Optional.empty(),
+					Optional.of("before"),
+					Optional.of("1990-01-01T07:30:00Z"),
 					Optional.empty(),
 					Optional.empty());
 		}
@@ -815,8 +815,8 @@ public class QueryingTest extends ComposeTest {
 				Optional.empty(),
 				Optional.empty(),
 				Optional.empty(),
-				Optional.empty(),
-				Optional.empty(),
+				Optional.of("before"),
+				Optional.of("1990-01-01T03:30:00Z"),
 				Optional.empty(),
 				Optional.empty());
 
@@ -839,6 +839,8 @@ public class QueryingTest extends ComposeTest {
 				.add("options", "temporalValues")
 				.add("idPattern", ".*")
 				.add("attrs", "temperature")
+				.add("timerel", "after")
+				.add("timeAt", "1960-01-01T03:30:00Z")
 				.add(paginationParameterName, "2");
 		List<String> allReturnedEntities = new ArrayList<>();
 		HttpResponse<List<Map<String, Object>>> entryListResponse = mintakaTestClient.toBlocking().exchange(getRequest, List.class);
@@ -864,6 +866,8 @@ public class QueryingTest extends ComposeTest {
 				.add("options", "temporalValues")
 				.add("idPattern", ".*")
 				.add("attrs", "temperature")
+				.add("timerel", "after")
+				.add("timeAt", "1960-01-01T03:30:00Z")
 				.add(paginationParameterName, "2")
 				.add("pageAnchor", nextPageAnchor);
 		entryListResponse = mintakaTestClient.toBlocking().exchange(getRequest, List.class);
@@ -880,6 +884,8 @@ public class QueryingTest extends ComposeTest {
 		String expectedRangeHeader = "date-time 1970-01-01T00:00-1970-01-01T00:49/*";
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
 		getRequest.getParameters()
+				.add("timerel", "before")
+				.add("timeAt", "1990-01-01T00:00:00Z")
 				.add("options", "temporalValues")
 				.add("idPattern", ".*")
 				.add("type", "car");
@@ -894,6 +900,8 @@ public class QueryingTest extends ComposeTest {
 	public void testQueryForNonExisting() {
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/");
 		getRequest.getParameters()
+				.add("timerel", "after")
+				.add("timeAt", "1960-01-01T03:30:00Z")
 				.add("type", "doesNotExist");
 		HttpResponse<List> entryListResponse = mintakaTestClient.toBlocking().exchange(getRequest, List.class);
 		assertEquals(HttpStatus.OK, entryListResponse.getStatus(), "The result should be ok.");
