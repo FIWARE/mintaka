@@ -115,7 +115,7 @@ public class TemporalApiController implements TemporalRetrievalApi {
 				.filter(property -> !WELL_KNOWN_ATTRIBUTES.contains(property))
 				.map(property -> contextCache.expandString(property, contextUrls))
 				.orElse(DEFAULT_GEO_PROPERTY);
-		TimeQuery timeQuery = new TimeQuery(apiDomainMapper.timeRelVoToTimeRelation(timerel), timeAt, endTimeAt, getTimeRelevantProperty(timeproperty));
+		TimeQuery timeQuery = new TimeQuery(apiDomainMapper.timeRelVoToTimeRelation(timerel), timeAt, endTimeAt, getTimeRelevantProperty(timeproperty), false);
 
 		Optional<List<String>> optionalIdList = Optional.ofNullable(id).map(this::getIdList);
 		Optional<String> optionalIdPattern = Optional.ofNullable(idPattern);
