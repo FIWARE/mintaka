@@ -165,7 +165,7 @@ public class EntityTemporalService {
 
 		for (EntityIdTempResults result : tempResults) {
 			Optional<LimitableResult<EntityTemporalVO>> optionalLimitableResult = getNgsiEntitiesWithTimerel(result.getEntityId(),
-					new TimeQuery(TimeRelation.BETWEEN, result.getStartTime(), result.getEndTime(), timeProperty, true),
+					new TimeQuery(TimeRelation.BETWEEN, result.getStartTime(), result.getEndTime(), timeProperty, true, true),
 					expandedAttributes,
 					sysAttrs,
 					temporalRepresentation,

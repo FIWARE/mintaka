@@ -19,11 +19,15 @@ public class TimeQuery {
 	private final boolean inclusive;
 
 	public TimeQuery(TimeRelation timeRelation, Instant timeAt, Instant endTime, String timeProperty) {
-		this(timeRelation, timeAt, endTime, timeProperty, false);
+		this(timeRelation, timeAt, endTime, timeProperty, false, true);
 	}
 
-	public TimeQuery(TimeRelation timeRelation, Instant timeAt, Instant endTime, String timeProperty, boolean inclusive) {
-		validateTimeRelation(timeAt, endTime, timeRelation);
+	public TimeQuery(TimeRelation timeRelation, Instant timeAt, Instant endTime, String timeProperty, boolean retrieval) {
+		this(timeRelation, timeAt, endTime, timeProperty, false, retrieval);
+	}
+
+	public TimeQuery(TimeRelation timeRelation, Instant timeAt, Instant endTime, String timeProperty, boolean inclusive, boolean retrieval) {
+		validateTimeRelation(timeAt, endTime, timeRelation, retrieval);
 		this.timeRelation = timeRelation;
 		this.timeAt = timeAt;
 		this.endTime = endTime;
@@ -31,15 +35,18 @@ public class TimeQuery {
 		this.inclusive = inclusive;
 	}
 
+
+
 	/**
 	 * Validate the given time relation combination. Throws an {@link InvalidTimeRelationException} if its not valid.
 	 *
 	 * @param time         timeReference as requested through the api
 	 * @param endTime      endpoint of the requested timeframe
 	 * @param timeRelation time relation as requested through the api
+	 * @param  retrieval empty timeRel is only allowed for retrieval, so indicate if we validate a retrieval
 	 */
-	private void validateTimeRelation(Instant time, Instant endTime, TimeRelation timeRelation) {
-		if (timeRelation == null && time == null && endTime == null) {
+	private void validateTimeRelation(Instant time, Instant endTime, TimeRelation timeRelation, boolean retrieval) {
+		if (timeRelation == null && time == null && endTime == null && retrieval) {
 			return;
 		}
 		if (timeRelation == null) {
