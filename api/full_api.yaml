@@ -823,6 +823,8 @@ paths:
         - $ref: '#/components/parameters/limit'
         - $ref: '#/components/parameters/components-parameters-options'
         - $ref: '#/components/parameters/lastN'
+        - $ref: '#/components/parameters/aggrMethods'
+        - $ref: '#/components/parameters/aggrPeriodDuration'
       responses:
         '200':
           description: OK
@@ -898,6 +900,8 @@ paths:
         - $ref: '#/components/parameters/time'
         - $ref: '#/components/parameters/endTime'
         - $ref: '#/components/parameters/lastN'
+        - $ref: '#/components/parameters/aggrMethods'
+        - $ref: '#/components/parameters/aggrPeriodDuration'
       responses:
         '200':
           description: OK
@@ -1074,6 +1078,8 @@ paths:
         - $ref: '#/components/parameters/limit'
         - $ref: '#/components/parameters/components-parameters-options'
         - $ref: '#/components/parameters/lastN'
+        - $ref: '#/components/parameters/aggrMethods'
+        - $ref: '#/components/parameters/aggrPeriodDuration'
       requestBody:
         required: true
         content:
@@ -1332,6 +1338,29 @@ components:
       schema:
         type: string
         format: uri
+    aggrMethods:
+      name: aggrMethods
+      description: Aggregation method to be applied
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+          - totalCount
+          - distinctCount
+          - sum
+          - avg
+          - min
+          - max
+          - stddev
+          - sumsq
+    aggrPeriodDuration:
+      name: aggrPeriodDuration
+      description: Period to be used for aggregation
+      in: query
+      required: false
+      schema:
+        type: string
   schemas:
     georelEnum:
       type: string

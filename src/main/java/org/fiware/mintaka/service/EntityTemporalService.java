@@ -170,7 +170,10 @@ public class EntityTemporalService {
 					sysAttrs,
 					temporalRepresentation,
 					limitPerEntity,
-					backwards);
+					backwards,
+					//TODO: implements
+					List.of(),
+					Optional.empty());
 			if (optionalLimitableResult.isPresent()) {
 				LimitableResult<EntityTemporalVO> limitableResult = optionalLimitableResult.get();
 				entityTemporalVOS.add(optionalLimitableResult.get().getResult());
@@ -230,9 +233,11 @@ public class EntityTemporalService {
 			boolean sysAttrs,
 			boolean temporalRepresentation,
 			Integer limit,
-			boolean backwards) {
+			boolean backwards,
+			List<String> aggregationMethods,
+			Optional<String> aggregationPeriod) {
 
-		LimitableResult<List<Attribute>> limitableAttributesList = entityRepository.findAttributeByEntityId(entityId, timeQuery, attrs, limit, backwards);
+		LimitableResult<List<Attribute>> limitableAttributesList = entityRepository.findAttributeByEntityId(entityId, timeQuery, attrs, limit, backwards, aggregationMethods, aggregationPeriod);
 		List<Attribute> attributes = limitableAttributesList.getResult();
 		List<String> attributesWithSubattributes = attributes.stream()
 				.filter(Attribute::getSubProperties)
@@ -274,7 +279,9 @@ public class EntityTemporalService {
 						TimeRelation.BETWEEN,
 						attributeTimeStamps.get(0).toInstant(ZoneOffset.UTC),
 						attributeTimeStamps.get(attributeTimeStamps.size() - 1).toInstant(ZoneOffset.UTC),
-						"ts"));
+						"ts"),
+				aggregationMethods,
+				aggregationPeriod);
 		// sort them, to get the first and last timestamp
 		attributeTimeStamps.sort(Comparator.naturalOrder());
 		if (entity.isEmpty()) {
@@ -295,8 +302,10 @@ public class EntityTemporalService {
 			List<String> attrs,
 			Integer lastN,
 			boolean sysAttrs,
-			boolean temporalRepresentation) {
-		return getNgsiEntitiesWithTimerel(entityId, timeQuery, attrs, sysAttrs, temporalRepresentation, entityRepository.getLimit(1, attrs.size(), lastN), lastN != null);
+			boolean temporalRepresentation,
+			List<String> aggregationMethods,
+			Optional<String> aggregationPeriod) {
+		return getNgsiEntitiesWithTimerel(entityId, timeQuery, attrs, sysAttrs, temporalRepresentation, entityRepository.getLimit(1, attrs.size(), lastN), lastN != null, aggregationMethods, aggregationPeriod);
 	}
 
 

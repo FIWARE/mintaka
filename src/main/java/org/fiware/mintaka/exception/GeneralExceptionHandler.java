@@ -31,7 +31,8 @@ public class GeneralExceptionHandler implements ExceptionHandler<Exception, Http
 	@Override
 	public HttpResponse<ProblemDetails> handle(HttpRequest request, Exception exception) {
 		// in case the error was thrown on serialization, we need a special handling
-		if (exception instanceof CodecException && exception.getCause() instanceof JsonMappingException) {
+
+ 		if (exception instanceof CodecException && exception.getCause() instanceof JsonMappingException) {
 			return handleCodecException(request, exception.getCause().getCause());
 		}
 

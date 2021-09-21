@@ -47,7 +47,7 @@ public class TimescaleBackedEntityRepository implements EntityRepository {
 	private final EntityManager entityManager;
 
 	@Override
-	public Optional<NgsiEntity> findById(String entityId, TimeQuery timeQuery) {
+	public Optional<NgsiEntity> findById(String entityId, TimeQuery timeQuery, List<String> aggregationMethods, Optional<String> aggregationPeriod) {
 		String timeQueryPart = timeQuery.getSqlRepresentation("entity");
 		String wherePart = "entity.id=:id";
 		if (!timeQueryPart.isEmpty()) {
@@ -63,13 +63,25 @@ public class TimescaleBackedEntityRepository implements EntityRepository {
 						" order by entity.ts desc", NgsiEntity.class);
 		getNgsiEntitiesQuery.setParameter("id", entityId);
 		getNgsiEntitiesQuery.setMaxResults(1);
+
+		if (!aggregationMethods.isEmpty()) {
+			// TODO: use aggregation period
+			String aggregatedSelect = "SELECT time_bucket('5 minutes', ts) as time_bucket, "
+					+ aggregationMethods.stream().map(agMethod -> mapAggregationMethodToSql(agMethod, "*")).collect(Collectors.joining(", ")) +
+					" from entities where  " + wherePart + " group by time_bucket order by time_bucket desc";
+			Query aggregatedQuery = entityManager.createNativeQuery(aggregatedSelect);
+			aggregatedQuery.setParameter("id", entityId);
+			List aggregationResult = aggregatedQuery.getResultList();
+		}
+
+
 		List<NgsiEntity> ngsiEntityList = getNgsiEntitiesQuery.getResultList();
 		// only return the entity if its not deleted.
 		return ngsiEntityList.stream().findFirst().filter(ngsiEntity -> ngsiEntity.getOpMode() != OpMode.Delete);
 	}
 
 	@Override
-	public LimitableResult<List<Attribute>> findAttributeByEntityId(String entityId, TimeQuery timeQuery, List<String> attributes, Integer limit, boolean backwards) {
+	public LimitableResult<List<Attribute>> findAttributeByEntityId(String entityId, TimeQuery timeQuery, List<String> attributes, Integer limit, boolean backwards, List<String> aggregationMethods, Optional<String> aggregationPeriod) {
 		AtomicBoolean isLimited = new AtomicBoolean(false);
 		String timeQueryPart = timeQuery.getSqlRepresentation();
 		if (attributes == null || attributes.isEmpty()) {
@@ -83,7 +95,7 @@ public class TimescaleBackedEntityRepository implements EntityRepository {
 		// we need to do single queries in order to fullfil the "lastN" parameter.
 		List<Attribute> attributeInstance = attributes.stream()
 				.flatMap(attributeId -> {
-					List<Attribute> instances = findAttributeInstancesForEntity(entityId, attributeId, timeQueryPart, timeQuery.getDBTimeField(), backwards, limit);
+					List<Attribute> instances = findAttributeInstancesForEntity(entityId, attributeId, timeQueryPart, timeQuery.getDBTimeField(), backwards, limit, aggregationMethods, aggregationPeriod);
 					if (instances.size() == limit) {
 						// Resultset was most probably limited. In an edge case the not limited number of attributes will exactly match the number of retrieved
 						// instances. Since it would be expensive to differ that case(e.g. an additional query would be required), we accept that.
@@ -126,6 +138,28 @@ public class TimescaleBackedEntityRepository implements EntityRepository {
 		}
 		// we have at least {@link TOTAL_MAX_NUMBER_OF_INSTANCES} attributes, only return one instance per attribute
 		return 1;
+	}
+
+	private String mapAggregationMethodToSql(String aggregationMethod, String attributeToAggregate) {
+		switch (aggregationMethod) {
+			case "totalCount":
+				return String.format("count(%s)", attributeToAggregate);
+			case "distinctCount":
+				return String.format("count(distinct %s)", attributeToAggregate);
+			case "sum":
+				return String.format("sum(%s)", attributeToAggregate);
+			case "avg":
+				//TODO: check with etsi in regards of  a timeweighted average
+				return String.format("avg(%s)", attributeToAggregate);
+			case "min":
+				return String.format("min(%s)", attributeToAggregate);
+			case "max":
+				return String.format("max(%s)", attributeToAggregate);
+			case "stddev":
+			case "sumsq":
+			default:
+				throw new IllegalArgumentException(String.format("%s is not a supported aggregation method.", aggregationMethod));
+		}
 	}
 
 	@Override
@@ -283,7 +317,21 @@ public class TimescaleBackedEntityRepository implements EntityRepository {
 	 * @param backwards     if the instances should be retrieved starting with the newest
 	 * @return list of attribute instances
 	 */
-	private List<Attribute> findAttributeInstancesForEntity(String entityId, String attributeId, String timeQueryPart, String timeProperty, boolean backwards, Integer limit) {
+	private List<Attribute> findAttributeInstancesForEntity(String entityId, String attributeId, String timeQueryPart, String timeProperty, boolean backwards, Integer limit, List<String> aggregationMethods, Optional<String> aggregationPeriod) {
+		if (!aggregationMethods.isEmpty()) {
+			String aggregatedQuery = String.format("Select time_bucket('5 minutes', attribute.%s) as time_bucket, avg(number) " +
+					"from attributes as attribute " +
+					"where attribute.entityId=:entityId " +
+					"and attribute.id=:attributeId " +
+					"and attribute.opMode!='" + OpMode.Delete.name() + "' " +
+					timeQueryPart +
+					"group by time_bucket order by time_bucket", timeProperty, timeProperty);
+			Query aggregationQuery = entityManager.createNativeQuery(aggregatedQuery);
+			aggregationQuery.setParameter("entityId", entityId);
+			aggregationQuery.setParameter("attributeId", attributeId);
+			List aggregationResult = aggregationQuery.getResultList();
+		}
+
 		String selectionQuery = "Select attribute " +
 				"from Attribute attribute " +
 				"where attribute.entityId=:entityId " +

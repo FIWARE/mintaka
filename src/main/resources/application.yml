@@ -1,4 +1,6 @@
 micronaut:
+  server:
+    port: 7070
   application:
     name: ${project.artifactId}
   caches:

@@ -106,7 +106,9 @@ public class TemporalApiController implements TemporalRetrievalApi {
 			URI pageAnchor,
 			Integer limit,
 			@Nullable String options,
-			@Nullable @Min(1) Integer lastN) {
+			@Nullable @Min(1) Integer lastN,
+			@Nullable String aggrMethods,
+			@Nullable String aggrPeriodDuration) {
 
 		AcceptType acceptType = getAcceptType();
 
@@ -192,7 +194,9 @@ public class TemporalApiController implements TemporalRetrievalApi {
 			@Nullable URI pageAnchor,
 			@Nullable @Min(1) @Max(100) Integer limit,
 			@Nullable String options,
-			@Nullable @Min(1) Integer lastN) {
+			@Nullable @Min(1) Integer lastN,
+			@Nullable String aggrMethods,
+			@Nullable String aggrPeriodDuration) {
 
 		Optional<EntityInfoVO> entityInfoVO = Optional.ofNullable(queryVO.entities());
 		Optional<GeoQueryVO> geoQueryVO = Optional.ofNullable(queryVO.geoQ());
@@ -211,7 +215,9 @@ public class TemporalApiController implements TemporalRetrievalApi {
 				temporalQueryVO.map(TemporalQueryVO::getTimeproperty).orElse(null),
 				temporalQueryVO.map(TemporalQueryVO::timeAt).orElse(null),
 				temporalQueryVO.map(TemporalQueryVO::endTimeAt).orElse(null),
-				queryVO.csf(), pageSize, pageAnchor, limit, options, lastN);
+				queryVO.csf(), pageSize, pageAnchor, limit, options, lastN,
+				aggrMethods,
+				aggrPeriodDuration);
 	}
 
 	private String idToString(Object id) {
@@ -237,7 +243,9 @@ public class TemporalApiController implements TemporalRetrievalApi {
 			@Nullable @Pattern(regexp = "^((\\d|[a-zA-Z]|_)+(:(\\d|[a-zA-Z]|_)+)?(#\\d+)?)$") @Size(min = 1) String timeproperty,
 			@Nullable Instant timeAt,
 			@Nullable Instant endTimeAt,
-			@Nullable @Min(1) Integer lastN) {
+			@Nullable @Min(1) Integer lastN,
+			@Nullable String aggrMethods,
+			@Nullable String aggrPeriodDuration) {
 
 		AcceptType acceptType = getAcceptType();
 		List<URL> contextUrls = contextCache.getContextURLsFromLinkHeader(link);
@@ -249,7 +257,9 @@ public class TemporalApiController implements TemporalRetrievalApi {
 						getExpandedAttributes(contextUrls, attrs),
 						lastN,
 						isSysAttrs(options),
-						isTemporalValuesOptionSet(options));
+						isTemporalValuesOptionSet(options),
+						getAggregationMethods(aggrMethods),
+						Optional.ofNullable(aggrPeriodDuration));
 
 		if (optionalLimitableResult.isEmpty()) {
 			return HttpResponse.notFound();
@@ -428,6 +438,10 @@ public class TemporalApiController implements TemporalRetrievalApi {
 			entityTemporalVO.atContext(contextUrls.get(0));
 		}
 		return entityTemporalVO;
+	}
+
+	private List<String> getAggregationMethods(String aggregationMethods) {
+		return Arrays.stream(aggregationMethods.split(COMMA_SEPERATOR)).collect(Collectors.toList());
 	}
 
 	/**

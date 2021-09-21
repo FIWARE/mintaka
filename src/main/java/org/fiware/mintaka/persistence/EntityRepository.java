@@ -21,7 +21,7 @@ public interface EntityRepository {
 	 * @param entityId id of the entity to retrieve
 	 * @return optional entity
 	 */
-	Optional<NgsiEntity> findById(String entityId, TimeQuery timeQuery);
+	Optional<NgsiEntity> findById(String entityId, TimeQuery timeQuery, List<String> aggregationMethods, Optional<String> aggregationPeriod);
 
 	/**
 	 * Find all attributes of an entity in the define timeframe
@@ -31,7 +31,7 @@ public interface EntityRepository {
 	 * @param attributes the attributes to be included, if null or empty return all
 	 * @return list of attribute instances
 	 */
-	LimitableResult<List<Attribute>> findAttributeByEntityId(String entityId, TimeQuery timeQuery, List<String> attributes, Integer limit, boolean backwards);
+	LimitableResult<List<Attribute>> findAttributeByEntityId(String entityId, TimeQuery timeQuery, List<String> attributes, Integer limit, boolean backwards, List<String> aggregationMethods, Optional<String> aggregationPeriod);
 
 	/**
 	 * Get the limit to be used for the given configuration
@@ -86,7 +86,7 @@ public interface EntityRepository {
 	/**
 	 * Find all attributes for the given entities in that timequery.
 	 *
-	 * @param entityIds entities to be associated with the attributes
+	 * @param entityIds     entities to be associated with the attributes
 	 * @param timeQueryPart timeframe to search for
 	 * @return list of attributes
 	 */
