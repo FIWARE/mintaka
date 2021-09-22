@@ -22,6 +22,7 @@ import org.fiware.mintaka.domain.query.temporal.TimeStampType;
 import org.fiware.mintaka.exception.InvalidTimeRelationException;
 import org.fiware.mintaka.exception.PersistenceRetrievalException;
 import org.fiware.mintaka.persistence.LimitableResult;
+import org.fiware.mintaka.persistence.NgsiEntity;
 import org.fiware.mintaka.service.EntityTemporalService;
 import org.fiware.ngsi.api.TemporalRetrievalApi;
 import org.fiware.ngsi.model.EntityInfoVO;
@@ -252,6 +253,10 @@ public class TemporalApiController implements TemporalRetrievalApi {
 						isTemporalValuesOptionSet(options));
 
 		if (optionalLimitableResult.isEmpty()) {
+			Optional<EntityTemporalVO> optionalEntity = entityTemporalService.getNgsiEntity(entityId.toString());
+			if (optionalEntity.isPresent()) {
+				return HttpResponse.ok(addContextToEntityTemporalVO(optionalEntity.get(), contextUrls));
+			}
 			return HttpResponse.notFound();
 		}
 
