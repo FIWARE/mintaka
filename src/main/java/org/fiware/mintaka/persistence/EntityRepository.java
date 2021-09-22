@@ -101,4 +101,12 @@ public interface EntityRepository {
 	 * @return the list of timestamps
 	 */
 	List<Instant> getCreatedAtForAttribute(String attributeId, String entityId, boolean isSubAttribute);
+
+	/**
+	 * Return an entity in case there are any instances of the entity in timescale db.
+	 *
+	 * @param entityId id of the entity to check
+	 * @return NgsiEntity if one exists
+	 */
+	Optional<NgsiEntity> getEntityIfExists(String entityId);
 }

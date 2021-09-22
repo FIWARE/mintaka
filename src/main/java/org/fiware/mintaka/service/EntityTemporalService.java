@@ -299,6 +299,10 @@ public class EntityTemporalService {
 		return getNgsiEntitiesWithTimerel(entityId, timeQuery, attrs, sysAttrs, temporalRepresentation, entityRepository.getLimit(1, attrs.size(), lastN), lastN != null);
 	}
 
+	@ReadOnly
+	public Optional<EntityTemporalVO> getNgsiEntity(String entityId) {
+		return entityRepository.getEntityIfExists(entityId).map(ngsiEntity -> new EntityTemporalVO().setId(URI.create(ngsiEntity.getId())).setType(ngsiEntity.getType()));
+	}
 
 	private void addSubAttributesToAttributeInstance(String entityId, Map.Entry<String, Object> propertyEntry, List<String> instancesWithSubattributes, boolean createdAt, boolean modifiedAt, int limit, boolean backwards) {
 		if (propertyEntry.getValue() == null) {
