@@ -3,6 +3,7 @@ package org.fiware.mintaka.persistence;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.Opt;
+import org.fiware.mintaka.domain.AggregatedTemporalProperty;
 import org.fiware.mintaka.domain.EntityIdTempResults;
 import org.fiware.mintaka.domain.PaginationInformation;
 import org.fiware.mintaka.domain.query.geo.GeoQuery;
@@ -13,8 +14,11 @@ import org.fiware.mintaka.exception.PersistenceRetrievalException;
 
 import javax.inject.Singleton;
 import javax.persistence.EntityManager;
+import javax.persistence.EntityResult;
+import javax.persistence.FieldResult;
 import javax.persistence.NoResultException;
 import javax.persistence.Query;
+import javax.persistence.SqlResultSetMapping;
 import javax.persistence.TypedQuery;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -44,10 +48,35 @@ public class TimescaleBackedEntityRepository implements EntityRepository {
 	public static final DateTimeFormatter LOCAL_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(YEAR_MONTH_DAY_FORMAT + " hh:mm:ss.ss");
 	public static final int EXPECTED_RESULT_SIZE = 4;
 
+	private static final List<String> AGGREGATION_METHODS = List.of("totalCount", "distinctCount", "sum", "avg", "min", "max", "stddev", "sumsq");
+
+	// field specific cases
+	private static final String STRING_CASE = "WHEN attribute.valueType='String' THEN attribute.text ";
+	private static final String NUMBER_CASE = "WHEN attribute.valueType='Number' THEN attribute.number ";
+	private static final String NUMBER_AS_TEXT_CASE = "WHEN attribute.valueType='Number' THEN CAST (attribute.number as text) ";
+	private static final String BOOLEAN_AS_TEXT_CASE = "WHEN attribute.valueType='Boolean' THEN (CASE WHEN attribute.boolean THEN '1' ELSE '0' END) ";
+	private static final String BOOLEAN_AS_NUMBER_CASE = "WHEN attribute.valueType='Boolean' THEN (CASE WHEN attribute.boolean THEN 1 ELSE 0 END) ";
+	private static final String RELATIONSHIP_CASE = "WHEN attribute.valueType='Relationship' THEN attribute.text ";
+	private static final String COMPOUND_CASE = "WHEN attribute.valueType='Compound' THEN attribute.compound ";
+	private static final String COMPOUND_AS_TEXT_CASE = "WHEN attribute.valueType='Compound' THEN CAST (attribute.compound as text) ";
+	private static final String DATE_TIME_CASE = "WHEN attribute.valueType='DateTime' THEN attribute.datetime ";
+	private static final String DATE_TIME_AS_TEXT_CASE = "WHEN attribute.valueType='DateTime' THEN CAST (attribute.datetime as text) ";
+	private static final String DATE_TIME_AS_NUMBER_CASE = "WHEN attribute.valueType='DateTime' THEN EXTRACT (EPOCH FROM attribute.datetime) ";
+	private static final String GEO_POINT_CASE = "WHEN attribute.valueType='GeoPoint' THEN attribute.geopoint ";
+	private static final String GEO_POINT_AS_TEXT_CASE = "WHEN attribute.valueType='GeoPoint' THEN CAST (attribute.geopoint as text) ";
+	private static final String GEO_POLYGON_CASE = "WHEN attribute.valueType='GeoPolygon' THEN attribute.geopolygon ";
+	private static final String GEO_POLYGON_AS_TEXT_CASE = "WHEN attribute.valueType='GeoPolygon' THEN CAST (attribute.geopolygon as text) ";
+	private static final String GEO_MULTI_POLYGON_CASE = "WHEN attribute.valueType='GeoMultiPolygon' THEN attribute.geomultipolygon ";
+	private static final String GEO_MULTI_POLYGON_AS_TEXT_CASE = "WHEN attribute.valueType='GeoMultiPolygon' THEN CAST (attribute.geomultipolygon as text) ";
+	private static final String GEO_LINE_STRING_CASE = "WHEN attribute.valueType='GeoLineString' THEN attribute.geolinestring ";
+	private static final String GEO_LINE_STRING_AS_TEXT_CASE = "WHEN attribute.valueType='GeoLineString' THEN CAST (attribute.geolinestring as text) ";
+	private static final String GEO_MULTI_LINE_STRING_CASE = "WHEN attribute.valueType='GeoMultiLineString' THEN attribute.geomultilinestring ";
+	private static final String GEO_MULTI_LINE_STRING_AS_TEXT_CASE = "WHEN attribute.valueType='GeoMultiLineString' THEN CAST (attribute.geomultilinestring as text) ";
+
 	private final EntityManager entityManager;
 
 	@Override
-	public Optional<NgsiEntity> findById(String entityId, TimeQuery timeQuery, List<String> aggregationMethods, Optional<String> aggregationPeriod) {
+	public Optional<NgsiEntity> findById(String entityId, TimeQuery timeQuery) {
 		String timeQueryPart = timeQuery.getSqlRepresentation("entity");
 		String wherePart = "entity.id=:id";
 		if (!timeQueryPart.isEmpty()) {
@@ -64,24 +93,14 @@ public class TimescaleBackedEntityRepository implements EntityRepository {
 		getNgsiEntitiesQuery.setParameter("id", entityId);
 		getNgsiEntitiesQuery.setMaxResults(1);
 
-		if (!aggregationMethods.isEmpty()) {
-			// TODO: use aggregation period
-			String aggregatedSelect = "SELECT time_bucket('5 minutes', ts) as time_bucket, "
-					+ aggregationMethods.stream().map(agMethod -> mapAggregationMethodToSql(agMethod, "*")).collect(Collectors.joining(", ")) +
-					" from entities where  " + wherePart + " group by time_bucket order by time_bucket desc";
-			Query aggregatedQuery = entityManager.createNativeQuery(aggregatedSelect);
-			aggregatedQuery.setParameter("id", entityId);
-			List aggregationResult = aggregatedQuery.getResultList();
-		}
-
-
 		List<NgsiEntity> ngsiEntityList = getNgsiEntitiesQuery.getResultList();
 		// only return the entity if its not deleted.
 		return ngsiEntityList.stream().findFirst().filter(ngsiEntity -> ngsiEntity.getOpMode() != OpMode.Delete);
 	}
 
+
 	@Override
-	public LimitableResult<List<Attribute>> findAttributeByEntityId(String entityId, TimeQuery timeQuery, List<String> attributes, Integer limit, boolean backwards, List<String> aggregationMethods, Optional<String> aggregationPeriod) {
+	public LimitableResult<List<Attribute>> findAttributeByEntityId(String entityId, TimeQuery timeQuery, List<String> attributes, Integer limit, boolean backwards) {
 		AtomicBoolean isLimited = new AtomicBoolean(false);
 		String timeQueryPart = timeQuery.getSqlRepresentation();
 		if (attributes == null || attributes.isEmpty()) {
@@ -92,10 +111,10 @@ public class TimescaleBackedEntityRepository implements EntityRepository {
 			return new LimitableResult<>(List.of(), false);
 		}
 
-		// we need to do single queries in order to fullfil the "lastN" parameter.
+		// we need to do single queries in order to fulfill the "lastN" parameter.
 		List<Attribute> attributeInstance = attributes.stream()
 				.flatMap(attributeId -> {
-					List<Attribute> instances = findAttributeInstancesForEntity(entityId, attributeId, timeQueryPart, timeQuery.getDBTimeField(), backwards, limit, aggregationMethods, aggregationPeriod);
+					List<Attribute> instances = findAttributeInstancesForEntity(entityId, attributeId, timeQueryPart, timeQuery.getDBTimeField(), backwards, limit);
 					if (instances.size() == limit) {
 						// Resultset was most probably limited. In an edge case the not limited number of attributes will exactly match the number of retrieved
 						// instances. Since it would be expensive to differ that case(e.g. an additional query would be required), we accept that.
@@ -107,8 +126,33 @@ public class TimescaleBackedEntityRepository implements EntityRepository {
 		return new LimitableResult<>(attributeInstance, isLimited.get());
 	}
 
-	private boolean isBackwards(Integer lastN) {
-		return lastN != null && lastN >= 0;
+	@Override
+	public LimitableResult<List<AggregatedAttributes>> findAggregatedAttributesByEntityId(String entityId, TimeQuery timeQuery, List<String> attributes, Integer limit, boolean backwards, List<String> aggregationMethods, Optional<String> aggregationPeriod) {
+		AtomicBoolean isLimited = new AtomicBoolean(false);
+		String timeQueryPart = timeQuery.getSqlRepresentation();
+		if (attributes == null || attributes.isEmpty()) {
+			attributes = findAllAttributesForEntity(entityId, timeQueryPart);
+		}
+		// if there still is nothing, return
+		if (attributes.isEmpty()) {
+			return new LimitableResult<>(List.of(), false);
+		}
+
+		// we need to do single queries in order to fulfill the "lastN" parameter.
+		List<AggregatedAttributes> aggregatedAttributes = attributes.stream()
+				.map(attributeId -> {
+					List<AggregatedAttribute> aggregations = findAggregatedAttributeByEntityIdAndAttribute(entityId, attributeId, timeQueryPart, timeQuery.getDBTimeField(), backwards, limit, aggregationMethods, aggregationPeriod);
+
+					if (aggregations.size() == limit) {
+						// Resultset was most probably limited. In an edge case the not limited number of attributes will exactly match the number of retrieved
+						// instances. Since it would be expensive to differ that case(e.g. an additional query would be required), we accept that.
+						isLimited.set(true);
+					}
+					return new AggregatedAttributes(entityId, attributeId, aggregations);
+				})
+				.collect(Collectors.toList());
+
+		return new LimitableResult<>(aggregatedAttributes, isLimited.get());
 	}
 
 	@Override
@@ -138,28 +182,6 @@ public class TimescaleBackedEntityRepository implements EntityRepository {
 		}
 		// we have at least {@link TOTAL_MAX_NUMBER_OF_INSTANCES} attributes, only return one instance per attribute
 		return 1;
-	}
-
-	private String mapAggregationMethodToSql(String aggregationMethod, String attributeToAggregate) {
-		switch (aggregationMethod) {
-			case "totalCount":
-				return String.format("count(%s)", attributeToAggregate);
-			case "distinctCount":
-				return String.format("count(distinct %s)", attributeToAggregate);
-			case "sum":
-				return String.format("sum(%s)", attributeToAggregate);
-			case "avg":
-				//TODO: check with etsi in regards of  a timeweighted average
-				return String.format("avg(%s)", attributeToAggregate);
-			case "min":
-				return String.format("min(%s)", attributeToAggregate);
-			case "max":
-				return String.format("max(%s)", attributeToAggregate);
-			case "stddev":
-			case "sumsq":
-			default:
-				throw new IllegalArgumentException(String.format("%s is not a supported aggregation method.", aggregationMethod));
-		}
 	}
 
 	@Override
@@ -308,6 +330,132 @@ public class TimescaleBackedEntityRepository implements EntityRepository {
 		return getAttributeIdsQuery.getResultList();
 	}
 
+	private List<AggregatedAttribute> findAggregatedAttributeByEntityIdAndAttribute(String entityId, String attributeId, String timeQueryPart, String timeProperty, boolean backwards, Integer limit, List<String> aggregationMethods, Optional<String> aggregationPeriod) {
+		if (aggregationMethods.isEmpty()) {
+			throw new IllegalArgumentException(String.format("Did not receive valid aggregation methods: %s", aggregationMethods));
+		}
+
+		String bucketFunction = String.format(aggregationPeriod.map(period -> "time_bucket('" + period + "', attribute.%s) as time_bucket,").orElse("attribute.%s as time_bucket,"), timeProperty);
+
+		String aggregationFunction = AGGREGATION_METHODS
+				.stream()
+				.map(currentMethod -> mapAggregationMethodToSql(currentMethod, aggregationMethods.contains(currentMethod)))
+				.collect(Collectors.joining(","));
+
+		String aggregatedQuery = String.format("Select %s %s " +
+				"from attributes as attribute " +
+				"where attribute.entityId=:entityId " +
+				"and attribute.id=:attributeId " +
+				"and attribute.opMode!='" + OpMode.Delete.name() + "' " +
+				timeQueryPart +
+				"group by time_bucket order by time_bucket", bucketFunction, aggregationFunction, timeProperty, timeProperty);
+		Query aggregationQuery = entityManager.createNativeQuery(aggregatedQuery, "AggregatedAttributeMapping");
+		aggregationQuery.setParameter("entityId", entityId);
+		aggregationQuery.setParameter("attributeId", attributeId);
+		return aggregationQuery.getResultList();
+	}
+
+
+	/* TODO: CHECK WITH ETSI:
+	 * - avg vs. time-weighted avg
+	 * - aggregation over different data-types?
+	 * - aggregation methods on the size of json arrays?
+	 * - min/max/stddev/sumsq/avg for boolean?
+	 */
+
+	private String mapAggregationMethodToSql(String aggregationMethod, boolean include) {
+		String caseSelector = "";
+
+		switch (aggregationMethod) {
+			case "totalCount":
+				if (include) {
+					return "count(attribute.id) as count";
+				}
+				return "null as count";
+			case "distinctCount":
+				if (include) {
+					caseSelector = "(CASE " +
+							STRING_CASE +
+							BOOLEAN_AS_TEXT_CASE +
+							NUMBER_AS_TEXT_CASE +
+							RELATIONSHIP_CASE +
+							COMPOUND_AS_TEXT_CASE +
+							DATE_TIME_AS_TEXT_CASE +
+							GEO_POINT_AS_TEXT_CASE +
+							GEO_POLYGON_AS_TEXT_CASE +
+							GEO_MULTI_POLYGON_AS_TEXT_CASE +
+							GEO_MULTI_LINE_STRING_AS_TEXT_CASE +
+							GEO_MULTI_LINE_STRING_AS_TEXT_CASE +
+							"ELSE null " +
+							"END)";
+					return String.format("count(distinct %s) as distinct_count", caseSelector);
+				}
+				return "null as distinct_count";
+			case "sum":
+				if (include) {
+					caseSelector = "(CASE " +
+							NUMBER_CASE +
+							BOOLEAN_AS_NUMBER_CASE +
+							" ELSE null " +
+							" END)";
+					return String.format("sum(%s) as sum", caseSelector);
+				}
+				return "null as sum";
+			case "avg":
+				if (include) {
+					caseSelector = "(CASE " +
+							NUMBER_CASE +
+							BOOLEAN_AS_NUMBER_CASE +
+							DATE_TIME_AS_NUMBER_CASE +
+							" ELSE null " +
+							" END)";
+					return String.format("avg(%s) as avg", caseSelector);
+				}
+				return "null as avg";
+			case "min":
+				if (include) {
+					caseSelector = "(CASE " +
+							NUMBER_CASE +
+							BOOLEAN_AS_NUMBER_CASE +
+//							STRING_CASE +
+							DATE_TIME_AS_NUMBER_CASE +
+							" ELSE null " +
+							" END)";
+					return String.format("min(%s) as min", caseSelector);
+				}
+				return "null as min";
+			case "max":
+				if (include) {
+					caseSelector = "(CASE " +
+							NUMBER_CASE +
+							BOOLEAN_AS_NUMBER_CASE +
+//							STRING_CASE +
+							DATE_TIME_AS_NUMBER_CASE +
+							" ELSE null " +
+							" END)";
+					return String.format("max(%s) as max", caseSelector);
+				}
+				return "null as max";
+			case "stddev":
+				if (include) {
+					caseSelector = "(CASE " +
+							NUMBER_CASE +
+							BOOLEAN_AS_NUMBER_CASE +
+							" ELSE null " +
+							" END)";
+					return String.format("stddev(%s) as stddev", caseSelector);
+				}
+				return "null as stddev";
+			case "sumsq":
+				if (!include) {
+					return "null as sumsq";
+				}
+				throw new IllegalArgumentException(String.format("Sumsq is not yet implemented."));
+			default:
+				throw new IllegalArgumentException(String.format("%s is not a supported aggregation method.", aggregationMethod));
+		}
+	}
+
 	/**
 	 * Find instances of a concrete attribute for an entity.
 	 *
@@ -317,20 +465,7 @@ public class TimescaleBackedEntityRepository implements EntityRepository {
 	 * @param backwards     if the instances should be retrieved starting with the newest
 	 * @return list of attribute instances
 	 */
-	private List<Attribute> findAttributeInstancesForEntity(String entityId, String attributeId, String timeQueryPart, String timeProperty, boolean backwards, Integer limit, List<String> aggregationMethods, Optional<String> aggregationPeriod) {
-		if (!aggregationMethods.isEmpty()) {
-			String aggregatedQuery = String.format("Select time_bucket('5 minutes', attribute.%s) as time_bucket, avg(number) " +
-					"from attributes as attribute " +
-					"where attribute.entityId=:entityId " +
-					"and attribute.id=:attributeId " +
-					"and attribute.opMode!='" + OpMode.Delete.name() + "' " +
-					timeQueryPart +
-					"group by time_bucket order by time_bucket", timeProperty, timeProperty);
-			Query aggregationQuery = entityManager.createNativeQuery(aggregatedQuery);
-			aggregationQuery.setParameter("entityId", entityId);
-			aggregationQuery.setParameter("attributeId", attributeId);
-			List aggregationResult = aggregationQuery.getResultList();
-		}
+	private List<Attribute> findAttributeInstancesForEntity(String entityId, String attributeId, String timeQueryPart, String timeProperty, boolean backwards, Integer limit) {
 
 		String selectionQuery = "Select attribute " +
 				"from Attribute attribute " +

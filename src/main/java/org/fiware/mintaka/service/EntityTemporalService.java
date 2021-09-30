@@ -3,6 +3,7 @@ package org.fiware.mintaka.service;
 import io.micronaut.transaction.annotation.ReadOnly;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.fiware.mintaka.domain.AggregatedTemporalProperty;
 import org.fiware.mintaka.domain.AttributePropertyVOMapper;
 import org.fiware.mintaka.domain.EntityIdTempResults;
 import org.fiware.mintaka.domain.PaginationInformation;
@@ -11,6 +12,8 @@ import org.fiware.mintaka.domain.query.temporal.TimeRelation;
 import org.fiware.mintaka.domain.query.geo.GeoQuery;
 import org.fiware.mintaka.domain.query.ngsi.QueryTerm;
 import org.fiware.mintaka.persistence.AbstractAttribute;
+import org.fiware.mintaka.persistence.AggregatedAttribute;
+import org.fiware.mintaka.persistence.AggregatedAttributes;
 import org.fiware.mintaka.persistence.Attribute;
 import org.fiware.mintaka.persistence.EntityRepository;
 import org.fiware.mintaka.persistence.TimescaleBackedEntityRepository;
@@ -23,12 +26,14 @@ import org.fiware.ngsi.model.RelationshipVO;
 
 import javax.inject.Singleton;
 import java.net.URI;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @Singleton
@@ -226,6 +231,62 @@ public class EntityTemporalService {
 		return entityTemporalVO1;
 	}
 
+	private Optional<LimitableResult<EntityTemporalVO>> getAggregatedNgsiEntitiesWithTimerel(
+			String entityId,
+			TimeQuery timeQuery,
+			List<String> attrs,
+			Integer limit,
+			boolean backwards,
+			List<String> aggregationMethods,
+			Optional<String> aggregationPeriod) {
+		// Use aggregated request in case aggregation is requested
+		LimitableResult<List<AggregatedAttributes>> limitableAggregatedResult = entityRepository.findAggregatedAttributesByEntityId(entityId, timeQuery, attrs, limit, backwards, aggregationMethods, aggregationPeriod);
+		List<AggregatedAttributes> aggregatedAttributesList = limitableAggregatedResult.getResult();
+
+		List<LocalDateTime> sortedTimeStamps = getSortedTimeStamps(aggregatedAttributesList);
+		Map<String, Object> aggregatedTemporalProperties = aggregatedAttributesList
+				.stream()
+				.map(aggregatedAttributes ->
+						attributePropertyVOMapper.aggregatedAttributesToAggregatedTemporalProperty(aggregatedAttributes, aggregationPeriod.map(ap -> Duration.parse(ap)), Optional.ofNullable(timeQuery.getEndTime()).orElse(Instant.now()).toString()))
+				.collect(Collectors.toMap(AggregatedTemporalProperty::getId, aggregatedTemporalProperty -> aggregatedTemporalProperty));
+
+
+		return getNgsiEntitiesResult(aggregatedTemporalProperties, sortedTimeStamps, entityId, limitableAggregatedResult.isLimited());
+	}
+
+	private List<LocalDateTime> getSortedTimeStamps(List<AggregatedAttributes> aggregatedAttributesList) {
+		return aggregatedAttributesList
+				.stream()
+				.flatMap(aggregatedAttributes -> aggregatedAttributes.getAggregatedAttributes().stream())
+				.map(aggregatedAttribute -> aggregatedAttribute.getTimeBucket())
+				.sorted().collect(Collectors.toList());
+	}
+
+	private Optional<LimitableResult<EntityTemporalVO>> getNgsiEntitiesResult(Map<String, Object> result, List<LocalDateTime> attributeTimeStamps, String entityId, boolean isLimited) {
+		if (attributeTimeStamps.isEmpty()) {
+			return Optional.empty();
+		}
+
+		// filter the entity in the timestamp we have attributes for.
+		Optional<NgsiEntity> entity = entityRepository.findById(entityId,
+				new TimeQuery(
+						TimeRelation.BETWEEN,
+						attributeTimeStamps.get(0).toInstant(ZoneOffset.UTC),
+						attributeTimeStamps.get(attributeTimeStamps.size() - 1).toInstant(ZoneOffset.UTC),
+						"ts"));
+		// sort them, to get the first and last timestamp
+		attributeTimeStamps.sort(Comparator.naturalOrder());
+		if (entity.isEmpty()) {
+			return Optional.empty();
+		}
+		NgsiEntity ngsiEntity = entity.get();
+		EntityTemporalVO entityTemporalVO = new EntityTemporalVO();
+		entityTemporalVO.type(ngsiEntity.getType()).id(URI.create(entityId));
+
+		entityTemporalVO.setAdditionalProperties(result);
+		return Optional.of(new LimitableResult<EntityTemporalVO>(entityTemporalVO, isLimited));
+	}
+
 	private Optional<LimitableResult<EntityTemporalVO>> getNgsiEntitiesWithTimerel(
 			String entityId,
 			TimeQuery timeQuery,
@@ -237,7 +298,11 @@ public class EntityTemporalService {
 			List<String> aggregationMethods,
 			Optional<String> aggregationPeriod) {
 
-		LimitableResult<List<Attribute>> limitableAttributesList = entityRepository.findAttributeByEntityId(entityId, timeQuery, attrs, limit, backwards, aggregationMethods, aggregationPeriod);
+		if (!aggregationMethods.isEmpty()) {
+			return getAggregatedNgsiEntitiesWithTimerel(entityId, timeQuery, attrs, limit, backwards, aggregationMethods, aggregationPeriod);
+		}
+
+		LimitableResult<List<Attribute>> limitableAttributesList = entityRepository.findAttributeByEntityId(entityId, timeQuery, attrs, limit, backwards);
 		List<Attribute> attributes = limitableAttributesList.getResult();
 		List<String> attributesWithSubattributes = attributes.stream()
 				.filter(Attribute::getSubProperties)
@@ -269,30 +334,8 @@ public class EntityTemporalService {
 					addEntryToTemporalAttributes(temporalAttributes, entry);
 				});
 
-		if (attributeTimeStamps.isEmpty()) {
-			return Optional.empty();
-		}
 
-		// filter the entity in the timestamp we have attributes for.
-		Optional<NgsiEntity> entity = entityRepository.findById(entityId,
-				new TimeQuery(
-						TimeRelation.BETWEEN,
-						attributeTimeStamps.get(0).toInstant(ZoneOffset.UTC),
-						attributeTimeStamps.get(attributeTimeStamps.size() - 1).toInstant(ZoneOffset.UTC),
-						"ts"),
-				aggregationMethods,
-				aggregationPeriod);
-		// sort them, to get the first and last timestamp
-		attributeTimeStamps.sort(Comparator.naturalOrder());
-		if (entity.isEmpty()) {
-			return Optional.empty();
-		}
-		NgsiEntity ngsiEntity = entity.get();
-		EntityTemporalVO entityTemporalVO = new EntityTemporalVO();
-		entityTemporalVO.type(ngsiEntity.getType()).id(URI.create(entityId));
-
-		entityTemporalVO.setAdditionalProperties(temporalAttributes);
-		return Optional.of(new LimitableResult<EntityTemporalVO>(entityTemporalVO, limitableAttributesList.isLimited()));
+		return getNgsiEntitiesResult(temporalAttributes, attributeTimeStamps, entityId, limitableAttributesList.isLimited());
 	}
 
 	@ReadOnly

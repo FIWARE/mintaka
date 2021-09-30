@@ -1,6 +1,8 @@
 package org.fiware.mintaka.domain;
 
 import org.fiware.mintaka.persistence.AbstractAttribute;
+import org.fiware.mintaka.persistence.AggregatedAttribute;
+import org.fiware.mintaka.persistence.AggregatedAttributes;
 import org.fiware.mintaka.persistence.Attribute;
 import org.fiware.mintaka.persistence.ValueType;
 import org.fiware.ngsi.model.*;
@@ -8,8 +10,11 @@ import org.geojson.LngLatAlt;
 import org.mapstruct.Mapper;
 
 import java.net.URI;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -96,7 +101,7 @@ public interface AttributePropertyVOMapper {
 				.instanceId(URI.create(attribute.getInstanceId()))
 				.type(GeoPropertyVO.Type.GEOPROPERTY);
 
-		if (attribute.getUnitCode() != null){
+		if (attribute.getUnitCode() != null) {
 			geoPropertyVO.unitCode(attribute.getUnitCode());
 		}
 		if (modifiedAt) {
@@ -179,7 +184,7 @@ public interface AttributePropertyVOMapper {
 				.instanceId(URI.create(attribute.getInstanceId()))
 				.type(PropertyVO.Type.PROPERTY);
 
-		if (attribute.getUnitCode() != null){
+		if (attribute.getUnitCode() != null) {
 			propertyVO.unitCode(attribute.getUnitCode());
 		}
 		if (modifiedAt) {
@@ -292,4 +297,66 @@ public interface AttributePropertyVOMapper {
 		return positionDefinitionVO;
 	}
 
+	default AggregatedTemporalProperty aggregatedAttributesToAggregatedTemporalProperty(AggregatedAttributes aggregatedAttributes, Optional<Duration> timeBucketDuration, String endTime) {
+		AggregatedTemporalProperty aggregatedTemporalProperty = new AggregatedTemporalProperty();
+		aggregatedTemporalProperty.setId(aggregatedAttributes.getAttributeId());
+		aggregatedTemporalProperty.setType("Property");
+
+		aggregatedAttributes.getAggregatedAttributes().forEach(aggregatedAttribute -> {
+			if (aggregatedAttribute.getSum() != null) {
+				List<List> sumList = Optional.ofNullable(aggregatedTemporalProperty.getSumList()).orElse(new ArrayList<>());
+				sumList.add(aggregatedAttributeToList(aggregatedAttribute, aggregatedAttribute.getSum(), timeBucketDuration, endTime));
+				aggregatedTemporalProperty.setSumList(sumList);
+			}
+			if (aggregatedAttribute.getSumsq() != null) {
+				List<List> sumSqList = Optional.ofNullable(aggregatedTemporalProperty.getSumsqList()).orElse(new ArrayList<>());
+				sumSqList.add(aggregatedAttributeToList(aggregatedAttribute, aggregatedAttribute.getSumsq(), timeBucketDuration, endTime));
+				aggregatedTemporalProperty.setSumsqList(sumSqList);
+			}
+			if (aggregatedAttribute.getStddev() != null) {
+				List<List> stddevList = Optional.ofNullable(aggregatedTemporalProperty.getStddevList()).orElse(new ArrayList<>());
+				stddevList.add(aggregatedAttributeToList(aggregatedAttribute, aggregatedAttribute.getStddev(), timeBucketDuration, endTime));
+				aggregatedTemporalProperty.setStddevList(stddevList);
+			}
+			if (aggregatedAttribute.getMin() != null) {
+				List<List> minList = Optional.ofNullable(aggregatedTemporalProperty.getMinList()).orElse(new ArrayList<>());
+				minList.add(aggregatedAttributeToList(aggregatedAttribute, aggregatedAttribute.getMin(), timeBucketDuration, endTime));
+				aggregatedTemporalProperty.setMinList(minList);
+			}
+			if (aggregatedAttribute.getMax() != null) {
+				List<List> maxList = Optional.ofNullable(aggregatedTemporalProperty.getMaxList()).orElse(new ArrayList<>());
+				maxList.add(aggregatedAttributeToList(aggregatedAttribute, aggregatedAttribute.getMax(), timeBucketDuration, endTime));
+				aggregatedTemporalProperty.setMaxList(maxList);
+			}
+			if (aggregatedAttribute.getDistinctCount() != null) {
+				List<List> distinctCountList = Optional.ofNullable(aggregatedTemporalProperty.getDistinctCountList()).orElse(new ArrayList<>());
+				distinctCountList.add(aggregatedAttributeToList(aggregatedAttribute, aggregatedAttribute.getDistinctCount(), timeBucketDuration, endTime));
+				aggregatedTemporalProperty.setDistinctCountList(distinctCountList);
+			}
+			if (aggregatedAttribute.getCount() != null) {
+				List<List> countList = Optional.ofNullable(aggregatedTemporalProperty.getTotalCountList()).orElse(new ArrayList<>());
+				countList.add(aggregatedAttributeToList(aggregatedAttribute, aggregatedAttribute.getCount(), timeBucketDuration, endTime));
+				aggregatedTemporalProperty.setTotalCountList(countList);
+			}
+			if (aggregatedAttribute.getAvg() != null) {
+				List<List> avgList = Optional.ofNullable(aggregatedTemporalProperty.getAvgList()).orElse(new ArrayList<>());
+				avgList.add(aggregatedAttributeToList(aggregatedAttribute, aggregatedAttribute.getAvg(), timeBucketDuration, endTime));
+				aggregatedTemporalProperty.setAvgList(avgList);
+			}
+		});
+		return aggregatedTemporalProperty;
+	}
+
+	private static <S> List aggregatedAttributeToList(AggregatedAttribute aggregatedAttribute, S value, Optional<Duration> timeBucketDuration, String endTime) {
+		return List.of(
+				value,
+				aggregatedAttribute.getTimeBucket().toString(),
+				timeBucketDuration.map(tbD -> getEndTime(aggregatedAttribute.getTimeBucket(), tbD)
+						.toString())
+						.orElse(endTime));
+	}
+
+	private static LocalDateTime getEndTime(LocalDateTime startTime, Duration duration) {
+		return startTime.plus(duration);
+	}
 }

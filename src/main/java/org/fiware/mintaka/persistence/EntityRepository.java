@@ -21,7 +21,7 @@ public interface EntityRepository {
 	 * @param entityId id of the entity to retrieve
 	 * @return optional entity
 	 */
-	Optional<NgsiEntity> findById(String entityId, TimeQuery timeQuery, List<String> aggregationMethods, Optional<String> aggregationPeriod);
+	Optional<NgsiEntity> findById(String entityId, TimeQuery timeQuery);
 
 	/**
 	 * Find all attributes of an entity in the define timeframe
@@ -31,7 +31,19 @@ public interface EntityRepository {
 	 * @param attributes the attributes to be included, if null or empty return all
 	 * @return list of attribute instances
 	 */
-	LimitableResult<List<Attribute>> findAttributeByEntityId(String entityId, TimeQuery timeQuery, List<String> attributes, Integer limit, boolean backwards, List<String> aggregationMethods, Optional<String> aggregationPeriod);
+	LimitableResult<List<Attribute>> findAttributeByEntityId(String entityId, TimeQuery timeQuery, List<String> attributes, Integer limit, boolean backwards);
+
+	/**
+	 * Find all attributes of an entity in the define timeframe and retrieve them in the defined aggregation
+	 *
+	 * @param entityId   id to get attributes for
+	 * @param timeQuery  time related query
+	 * @param attributes the attributes to be included, if null or empty return all
+	 * @param aggregationMethods methods to be used for aggregation
+	 * @param aggregationPeriod period to be used for the individual aggregations
+	 * @return list of aggregated attributes
+	 */
+	LimitableResult<List<AggregatedAttributes>> findAggregatedAttributesByEntityId(String entityId, TimeQuery timeQuery, List<String> attributes, Integer limit, boolean backwards, List<String> aggregationMethods, Optional<String> aggregationPeriod);
 
 	/**
 	 * Get the limit to be used for the given configuration
