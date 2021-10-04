@@ -340,6 +340,14 @@ public class TimescaleBackedEntityRepository implements EntityRepository {
 		return instantTypedQuery.getResultList().stream().map(localDateTime -> localDateTime.toInstant(ZoneOffset.UTC)).collect(Collectors.toList());
 	}
 
+	@Override
+	public Optional<NgsiEntity> getEntityIfExists(String entityId) {
+		TypedQuery<NgsiEntity> getNgsiEntitiesQuery = entityManager.createQuery(
+				"Select entity from NgsiEntity entity where id=:entityId", NgsiEntity.class);
+		getNgsiEntitiesQuery.setParameter("entityId", entityId);
+		return getNgsiEntitiesQuery.getResultList().stream().findFirst();
+	}
+
 	/**
 	 * Create the sql selection criteria, based on the QueryTerm, while including all additional parameters. Geoqueries are handle as a seperate
 	 * query term.

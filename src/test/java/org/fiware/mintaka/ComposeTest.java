@@ -15,7 +15,20 @@ import io.micronaut.runtime.server.EmbeddedServer;
 import lombok.extern.slf4j.Slf4j;
 import org.fiware.mintaka.domain.AcceptType;
 import org.fiware.ngsi.api.EntitiesApiTestClient;
-import org.fiware.ngsi.model.*;
+import org.fiware.ngsi.model.EntityFragmentVO;
+import org.fiware.ngsi.model.EntityVO;
+import org.fiware.ngsi.model.GeoPropertyVO;
+import org.fiware.ngsi.model.LineStringDefinitionVO;
+import org.fiware.ngsi.model.LineStringVO;
+import org.fiware.ngsi.model.LinearRingDefinitionVO;
+import org.fiware.ngsi.model.MultiLineStringVO;
+import org.fiware.ngsi.model.MultiPolygonVO;
+import org.fiware.ngsi.model.PointVO;
+import org.fiware.ngsi.model.PolygonDefinitionVO;
+import org.fiware.ngsi.model.PolygonVO;
+import org.fiware.ngsi.model.PositionDefinitionVO;
+import org.fiware.ngsi.model.PropertyVO;
+import org.fiware.ngsi.model.RelationshipVO;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.provider.Arguments;
@@ -32,16 +45,25 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @Slf4j
 public abstract class ComposeTest {
@@ -54,6 +76,7 @@ public abstract class ComposeTest {
 	protected static final URI DELETED_ENTITY_ID = URI.create("urn:ngsi-ld:store:deleted-" + UUID.randomUUID().toString());
 	protected static final URI LIMITED_ENTITY_ID = URI.create("urn:ngsi-ld:store:limited-" + UUID.randomUUID().toString());
 	protected static final URI CREATED_AFTER_ENTITY_ID = URI.create("urn:ngsi-ld:store:after-" + UUID.randomUUID().toString());
+	protected static final URI NO_OBSERVED_AT_ENTITY_ID = URI.create("urn:ngsi-ld:thermometer:" + UUID.randomUUID().toString());
 	protected static final URI DATA_MODEL_CONTEXT = URI.create("https://fiware.github.io/data-models/context.jsonld");
 	protected static final URI CORE_CONTEXT = URI.create("https://uri.etsi.org/ngsi-ld/v1/ngsi-ld-core-context.jsonld");
 	protected static final String ORION_LD_HOST = "orion-ld";
@@ -122,6 +145,7 @@ public abstract class ComposeTest {
 				createEntityHistory(LIMITED_ENTITY_ID, START_TIME_STAMP, 350);
 				createEntityHistory(ENTITY_ID, START_TIME_STAMP);
 				createEntityHistoryWithDeletion();
+				createEntityWithoutDefaultTimeProperty(NO_OBSERVED_AT_ENTITY_ID);
 			}
 		}
 
@@ -370,6 +394,21 @@ public abstract class ComposeTest {
 
 
 	// create
+
+	protected void createEntityWithoutDefaultTimeProperty(URI entityId) {
+
+		EntityVO entityVO = new EntityVO()
+				.atContext(CORE_CONTEXT)
+				.id(entityId)
+				.location(null)
+				.observationSpace(null)
+				.operationSpace(null)
+				.type("thermometer");
+		PropertyVO temperatureProperty =	new PropertyVO().type(PropertyVO.Type.PROPERTY).value(25).unitCode("C");
+		entityVO.setAdditionalProperties(Map.of("temperature", temperatureProperty));
+		entitiesApiTestClient.createEntity(entityVO);
+	}
+
 	protected void createMovingEntity(URI entityId) {
 		when(clock.instant()).thenReturn(START_TIME_STAMP);
 
@@ -391,7 +430,7 @@ public abstract class ComposeTest {
 				.operationSpace(null)
 				.type("car");
 		PropertyVO temperatureProperty = getNewPropety().value(25).unitCode("C");
-		;
+
 		PropertyVO radioProperty = getNewPropety().value(true);
 		PropertyVO driverProperty = getNewPropety().value("Stefan");
 		PropertyVO motorProperty = getMotorSubProperty(Optional.of(0.9), Optional.of(1700));
@@ -459,7 +498,7 @@ public abstract class ComposeTest {
 				.operationSpace(null)
 				.type("store");
 		PropertyVO temperatureProperty = getNewPropety().value(optionalTemp.orElseGet(() -> (int) (Math.random() * 10))).unitCode("C");
-		;
+
 		PropertyVO radioProperty = getNewPropety().value(optionalRadio.orElse(true));
 		PropertyVO motorProperty = getMotorSubProperty(optionalFuel, optionalRPM);
 		PropertyVO compoundProperty = getCompoundProperty(optionalCases.orElse(3));

@@ -100,7 +100,21 @@ public class RetrievalTest extends ComposeTest {
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/" + ENTITY_ID);
 		getRequest.getParameters().add("attrs", "nonExisting");
 
-		assertNotFound(getRequest, "If the requested attribute does not exist, a 404 should be returned.");
+		Map<String, String> resultMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
+		assertEquals(2, resultMap.size(),"Id and type should be returned.");
+		assertEquals(ENTITY_ID.toString(), resultMap.get("id"));
+		assertEquals("store", resultMap.get("type"));
+	}
+
+	@DisplayName("Request an entity without an observedAt attribute.")
+	@Test
+	public void testGetEntityWithoutDefaultTimeAttribute() {
+		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/" + NO_OBSERVED_AT_ENTITY_ID);
+
+		Map<String, String> resultMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
+		assertEquals(2, resultMap.size(),"Id and type should be returned.");
+		assertEquals(NO_OBSERVED_AT_ENTITY_ID.toString(), resultMap.get("id"));
+		assertEquals("thermometer", resultMap.get("type"));
 	}
 
 	@DisplayName("Retrieve deleted entity should lead to 404.")
