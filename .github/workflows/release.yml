@@ -60,5 +60,5 @@ jobs:
           prerelease: false
           title: ${{ steps.out.outputs.version }}
           files: |
-            LICENSE.txt
-            *.jar
+            LICENSE
+            target/*.jar

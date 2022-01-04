@@ -55,3 +55,6 @@ jobs:
           automatic_release_tag: ${{ steps.out.outputs.version }}
           prerelease: true
           title: ${{ steps.out.outputs.version }}
+          files: |
+            LICENSE
+            target/*.jar
