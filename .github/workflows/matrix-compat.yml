@@ -41,8 +41,6 @@ jobs:
     steps:
 
       - uses: actions/checkout@v2
-        with:
-          ref: compat-matrix
 
       - uses: wistefan/check-compatibility@master
         id: check-compatibility
