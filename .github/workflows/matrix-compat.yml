@@ -17,7 +17,6 @@ jobs:
           include: "MINOR"
           repository: fiware/mintaka
 
-
       - id: orion-version
         uses: wistefan/get-releases-by-semver@master
         with:
@@ -38,7 +37,9 @@ jobs:
       matrix:
         orion: ${{fromJson(needs.create-version-matrix.outputs.orion-matrix)}}
         mintaka: ${{fromJson(needs.create-version-matrix.outputs.mintaka-matrix)}}
+
     steps:
+
       - uses: actions/checkout@v2
 
       - uses: wistefan/check-compatibility@master
@@ -79,7 +80,6 @@ jobs:
           versionTwo: ${{ matrix.mintaka }}
           compatibilityFile: compatibility.json
           compatible: "True"
-
 
       - name: Publish failure
         if: steps.runTest.outcome == 'failure'
