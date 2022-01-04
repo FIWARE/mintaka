@@ -41,6 +41,8 @@ jobs:
     steps:
 
       - uses: actions/checkout@v2
+        with:
+          ref: compat-matrix
 
       - uses: wistefan/check-compatibility@master
         id: check-compatibility
@@ -104,6 +106,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+      - uses: actions/checkout@v2
+        with:
+          ref: compat-matrix
+
       - uses: actions/download-artifact@v2
         with:
           path: results
@@ -130,4 +136,3 @@ jobs:
       - uses: EndBug/add-and-commit@v7
         with:
           add: 'doc/compatibility'
-          branch: compat-matrix
