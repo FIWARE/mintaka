@@ -2,7 +2,7 @@ version: "3.5"
 services:
   # Orion is the context broker
   orion-ld:
-    image: ${ORION_IMAGE:-fiware/orion-ld:v0.8.1}
+    image: ${ORION_IMAGE:-fiware/orion-ld:1.0.0}
     hostname: orion
     # sometimes the initial startup fails due to a weird timescale behaviour
     restart: always
@@ -46,7 +46,7 @@ services:
       interval: 30s
 
   timescale:
-    image: timescale/timescaledb-postgis:latest-pg12
+    image: timescale/timescaledb-postgis:1.7.5-pg12
     hostname: timescale
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U orion" ]
