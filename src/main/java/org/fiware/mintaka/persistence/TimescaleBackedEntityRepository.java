@@ -361,6 +361,7 @@ public class TimescaleBackedEntityRepository implements EntityRepository {
 	 * - aggregation over different data-types?
 	 * - aggregation methods on the size of json arrays?
 	 * - min/max/stddev/sumsq/avg for boolean?
+	 * - behaviour if datatype changes inside the time bucket?
 	 */
 
 	private String mapAggregationMethodToSql(String aggregationMethod, boolean include) {

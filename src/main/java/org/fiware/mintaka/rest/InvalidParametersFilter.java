@@ -8,7 +8,7 @@ import io.micronaut.http.annotation.Filter;
 import io.micronaut.http.filter.FilterChain;
 import io.micronaut.http.filter.HttpFilter;
 import io.micronaut.web.router.UriRouteMatch;
-import io.reactivex.Flowable;
+import io.reactivex.rxjava3.core.Flowable;
 import org.fiware.mintaka.exception.ErrorType;
 import org.fiware.mintaka.exception.ProblemDetails;
 import org.reactivestreams.Publisher;
