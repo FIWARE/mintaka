@@ -1,0 +1,47 @@
+[
+  {
+    "orion": "0.7.0",
+    "mintaka": "0.3.37",
+    "compatible": true
+  },
+  {
+    "orion": "0.8.0",
+    "mintaka": "0.0.12",
+    "compatible": true
+  },
+  {
+    "orion": "0.8.0",
+    "mintaka": "0.1.1",
+    "compatible": true
+  },
+  {
+    "orion": "0.8.0",
+    "mintaka": "0.2.1",
+    "compatible": true
+  },
+  {
+    "orion": "0.8.0",
+    "mintaka": "0.3.37",
+    "compatible": true
+  },
+  {
+    "orion": "1.0.0",
+    "mintaka": "0.0.12",
+    "compatible": true
+  },
+  {
+    "orion": "1.0.0",
+    "mintaka": "0.1.1",
+    "compatible": true
+  },
+  {
+    "orion": "1.0.0",
+    "mintaka": "0.2.1",
+    "compatible": true
+  },
+  {
+    "orion": "1.0.0",
+    "mintaka": "0.3.37",
+    "compatible": true
+  }
+]
