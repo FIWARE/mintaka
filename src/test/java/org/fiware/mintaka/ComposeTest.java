@@ -37,13 +37,12 @@ import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
 import org.testcontainers.shaded.com.google.common.collect.Lists;
 
 import java.io.File;
-import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.URL;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -62,8 +61,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 @Slf4j
 public abstract class ComposeTest {
@@ -136,7 +133,6 @@ public abstract class ComposeTest {
 	@BeforeEach
 	public void setup() throws Exception {
 		entitiesApiTestClient = applicationContext.getBean(EntitiesApiTestClient.class);
-		clock = mock(Clock.class);
 
 		synchronized (INITIALIZED) {
 			if (!INITIALIZED.getAndSet(true)) {
@@ -410,7 +406,7 @@ public abstract class ComposeTest {
 	}
 
 	protected void createMovingEntity(URI entityId) {
-		when(clock.instant()).thenReturn(START_TIME_STAMP);
+		clock = Clock.fixed(START_TIME_STAMP, ZoneOffset.UTC);
 
 		double lat = 0;
 		double longi = 0;
@@ -473,7 +469,8 @@ public abstract class ComposeTest {
 						 Optional<Integer> optionalRPM,
 						 Optional<Integer> optionalCases) {
 		currentTime = currentTime.plus(1, ChronoUnit.MINUTES);
-		when(clock.instant()).thenReturn(currentTime);
+
+		clock = Clock.fixed(currentTime, ZoneOffset.UTC);
 		updateLatLong(entityId, lat, longi, optionalTemp, optionalRadio, optionalDriver, optionalFuel, optionalRPM, optionalCases);
 		return currentTime;
 	}
@@ -530,7 +527,7 @@ public abstract class ComposeTest {
 	}
 
 	protected void createEntityHistory(URI entityId, Instant startTimeStamp, int numberOfUpdates) {
-		when(clock.instant()).thenReturn(startTimeStamp);
+		clock = Clock.fixed(startTimeStamp, ZoneOffset.UTC);
 
 		Instant currentTime = startTimeStamp;
 		EntityVO entityVO = new EntityVO()
@@ -555,7 +552,7 @@ public abstract class ComposeTest {
 
 		for (int i = 0; i < numberOfUpdates; i++) {
 			currentTime = currentTime.plus(1, ChronoUnit.MINUTES);
-			when(clock.instant()).thenReturn(currentTime);
+			clock = Clock.fixed(currentTime, ZoneOffset.UTC);
 			// evolve over time
 			EntityFragmentVO entityFragmentVO = new EntityFragmentVO().atContext(CORE_CONTEXT)
 					.location(null)
