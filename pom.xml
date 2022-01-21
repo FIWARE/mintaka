@@ -193,6 +193,12 @@
             <version>${micronaut.configuration.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
+            <version>1</version>
+        </dependency>
+
         <!-- dedicated hibernate core to fix vulnarability in previous version -->
         <dependency>
             <groupId>org.hibernate</groupId>
