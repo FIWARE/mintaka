@@ -83,7 +83,7 @@ jobs:
     needs:
       - generate-version
       - prerelease-quay
-      - prerelease-dockerhu
+      - prerelease-dockerhub
 
     runs-on: ubuntu-latest
 
