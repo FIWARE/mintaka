@@ -3,17 +3,14 @@ package org.fiware.mintaka;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.MutableHttpRequest;
-import io.micronaut.http.client.RxHttpClient;
 import io.micronaut.http.client.annotation.Client;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
+import io.micronaut.http.client.netty.DefaultHttpClient;
 import io.micronaut.test.annotation.MockBean;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import lombok.extern.slf4j.Slf4j;
-import org.fiware.mintaka.persistence.EntityRepository;
 import org.fiware.mintaka.persistence.LimitableResult;
-import org.fiware.mintaka.persistence.TimescaleBackedEntityRepository;
 import org.fiware.mintaka.service.EntityTemporalService;
-import org.fiware.ngsi.api.TemporalRetrievalApiTestClient;
 import org.fiware.ngsi.model.EntityTemporalVO;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,7 +18,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import javax.inject.Inject;
-
 import java.net.URI;
 import java.util.List;
 
@@ -40,7 +36,7 @@ public class ExceptionTest {
 
 	@Inject
 	@Client("/")
-	RxHttpClient mintakaTestClient;
+	DefaultHttpClient mintakaTestClient;
 
 	@MockBean(EntityTemporalService.class)
 	EntityTemporalService entityTemporalService() {

@@ -134,7 +134,7 @@ public abstract class ComposeTest {
 	}
 
 	@BeforeEach
-	public void setup() throws MalformedURLException {
+	public void setup() throws Exception {
 		entitiesApiTestClient = applicationContext.getBean(EntitiesApiTestClient.class);
 		clock = mock(Clock.class);
 
@@ -152,7 +152,7 @@ public abstract class ComposeTest {
 		HttpClientConfiguration configuration = new DefaultHttpClientConfiguration();
 		//high timeout is required, because github-action runners are not that powerful
 		configuration.setReadTimeout(Duration.ofSeconds(30));
-		mintakaTestClient = new DefaultHttpClient(new URL("http://" + embeddedServer.getHost() + ":" + embeddedServer.getPort()), configuration);
+		mintakaTestClient = new DefaultHttpClient(new URI("http://" + embeddedServer.getHost() + ":" + embeddedServer.getPort()), configuration);
 	}
 
 	/*
