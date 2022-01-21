@@ -92,12 +92,12 @@
   {
     "orion": "1.0.1",
     "mintaka": "0.0.12",
-    "compatible": true
+    "compatible": false
   },
   {
     "orion": "1.0.1",
     "mintaka": "0.1.1",
-    "compatible": true
+    "compatible": false
   },
   {
     "orion": "1.0.1",
