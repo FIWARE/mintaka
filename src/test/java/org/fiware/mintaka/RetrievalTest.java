@@ -5,6 +5,7 @@ import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.MutableHttpRequest;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
+import org.checkerframework.checker.nullness.Opt;
 import org.fiware.mintaka.domain.AcceptType;
 import org.fiware.mintaka.domain.query.temporal.TimeRelation;
 import org.fiware.mintaka.exception.ErrorType;
@@ -15,6 +16,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.testcontainers.shaded.com.fasterxml.jackson.core.JsonProcessingException;
+import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.net.URI;
 import java.time.Instant;
@@ -79,11 +82,18 @@ public class RetrievalTest extends ComposeTest {
 			fail("The request should have been rejected.");
 		} catch (HttpClientResponseException e) {
 			assertEquals(errorType.getStatus(), e.getStatus(), "The request should have been rejected.");
-			Optional<ProblemDetails> problemDetails = e.getResponse().getBody(ProblemDetails.class);
-			assertTrue(problemDetails.isPresent(), "Problem details should have been returned.");
-			assertEquals(errorType.getType(), problemDetails.get().getType(), "Correct error type should have been returned");
-			assertEquals(errorType.getStatus().getCode(), problemDetails.get().getStatus(), "Correct error status should have been returned.");
-			instanceId.ifPresent(iid -> assertEquals(iid, problemDetails.get().getInstance(), "Correct instance id should have been returned."));
+			if (e.getStatus().equals(HttpStatus.BAD_REQUEST)) {
+				Optional<String> problemDetails = e.getResponse().getBody(String.class);
+				// Bad request response bodys are weirdly parsed to some arbitrary string
+				assertTrue(problemDetails.isPresent(), "Problem details should have been returned.");
+			} else {
+				Optional<ProblemDetails> problemDetails;
+				problemDetails = e.getResponse().getBody(ProblemDetails.class);
+				assertTrue(problemDetails.isPresent(), "Problem details should have been returned.");
+				assertEquals(errorType.getType(), problemDetails.get().getType(), "Correct error type should have been returned");
+				assertEquals(errorType.getStatus().getCode(), problemDetails.get().getStatus(), "Correct error status should have been returned.");
+				instanceId.ifPresent(iid -> assertEquals(iid, problemDetails.get().getInstance(), "Correct instance id should have been returned."));
+			}
 		}
 	}
 
@@ -101,7 +111,7 @@ public class RetrievalTest extends ComposeTest {
 		getRequest.getParameters().add("attrs", "nonExisting");
 
 		Map<String, String> resultMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
-		assertEquals(2, resultMap.size(),"Id and type should be returned.");
+		assertEquals(2, resultMap.size(), "Id and type should be returned.");
 		assertEquals(ENTITY_ID.toString(), resultMap.get("id"));
 		assertEquals("store", resultMap.get("type"));
 	}
@@ -112,7 +122,7 @@ public class RetrievalTest extends ComposeTest {
 		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/" + NO_OBSERVED_AT_ENTITY_ID);
 
 		Map<String, String> resultMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
-		assertEquals(2, resultMap.size(),"Id and type should be returned.");
+		assertEquals(2, resultMap.size(), "Id and type should be returned.");
 		assertEquals(NO_OBSERVED_AT_ENTITY_ID.toString(), resultMap.get("id"));
 		assertEquals("thermometer", resultMap.get("type"));
 	}
