@@ -82,7 +82,7 @@ public class RetrievalTest extends ComposeTest {
 			fail("The request should have been rejected.");
 		} catch (HttpClientResponseException e) {
 			assertEquals(errorType.getStatus(), e.getStatus(), "The request should have been rejected.");
-			if (e.getStatus().equals(HttpStatus.BAD_REQUEST)) {
+			if (e.getStatus().equals(HttpStatus.BAD_REQUEST) || e.getStatus().equals(HttpStatus.UNPROCESSABLE_ENTITY)) {
 				Optional<String> problemDetails = e.getResponse().getBody(String.class);
 				// Bad request response bodys are weirdly parsed to some arbitrary string
 				assertTrue(problemDetails.isPresent(), "Problem details should have been returned.");
