@@ -83,7 +83,7 @@ jobs:
     needs:
       - generate-version
       - release-quay
-      - release-dockerhu
+      - release-dockerhub
 
     runs-on: ubuntu-latest
 
