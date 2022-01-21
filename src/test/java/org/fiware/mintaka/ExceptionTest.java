@@ -3,6 +3,7 @@ package org.fiware.mintaka;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.MutableHttpRequest;
+import io.micronaut.http.client.HttpClient;
 import io.micronaut.http.client.annotation.Client;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
 import io.micronaut.http.client.netty.DefaultHttpClient;
@@ -36,7 +37,7 @@ public class ExceptionTest {
 
 	@Inject
 	@Client("/")
-	DefaultHttpClient mintakaTestClient;
+	HttpClient mintakaTestClient;
 
 	@MockBean(EntityTemporalService.class)
 	EntityTemporalService entityTemporalService() {
