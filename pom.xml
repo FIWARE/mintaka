@@ -633,7 +633,7 @@
                                 <paths>
                                     <path>
                                         <from>license</from>
-                                        <into>/license</into>
+                                        <into>/licenses</into>
                                     </path>
                                 </paths>
                             </extraDirectories>
