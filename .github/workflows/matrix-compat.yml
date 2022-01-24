@@ -137,6 +137,8 @@ jobs:
           markdownOutput: doc/compatibility/compatibility.md
 
       - name: Git commit
+        # dont fail if nothing is to be commited
+        continue-on-error: true
         run: |
           git add .
           git commit -m "Update compat-matrix"
