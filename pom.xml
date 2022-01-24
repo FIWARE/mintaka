@@ -42,6 +42,7 @@
         <project.author.name>Stefan Wiedemann</project.author.name>
         <project.author.email>stefan.wiedemann@fiware.org</project.author.email>
         <project.description>Mintaka provides an implementation of the NGSI-LD temporal API, based on Orion-LDs temporal api</project.description>
+        <project.summary>Temporal querying for Orion-LD.</project.summary>
         <project.url>https://github.com/FIWARE/mintaka</project.url>
         <project.license.name>GNU Affero General Public License v3.0</project.license.name>
         <project.license.identifier>AGPL-3.0-only</project.license.identifier>
@@ -628,8 +629,17 @@
                                     <tag>latest</tag>
                                 </tags>
                             </to>
+                            <extraDirectories>
+                                <paths>
+                                    <path>
+                                        <from>license</from>
+                                        <into>/licenses</into>
+                                    </path>
+                                </paths>
+                            </extraDirectories>
                             <container>
                                 <labels>
+                                    <!-- oci labels -->
                                     <org.opencontainers.image.authors>${project.author.name} - ${project.author.email}</org.opencontainers.image.authors>
                                     <org.opencontainers.image.description>${project.description}</org.opencontainers.image.description>
                                     <org.opencontainers.image.documentation>${project.url}</org.opencontainers.image.documentation>
@@ -641,6 +651,14 @@
                                     <org.opencontainers.image.created>${maven.build.timestamp}</org.opencontainers.image.created>
                                     <org.fiware.contact.localpart>${project.contact.email}</org.fiware.contact.localpart>
                                     <org.fiware.contact.domain>${project.contact.domain}</org.fiware.contact.domain>
+                                    <!-- redhat required labels -->
+                                    <name>${project.title}</name>
+                                    <description>${project.description}</description>
+                                    <authors>${project.author.name} - ${project.author.email}</authors>
+                                    <maintainer>${project.author.email}</maintainer>
+                                    <documentation>${project.url}</documentation>
+                                    <vendor>${project.vendor}</vendor>
+                                    <summary>${project.summary}</summary>
                                 </labels>
                             </container>
                         </configuration>
