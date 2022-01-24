@@ -98,4 +98,4 @@ jobs:
           prerelease: true
           title: ${{ needs.generate-version.outputs.version }}
           files: |
-            LICENSE
+            license/LICENSE
