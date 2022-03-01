@@ -54,7 +54,7 @@ jobs:
 
       - uses: actions/setup-java@v1
         with:
-          java-version: '11'
+          java-version: '17'
           java-package: jdk
 
       - uses: actions/checkout@v2
@@ -137,6 +137,8 @@ jobs:
           markdownOutput: doc/compatibility/compatibility.md
 
       - name: Git commit
+        # dont fail if nothing is to be commited
+        continue-on-error: true
         run: |
           git add .
           git commit -m "Update compat-matrix"

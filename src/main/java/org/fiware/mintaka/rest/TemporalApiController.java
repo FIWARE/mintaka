@@ -103,9 +103,9 @@ public class TemporalApiController implements TemporalRetrievalApi {
 			@Nullable Instant timeAt,
 			@Nullable Instant endTimeAt,
 			@Nullable @Size(min = 1) String csf,
-			Integer pageSize,
-			URI pageAnchor,
-			Integer limit,
+			@Nullable Integer pageSize,
+			@Nullable URI pageAnchor,
+			@Nullable Integer limit,
 			@Nullable String options,
 			@Nullable @Min(1) Integer lastN) {
 

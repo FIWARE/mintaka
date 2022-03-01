@@ -1,12 +1,12 @@
 package org.fiware.mintaka.persistence.tenancy;
 
+import io.micronaut.configuration.hibernate.jpa.EntityManagerFactoryBean;
 import io.micronaut.configuration.hibernate.jpa.JpaConfiguration;
 import io.micronaut.context.BeanLocator;
 import io.micronaut.context.annotation.EachBean;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Parameter;
 import io.micronaut.context.annotation.Replaces;
-import io.micronaut.data.hibernate.runtime.DataEntityManagerFactoryBean;
 import io.micronaut.inject.qualifiers.Qualifiers;
 import io.micronaut.transaction.hibernate5.MicronautSessionContext;
 import io.micronaut.transaction.jdbc.DelegatingDataSource;
@@ -33,7 +33,7 @@ public class MultiTenantEntityManagerFactoryBean {
 
 	@EachBean(DataSource.class)
 	@Replaces(
-			factory = DataEntityManagerFactoryBean.class,
+			factory = EntityManagerFactoryBean.class,
 			bean = StandardServiceRegistry.class
 	)
 	protected StandardServiceRegistry hibernateStandardServiceRegistry(@Parameter String dataSourceName, DataSource dataSource) {
