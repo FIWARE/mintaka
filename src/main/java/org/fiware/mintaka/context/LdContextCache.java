@@ -140,6 +140,14 @@ public class LdContextCache {
 			return Map.of(JsonLdConsts.CONTEXT, ((List) contextURLs).stream()
 					.map(this::getContext)
 					.map(contextMap -> ((Map<String, Object>) contextMap).get(JsonLdConsts.CONTEXT))
+					.map(contextObject -> {
+						// follow potential list-contexts
+						if (contextObject instanceof List) {
+							return getContext((List) contextObject);
+						} else {
+							return contextObject;
+						}
+					})
 					.flatMap(map -> ((Map<String, Object>) map).entrySet().stream())
 					.collect(Collectors.toMap(e -> ((Map.Entry<String, Object>) e).getKey(), e -> ((Map.Entry<String, Object>) e).getValue(), (e1, e2) -> e2)));
 		} else if (contextURLs instanceof URL) {
@@ -151,6 +159,7 @@ public class LdContextCache {
 		}
 		throw new ContextRetrievalException(String.format("Did not receive a valid context: %s.", contextURLs), contextURLs.toString());
 	}
+
 
 	/**
 	 * Get the context from the given url

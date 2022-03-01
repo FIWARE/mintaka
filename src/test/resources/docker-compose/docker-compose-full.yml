@@ -2,7 +2,7 @@ version: "3.5"
 services:
   # Orion is the context broker
   orion:
-    image: fiware/orion-ld:1.0.0
+    image: fiware/orion-ld:1.0.1
     hostname: orion
     container_name: fiware-orion
     # sometimes the initial startup fails due to a weird timescale behaviour
@@ -68,8 +68,9 @@ services:
       - default
 
   mintaka:
-    image: fiware/mintaka:latest
+    image: fiware/mintaka:0.4.3
     hostname: mintaka
+    restart: always
     container_name: mintaka
     environment:
       - DATASOURCES_DEFAULT_HOST=timescale

@@ -209,6 +209,18 @@ public class RetrievalTest extends ComposeTest {
 		assertInstanceInTimeFrame(listRepresentation, NUMBER_OF_UPDATES + 1, START_TIME_STAMP, START_TIME_STAMP.plus(NUMBER_OF_UPDATES, ChronoUnit.MINUTES));
 	}
 
+	@DisplayName("Retrieve the entity with only the requested attribute. No timeframe definition, specuak cibtext.")
+	@Test
+	public void testGetEntityWithSingleAttributeByIdWithoutTimeLinkHeader() {
+		MutableHttpRequest getRequest = HttpRequest.GET("/temporal/entities/" + ENTITY_ID);
+		getRequest.getParameters().add("attrs", "temperature");
+		getRequest.getHeaders().add("Accept", AcceptType.JSON_LD.getValue());
+
+		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
+		List<Map<String, Object>> listRepresentation = retrieveListRepresentationForProperty("temperature", entityTemporalMap);
+		assertFalse(listRepresentation.isEmpty(), "There should be some updates for the requested property.");
+	}
+
 	@DisplayName("Retrieve the entity with multiple requested attributes. No timeframe definition, default context.")
 	@ParameterizedTest
 	@MethodSource("provideCombinedAttributeStrings")
