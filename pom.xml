@@ -36,7 +36,7 @@
         <micronaut.data.version>3.2.2</micronaut.data.version>
         <micronaut.configuration.version>1.3.1</micronaut.configuration.version>
         <micronaut.multitenancy.version>2.2.3</micronaut.multitenancy.version>
-        <version.io.micronaut.sql.hibernate-jpa>4.1.1</version.io.micronaut.sql.hibernate-jpa>
+        <version.io.micronaut.sql.hibernate-jpa>4.2.2</version.io.micronaut.sql.hibernate-jpa>
 
         <!-- project info -->
         <project.author.name>Stefan Wiedemann</project.author.name>
