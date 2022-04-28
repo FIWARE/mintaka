@@ -38,7 +38,6 @@
         <micronaut.multitenancy.version>2.2.3</micronaut.multitenancy.version>
         <version.io.micronaut.sql.hibernate-jpa>4.2.2</version.io.micronaut.sql.hibernate-jpa>
 
-
         <!-- project info -->
         <project.author.name>Stefan Wiedemann</project.author.name>
         <project.author.email>stefan.wiedemann@fiware.org</project.author.email>
