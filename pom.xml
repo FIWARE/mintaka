@@ -38,6 +38,7 @@
         <micronaut.multitenancy.version>2.2.3</micronaut.multitenancy.version>
         <version.io.micronaut.sql.hibernate-jpa>4.4.0</version.io.micronaut.sql.hibernate-jpa>
 
+
         <!-- project info -->
         <project.author.name>Stefan Wiedemann</project.author.name>
         <project.author.email>stefan.wiedemann@fiware.org</project.author.email>
@@ -63,7 +64,7 @@
         <!-- lazy dev -->
 
         <version.org.mapstruct>1.4.2.Final</version.org.mapstruct>
-        <version.org.projectlombok>1.18.22</version.org.projectlombok>
+        <version.org.projectlombok>1.18.24</version.org.projectlombok>
 
         <!-- logging -->
         <version.ch.qos.logback>1.2.3</version.ch.qos.logback>
@@ -78,7 +79,7 @@
         <version.com.apicatalog.titanium-json-ld>1.3.0</version.com.apicatalog.titanium-json-ld>
         <version.org.glassfish.jakarta-json>2.0.1</version.org.glassfish.jakarta-json>
         <version.de.grundid.opendatalab.geojson-jackson>1.14</version.de.grundid.opendatalab.geojson-jackson>
-        <version.com.fasterxml.jackson.datatype.jackson-datatype-jsr310>2.13.2</version.com.fasterxml.jackson.datatype.jackson-datatype-jsr310>
+        <version.com.fasterxml.jackson.datatype.jackson-datatype-jsr310>2.13.3</version.com.fasterxml.jackson.datatype.jackson-datatype-jsr310>
 
         <!-- test -->
         <version.org.testcontainers>1.15.1</version.org.testcontainers>
