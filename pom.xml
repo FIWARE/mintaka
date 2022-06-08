@@ -629,7 +629,7 @@
                         <!-- disables the micronaut plugin extension, that breaks the exectuion individual config -->
                         <configuration combine.self="override">
                             <from>
-                                <image>registry.access.redhat.com/ubi8/openjdk-17:1.10-5</image>
+                                <image>registry.access.redhat.com/ubi8/openjdk-17:1.13-1</image>
                             </from>
                             <to>
                                 <image>${image.registry}/${image.repository}/${artifactId}</image>
