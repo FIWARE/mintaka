@@ -120,6 +120,11 @@
     "compatible": false
   },
   {
+    "orion": "1.0.1",
+    "mintaka": "0.5.14",
+    "compatible": false
+  },
+  {
     "orion": "0.7.0",
     "mintaka": "0.5.2",
     "compatible": false
