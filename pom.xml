@@ -63,7 +63,7 @@
 
         <!-- lazy dev -->
 
-        <version.org.mapstruct>1.4.2.Final</version.org.mapstruct>
+        <version.org.mapstruct>1.5.1.Final</version.org.mapstruct>
         <version.org.projectlombok>1.18.24</version.org.projectlombok>
 
         <!-- logging -->
@@ -98,7 +98,7 @@
         <spotbugs.reportFolder>${project.build.directory}/site/spotbugs</spotbugs.reportFolder>
 
         <!-- persistence -->
-        <version.org.postgresql>42.3.4</version.org.postgresql>
+        <version.org.postgresql>42.4.1</version.org.postgresql>
 
     </properties>
 
