@@ -1,16 +1,19 @@
 package org.fiware.mintaka.persistence;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.nullness.Opt;
 import org.fiware.mintaka.domain.EntityIdTempResults;
 import org.fiware.mintaka.domain.PaginationInformation;
 import org.fiware.mintaka.domain.query.geo.GeoQuery;
-import org.fiware.mintaka.domain.query.ngsi.*;
+import org.fiware.mintaka.domain.query.ngsi.ComparisonTerm;
+import org.fiware.mintaka.domain.query.ngsi.LogicalConnectionTerm;
+import org.fiware.mintaka.domain.query.ngsi.LogicalOperator;
+import org.fiware.mintaka.domain.query.ngsi.LogicalTerm;
+import org.fiware.mintaka.domain.query.ngsi.QueryTerm;
 import org.fiware.mintaka.domain.query.temporal.TimeQuery;
 import org.fiware.mintaka.exception.InvalidTimeRelationException;
 import org.fiware.mintaka.exception.PersistenceRetrievalException;
 
+import javax.inject.Named;
 import javax.inject.Singleton;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
@@ -21,10 +24,8 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -36,7 +37,6 @@ import static org.fiware.mintaka.domain.query.ngsi.ComparisonTerm.YEAR_MONTH_DAY
  */
 @Slf4j
 @Singleton
-@RequiredArgsConstructor
 public class TimescaleBackedEntityRepository implements EntityRepository {
 
 	private static final int TOTAL_MAX_NUMBER_OF_INSTANCES = 1000;
@@ -45,6 +45,10 @@ public class TimescaleBackedEntityRepository implements EntityRepository {
 	public static final int EXPECTED_RESULT_SIZE = 4;
 
 	private final EntityManager entityManager;
+
+	public TimescaleBackedEntityRepository(@Named("default") EntityManager entityManager) {
+		this.entityManager = entityManager;
+	}
 
 	@Override
 	public Optional<NgsiEntity> findById(String entityId, TimeQuery timeQuery) {
