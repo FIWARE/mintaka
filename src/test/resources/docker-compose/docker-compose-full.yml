@@ -2,7 +2,7 @@ version: "3.5"
 services:
   # Orion is the context broker
   orion:
-    image: fiware/orion-ld:1.0.1
+    image: fiware/orion-ld:1.1.0
     hostname: orion
     container_name: fiware-orion
     # sometimes the initial startup fails due to a weird timescale behaviour
