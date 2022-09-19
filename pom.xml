@@ -34,10 +34,9 @@
         <release.version>17</release.version>
         <micronaut.version>3.6.3</micronaut.version>
         <micronaut.data.version>3.7.3</micronaut.data.version>
-        <micronaut.configuration.version>1.3.1</micronaut.configuration.version>
+        <micronaut.sql.version>4.6.3</micronaut.sql.version>
+        <micronaut.configuration.version.hibernate-jpa>2.2.6</micronaut.configuration.version.hibernate-jpa>
         <micronaut.multitenancy.version>2.2.3</micronaut.multitenancy.version>
-        <version.io.micronaut.sql.hibernate-jpa>4.4.0</version.io.micronaut.sql.hibernate-jpa>
-
 
         <!-- project info -->
         <project.author.name>Stefan Wiedemann</project.author.name>
@@ -148,42 +147,36 @@
             <scope>compile</scope>
         </dependency>
         <dependency>
+            <groupId>io.micronaut</groupId>
+            <artifactId>micronaut-management</artifactId>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.micronaut</groupId>
+            <artifactId>micronaut-multitenancy</artifactId>
+            <version>${micronaut.multitenancy.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.micronaut.cache</groupId>
+            <artifactId>micronaut-cache-caffeine</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.micronaut.micrometer</groupId>
+            <artifactId>micronaut-micrometer-core</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
             <groupId>io.micronaut.sql</groupId>
             <artifactId>micronaut-jdbc-hikari</artifactId>
             <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>io.micronaut</groupId>
-            <artifactId>micronaut-management</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.micronaut.data</groupId>
-            <artifactId>micronaut-data-hibernate-jpa</artifactId>
-            <version>${micronaut.data.version}</version>
-        </dependency>
-        <dependency>
             <groupId>io.micronaut.sql</groupId>
             <artifactId>micronaut-hibernate-jpa</artifactId>
-            <version>${version.io.micronaut.sql.hibernate-jpa}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.micronaut</groupId>
-            <artifactId>micronaut-multitenancy</artifactId>
-            <version>${micronaut.multitenancy.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.micronaut.cache</groupId>
-            <artifactId>micronaut-cache-caffeine</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.micronaut.configuration</groupId>
-            <artifactId>micronaut-micrometer-core</artifactId>
-            <version>${micronaut.configuration.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.micronaut.configuration</groupId>
-            <artifactId>micronaut-micrometer-registry-prometheus</artifactId>
-            <version>${micronaut.configuration.version}</version>
+            <scope>compile</scope>
         </dependency>
 
         <dependency>
@@ -445,11 +438,6 @@
                             <artifactId>micronaut-graal</artifactId>
                             <version>${micronaut.version}</version>
                         </path>
-                        <path>
-                            <groupId>io.micronaut.data</groupId>
-                            <artifactId>micronaut-data-processor</artifactId>
-                            <version>${micronaut.data.version}</version>
-                        </path>
                     </annotationProcessorPaths>
                     <compilerArgs>
                         <arg>-Amicronaut.processing.group=org.fiware</arg>
@@ -488,11 +476,6 @@
                                     <groupId>io.micronaut</groupId>
                                     <artifactId>micronaut-graal</artifactId>
                                     <version>${micronaut.version}</version>
-                                </path>
-                                <path>
-                                    <groupId>io.micronaut.data</groupId>
-                                    <artifactId>micronaut-data-processor</artifactId>
-                                    <version>${micronaut.data.version}</version>
                                 </path>
                             </annotationProcessorPaths>
                         </configuration>

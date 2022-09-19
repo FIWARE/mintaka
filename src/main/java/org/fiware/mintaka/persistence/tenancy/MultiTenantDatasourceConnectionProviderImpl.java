@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.engine.jdbc.connections.spi.AbstractDataSourceBasedMultiTenantConnectionProviderImpl;
 
+import javax.annotation.PostConstruct;
 import javax.inject.Singleton;
 import javax.sql.DataSource;
 import java.util.HashMap;
@@ -30,6 +31,7 @@ public class MultiTenantDatasourceConnectionProviderImpl extends AbstractDataSou
 	 *
 	 * @param dataSource the datasource to use as default
 	 */
+	@PostConstruct
 	public void registerDefaultDatasource(DataSource dataSource) {
 		dataSourceMap.put(DEFAULT_TENANT, dataSource);
 	}
