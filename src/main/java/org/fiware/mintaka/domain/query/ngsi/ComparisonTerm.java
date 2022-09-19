@@ -3,7 +3,7 @@ package org.fiware.mintaka.domain.query.ngsi;
 import lombok.Getter;
 import lombok.ToString;
 import org.fiware.mintaka.context.LdContextCache;
-import org.graalvm.compiler.options.SuppressFBWarnings;
+import org.graalvm.compiler.core.common.SuppressFBWarnings;
 
 import java.net.URL;
 import java.text.DateFormat;
