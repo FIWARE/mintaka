@@ -1,6 +1,5 @@
 package org.fiware.mintaka.persistence.tenancy;
 
-import io.micronaut.configuration.hibernate.jpa.EntityManagerFactoryBean;
 import io.micronaut.configuration.hibernate.jpa.JpaConfiguration;
 import io.micronaut.context.BeanLocator;
 import io.micronaut.context.annotation.EachBean;
@@ -15,6 +14,7 @@ import org.hibernate.MultiTenancyStrategy;
 import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.cfg.AvailableSettings;
 
+import javax.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -33,7 +33,7 @@ public class MultiTenantEntityManagerFactoryBean {
 
 	@EachBean(DataSource.class)
 	@Replaces(
-			factory = EntityManagerFactoryBean.class,
+			factory = EntityManagerFactory.class,
 			bean = StandardServiceRegistry.class
 	)
 	protected StandardServiceRegistry hibernateStandardServiceRegistry(@Parameter String dataSourceName, DataSource dataSource) {
