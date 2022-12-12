@@ -5,7 +5,6 @@ import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.MutableHttpRequest;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
-import org.checkerframework.checker.nullness.Opt;
 import org.fiware.mintaka.domain.AcceptType;
 import org.fiware.mintaka.domain.query.temporal.TimeRelation;
 import org.fiware.mintaka.exception.ErrorType;
