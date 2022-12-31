@@ -295,6 +295,11 @@
     "compatible": false
   },
   {
+    "orion": "1.1.2",
+    "mintaka": "0.5.28",
+    "compatible": false
+  },
+  {
     "orion": "1.0.1",
     "mintaka": "0.5.3",
     "compatible": false
