@@ -58,7 +58,7 @@ import java.util.stream.Collectors;
  * Implementation of the NGSI-LD temporal retrieval api
  */
 @Slf4j
-@Controller
+@Controller("${basepath:/}")
 @RequiredArgsConstructor
 public class TemporalApiController implements TemporalRetrievalApi {
 
