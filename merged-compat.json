@@ -756,6 +756,21 @@
   },
   {
     "orion": "0.7.0",
+    "mintaka": "0.5.30",
+    "compatible": true
+  },
+  {
+    "orion": "0.8.0",
+    "mintaka": "0.5.30",
+    "compatible": true
+  },
+  {
+    "orion": "1.1.2",
+    "mintaka": "0.5.30",
+    "compatible": true
+  },
+  {
+    "orion": "0.7.0",
     "mintaka": "0.5.4",
     "compatible": true
   },

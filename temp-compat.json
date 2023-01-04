@@ -32,7 +32,7 @@
   {
     "orion": "0.7.0",
     "mintaka": "0.4.3",
-    "compatible": false
+    "compatible": true
   },
   {
     "orion": "0.7.0",
@@ -107,6 +107,11 @@
   {
     "orion": "0.7.0",
     "mintaka": "0.5.3",
+    "compatible": true
+  },
+  {
+    "orion": "0.7.0",
+    "mintaka": "0.5.30",
     "compatible": true
   },
   {
@@ -182,7 +187,7 @@
   {
     "orion": "0.8.0",
     "mintaka": "0.4.3",
-    "compatible": true
+    "compatible": false
   },
   {
     "orion": "0.8.0",
@@ -257,6 +262,11 @@
   {
     "orion": "0.8.0",
     "mintaka": "0.5.3",
+    "compatible": true
+  },
+  {
+    "orion": "0.8.0",
+    "mintaka": "0.5.30",
     "compatible": true
   },
   {
@@ -542,6 +552,11 @@
   {
     "orion": "1.1.2",
     "mintaka": "0.5.28",
+    "compatible": true
+  },
+  {
+    "orion": "1.1.2",
+    "mintaka": "0.5.30",
     "compatible": true
   }
 ]
