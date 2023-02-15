@@ -12,11 +12,12 @@ jobs:
 
     steps:
       - id: mintaka-version
-        uses: wistefan/get-releases-by-semver@master
+        uses: wistefan/get-releases-by-semver@0.1.1
         with:
           include: "MINOR"
           repository: fiware/mintaka
-
+          token: ${{ secrets.ADMIN_TOKEN }}
+          
       - id: orion-version
         uses: wistefan/get-releases-by-semver@master
         with:
