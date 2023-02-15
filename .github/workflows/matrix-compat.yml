@@ -16,7 +16,7 @@ jobs:
         with:
           include: "MINOR"
           repository: fiware/mintaka
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.ADMIN_TOKEN }}
           
       - id: orion-version
         uses: wistefan/get-releases-by-semver@master
