@@ -47,7 +47,7 @@ services:
       interval: 5s
 
   timescale:
-    image: timescale/timescaledb-postgis:1.7.5-pg12
+    image: timescale/timescaledb-postgis:2.3.0-pg12
     hostname: timescale
     container_name: timescale
     healthcheck:
