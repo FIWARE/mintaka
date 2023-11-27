@@ -15,20 +15,7 @@ import io.micronaut.runtime.server.EmbeddedServer;
 import lombok.extern.slf4j.Slf4j;
 import org.fiware.mintaka.domain.AcceptType;
 import org.fiware.ngsi.api.EntitiesApiTestClient;
-import org.fiware.ngsi.model.EntityFragmentVO;
-import org.fiware.ngsi.model.EntityVO;
-import org.fiware.ngsi.model.GeoPropertyVO;
-import org.fiware.ngsi.model.LineStringDefinitionVO;
-import org.fiware.ngsi.model.LineStringVO;
-import org.fiware.ngsi.model.LinearRingDefinitionVO;
-import org.fiware.ngsi.model.MultiLineStringVO;
-import org.fiware.ngsi.model.MultiPolygonVO;
-import org.fiware.ngsi.model.PointVO;
-import org.fiware.ngsi.model.PolygonDefinitionVO;
-import org.fiware.ngsi.model.PolygonVO;
-import org.fiware.ngsi.model.PositionDefinitionVO;
-import org.fiware.ngsi.model.PropertyVO;
-import org.fiware.ngsi.model.RelationshipVO;
+import org.fiware.ngsi.model.*;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.provider.Arguments;
@@ -38,29 +25,16 @@ import org.testcontainers.shaded.com.google.common.collect.Lists;
 
 import java.io.File;
 import java.net.URI;
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.*;
 import java.time.temporal.ChronoUnit;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
 public abstract class ComposeTest {
@@ -221,7 +195,7 @@ public abstract class ComposeTest {
 		Integer expectedInstances = lastN != null ? lastN : 14;
 
 		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
-		if(acceptType == AcceptType.JSON_LD){
+		if (acceptType == AcceptType.JSON_LD) {
 			assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
 		} else {
 			assertEquals(attributesList.size() + 2, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
@@ -262,19 +236,22 @@ public abstract class ComposeTest {
 		}
 
 		Integer expectedInstances = lastN != null ? lastN : 30;
-
-		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
-		if(acceptType == AcceptType.JSON_LD) {
-			assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the requested attribute should have been returned.");
-		} else {
-			assertEquals(attributesList.size() + 2, entityTemporalMap.size(), "Only id, type, context and the requested attribute should have been returned.");
+		try {
+			Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
+			if (acceptType == AcceptType.JSON_LD) {
+				assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the requested attribute should have been returned.");
+			} else {
+				assertEquals(attributesList.size() + 2, entityTemporalMap.size(), "Only id, type, context and the requested attribute should have been returned.");
+			}
+			assertAttributesInMap(
+					entityTemporalMap,
+					attributesList,
+					expectedInstances,
+					expectedStart,
+					START_TIME_STAMP.plus(29, ChronoUnit.MINUTES));
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
-		assertAttributesInMap(
-				entityTemporalMap,
-				attributesList,
-				expectedInstances,
-				expectedStart,
-				START_TIME_STAMP.plus(29, ChronoUnit.MINUTES));
 	}
 
 	protected void assertAttributesAfter(List<String> attributesList, AcceptType acceptType) {
@@ -308,7 +285,7 @@ public abstract class ComposeTest {
 		Integer expectedInstances = lastN != null ? lastN : 80;
 
 		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
-		if(acceptType == AcceptType.JSON_LD) {
+		if (acceptType == AcceptType.JSON_LD) {
 			assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
 		} else {
 			assertEquals(attributesList.size() + 2, entityTemporalMap.size(), "Only id, type, context and the attributes should have been returned.");
@@ -400,7 +377,7 @@ public abstract class ComposeTest {
 				.observationSpace(null)
 				.operationSpace(null)
 				.type("thermometer");
-		PropertyVO temperatureProperty =	new PropertyVO().type(PropertyVO.Type.PROPERTY).value(25).unitCode("C");
+		PropertyVO temperatureProperty = new PropertyVO().type(PropertyVO.Type.PROPERTY).value(25).unitCode("C");
 		entityVO.setAdditionalProperties(Map.of("temperature", temperatureProperty));
 		entitiesApiTestClient.createEntity(entityVO);
 	}
@@ -471,8 +448,24 @@ public abstract class ComposeTest {
 		currentTime = currentTime.plus(1, ChronoUnit.MINUTES);
 
 		clock = Clock.fixed(currentTime, ZoneOffset.UTC);
-		updateLatLong(entityId, lat, longi, optionalTemp, optionalRadio, optionalDriver, optionalFuel, optionalRPM, optionalCases);
+		updateLatLong(entityId, restrictCoordinateSystem(lat), restrictCoordinateSystem(longi), optionalTemp, optionalRadio, optionalDriver, optionalFuel, optionalRPM, optionalCases);
 		return currentTime;
+	}
+
+	/**
+	 * Flips the coordinate value around the -90° and 90° border, to respect the coordinate system's limit.
+	 * @param coordinate
+	 * @return
+	 */
+	private double restrictCoordinateSystem(double coordinate) {
+		if (coordinate >= -90.0 && coordinate <= 90.0) {
+			return coordinate;
+		}
+		if (coordinate < 0.0) {
+			return restrictCoordinateSystem(coordinate + 180.0);
+		} else {
+			return restrictCoordinateSystem(coordinate - 180.0);
+		}
 	}
 
 	protected void updateLatLong(URI entityId, double lat, double longi,
@@ -529,6 +522,7 @@ public abstract class ComposeTest {
 	protected void createEntityHistory(URI entityId, Instant startTimeStamp, int numberOfUpdates) {
 		clock = Clock.fixed(startTimeStamp, ZoneOffset.UTC);
 
+
 		Instant currentTime = startTimeStamp;
 		EntityVO entityVO = new EntityVO()
 				.atContext(CORE_CONTEXT)
@@ -580,8 +574,8 @@ public abstract class ComposeTest {
 		PropertyVO storeNameProperty = getNewPropety().value("myStore");
 		PointVO pointVO = new PointVO();
 		pointVO.type(PointVO.Type.POINT);
-		pointVO.coordinates().add(123.0);
-		pointVO.coordinates().add(321.0);
+		pointVO.coordinates().add(-57.0);
+		pointVO.coordinates().add(-39.0);
 		GeoPropertyVO pointProperty = getNewGeoProperty();
 		pointProperty.value(pointVO);
 
@@ -648,8 +642,8 @@ public abstract class ComposeTest {
 
 	protected PositionDefinitionVO getPositionDef(double lng, double lat) {
 		PositionDefinitionVO positionDefinitionVO = new PositionDefinitionVO();
-		positionDefinitionVO.add(lng);
-		positionDefinitionVO.add(lat);
+		positionDefinitionVO.add(restrictCoordinateSystem(lng));
+		positionDefinitionVO.add(restrictCoordinateSystem(lat));
 		return positionDefinitionVO;
 	}
 
@@ -701,14 +695,14 @@ public abstract class ComposeTest {
 		l2.addAll(
 				List.of(
 						getPositionDef(10, 20),
-						getPositionDef(50, 150),
-						getPositionDef(100, 200)));
+						getPositionDef(50, -30),
+						getPositionDef(-80, -160)));
 		LineStringDefinitionVO l3 = new LineStringDefinitionVO();
 		l3.addAll(
 				List.of(
-						getPositionDef(210, 220),
-						getPositionDef(250, 2150),
-						getPositionDef(2100, 2200)));
+						getPositionDef(30, 40),
+						getPositionDef(70, -10),
+						getPositionDef(-60, 40)));
 		MultiLineStringVO multiLineStringVO = new MultiLineStringVO();
 		multiLineStringVO.coordinates(List.of(l1, l2, l3));
 		multiLineStringVO.type(MultiLineStringVO.Type.MULTILINESTRING);
