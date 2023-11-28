@@ -12,6 +12,7 @@ import java.net.URL;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Stream;
 
 class ComparisonTermTest {
@@ -44,6 +45,7 @@ class ComparisonTermTest {
 	@ParameterizedTest
 	@MethodSource("getNumbers")
 	void parseNumber(String input, Number expected) throws ParseException {
+		System.out.println(Locale.getDefault(Locale.Category.FORMAT));
 		Number parsedNumber = NumberFormat.getInstance().parse(input);
 		System.out.println(input + " -> " +parsedNumber);
 		Assertions.assertEquals(expected, parsedNumber);
