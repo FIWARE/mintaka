@@ -448,23 +448,39 @@ public abstract class ComposeTest {
 		currentTime = currentTime.plus(1, ChronoUnit.MINUTES);
 
 		clock = Clock.fixed(currentTime, ZoneOffset.UTC);
-		updateLatLong(entityId, restrictCoordinateSystem(lat), restrictCoordinateSystem(longi), optionalTemp, optionalRadio, optionalDriver, optionalFuel, optionalRPM, optionalCases);
+		updateLatLong(entityId, restrictLatitude(lat), restrictLongitude(longi), optionalTemp, optionalRadio, optionalDriver, optionalFuel, optionalRPM, optionalCases);
 		return currentTime;
 	}
 
 	/**
-	 * Flips the coordinate value around the -90° and 90° border, to respect the coordinate system's limit.
+	 * Flips the latitude coordinate value around the -90° and 90° border, to respect the coordinate system's limit.
 	 * @param coordinate
 	 * @return
 	 */
-	private double restrictCoordinateSystem(double coordinate) {
+	private double restrictLatitude(double coordinate) {
 		if (coordinate >= -90.0 && coordinate <= 90.0) {
 			return coordinate;
 		}
 		if (coordinate < 0.0) {
-			return restrictCoordinateSystem(coordinate + 180.0);
+			return restrictLatitude(coordinate + 180.0);
 		} else {
-			return restrictCoordinateSystem(coordinate - 180.0);
+			return restrictLatitude(coordinate - 180.0);
+		}
+	}
+
+	/**
+	 * Flips the longitude coordinate value around the -180° and 180° border, to respect the coordinate system's limit.
+	 * @param coordinate
+	 * @return
+	 */
+	private double restrictLongitude(double coordinate) {
+		if (coordinate >= -180.0 && coordinate <= 180.0) {
+			return coordinate;
+		}
+		if (coordinate < 0.0) {
+			return restrictLatitude(coordinate + 360.0);
+		} else {
+			return restrictLatitude(coordinate - 360.0);
 		}
 	}
 
@@ -642,8 +658,8 @@ public abstract class ComposeTest {
 
 	protected PositionDefinitionVO getPositionDef(double lng, double lat) {
 		PositionDefinitionVO positionDefinitionVO = new PositionDefinitionVO();
-		positionDefinitionVO.add(restrictCoordinateSystem(lng));
-		positionDefinitionVO.add(restrictCoordinateSystem(lat));
+		positionDefinitionVO.add(restrictLongitude(lng));
+		positionDefinitionVO.add(restrictLatitude(lat));
 		return positionDefinitionVO;
 	}
 
