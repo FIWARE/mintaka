@@ -62,13 +62,6 @@ public abstract class ComposeTest {
 	public static final URI CAR_2_ID = URI.create("urn:ngsi-ld:car:moving-car-2");
 	public static final URI CAR_1_ID = URI.create("urn:ngsi-ld:car:moving-car");
 
-	{
-		synchronized (SETUP) {
-			DOCKER_COMPOSE_CONTAINER.waitingFor(ORION_LD_HOST, new OrionWaitStrategy()
-					.withReadTimeout(Duration.of(10, ChronoUnit.MINUTES)).forPort(ORION_LD_PORT).forPath("/version"));
-		}
-	}
-
 	protected static final Instant START_TIME_STAMP = Instant.ofEpochMilli(0);
 	protected Clock clock;
 	protected static EmbeddedServer embeddedServer;
@@ -92,6 +85,8 @@ public abstract class ComposeTest {
 		synchronized (SETUP) {
 			if (!SETUP.getAndSet(true)) {
 				DOCKER_COMPOSE_CONTAINER.start();
+				DOCKER_COMPOSE_CONTAINER.waitingFor(ORION_LD_HOST, new OrionWaitStrategy()
+						.withReadTimeout(Duration.of(10, ChronoUnit.MINUTES)).forPort(ORION_LD_PORT).forPath("/version"));
 			}
 		}
 
@@ -101,7 +96,6 @@ public abstract class ComposeTest {
 				)));
 
 		applicationContext = embeddedServer.getApplicationContext();
-
 	}
 
 	@BeforeEach
@@ -725,7 +719,7 @@ public abstract class ComposeTest {
 
 
 	// wait strategy for orion. Will wait and repeat after the first successful check to ensure its stable
-	class OrionWaitStrategy extends HttpWaitStrategy {
+	static class OrionWaitStrategy extends HttpWaitStrategy {
 
 		public static final int RETEST_WAIT_IN_MS = 30000;
 
