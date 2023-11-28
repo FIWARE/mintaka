@@ -236,22 +236,18 @@ public abstract class ComposeTest {
 		}
 
 		Integer expectedInstances = lastN != null ? lastN : 30;
-		try {
-			Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
-			if (acceptType == AcceptType.JSON_LD) {
-				assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the requested attribute should have been returned.");
-			} else {
-				assertEquals(attributesList.size() + 2, entityTemporalMap.size(), "Only id, type, context and the requested attribute should have been returned.");
-			}
-			assertAttributesInMap(
-					entityTemporalMap,
-					attributesList,
-					expectedInstances,
-					expectedStart,
-					START_TIME_STAMP.plus(29, ChronoUnit.MINUTES));
-		} catch (Exception e) {
-			e.printStackTrace();
+		Map<String, Object> entityTemporalMap = mintakaTestClient.toBlocking().retrieve(getRequest, Map.class);
+		if (acceptType == AcceptType.JSON_LD) {
+			assertEquals(attributesList.size() + 3, entityTemporalMap.size(), "Only id, type, context and the requested attribute should have been returned.");
+		} else {
+			assertEquals(attributesList.size() + 2, entityTemporalMap.size(), "Only id, type, context and the requested attribute should have been returned.");
 		}
+		assertAttributesInMap(
+				entityTemporalMap,
+				attributesList,
+				expectedInstances,
+				expectedStart,
+				START_TIME_STAMP.plus(29, ChronoUnit.MINUTES));
 	}
 
 	protected void assertAttributesAfter(List<String> attributesList, AcceptType acceptType) {
@@ -454,6 +450,7 @@ public abstract class ComposeTest {
 
 	/**
 	 * Flips the latitude coordinate value around the -90° and 90° border, to respect the coordinate system's limit.
+	 *
 	 * @param coordinate
 	 * @return
 	 */
@@ -470,6 +467,7 @@ public abstract class ComposeTest {
 
 	/**
 	 * Flips the longitude coordinate value around the -180° and 180° border, to respect the coordinate system's limit.
+	 *
 	 * @param coordinate
 	 * @return
 	 */
