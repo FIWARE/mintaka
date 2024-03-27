@@ -64,13 +64,16 @@ public class QueryingTest extends ComposeTest {
 				.add("options", "temporalValues");
 
 		if (setLastN) {
-			getRequest.getParameters().add("lastN", "10");
+			getRequest.getParameters().add("lastN", "20");
 		}
 
 		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
-		// we expect the two cars to be inside the area two times each, between 00:04 and 00:08 and again between 06:32 and 06.36
-		List expectedValues = List.of("1970-01-01T00:05:00Z", "1970-01-01T00:06:00Z", "1970-01-01T00:07:00Z", "1970-01-01T00:08:00Z", "1970-01-01T00:09:00Z",
-				"1970-01-01T06:33:00Z", "1970-01-01T06:34:00Z", "1970-01-01T06:35:00Z", "1970-01-01T06:36:00Z", "1970-01-01T06:37:00Z");
+		// we expect the two cars to be inside the area four times each, between 00:04 and 00:10, between 03:04 and 03:10, 03:32 and 03:38 and again between 06:32 and 06.38
+		List expectedValues = List.of("1970-01-01T00:05:00Z" ,"1970-01-01T00:06:00Z" ,"1970-01-01T00:07:00Z" ,
+				"1970-01-01T00:08:00Z" ,"1970-01-01T00:09:00Z" ,"1970-01-01T03:05:00Z" ,"1970-01-01T03:06:00Z" ,"1970-01-01T03:07:00Z" ,
+				"1970-01-01T03:08:00Z" ,"1970-01-01T03:09:00Z" ,"1970-01-01T03:33:00Z" ,"1970-01-01T03:34:00Z" ,"1970-01-01T03:35:00Z" ,
+				"1970-01-01T03:36:00Z" ,"1970-01-01T03:37:00Z" ,"1970-01-01T06:33:00Z" ,"1970-01-01T06:34:00Z" ,"1970-01-01T06:35:00Z" ,
+				"1970-01-01T06:36:00Z" ,"1970-01-01T06:37:00Z");
 
 		assertEquals(2, entryList.size(), "Both matching entities should have been returned.");
 		entryList.forEach(entry -> {
@@ -178,9 +181,12 @@ public class QueryingTest extends ComposeTest {
 		}
 
 		List<Map<String, Object>> entryList = mintakaTestClient.toBlocking().retrieve(getRequest, List.class);
-		// we expect the two cars to be inside the area two times each, between 00:04 and 00:08 and again between 06:32 and 06.36
-		List expectedValues = List.of("1970-01-01T00:05:00Z", "1970-01-01T00:06:00Z", "1970-01-01T00:07:00Z", "1970-01-01T00:08:00Z", "1970-01-01T00:09:00Z",
-				"1970-01-01T06:33:00Z", "1970-01-01T06:34:00Z", "1970-01-01T06:35:00Z", "1970-01-01T06:36:00Z", "1970-01-01T06:37:00Z");
+		// we expect the two cars to be inside the area four times each, between 00:04 and 00:10, between 03:04 and 03:10, 03:32 and 03:38 and again between 06:32 and 06.38
+		List expectedValues = List.of("1970-01-01T00:05:00Z" ,"1970-01-01T00:06:00Z" ,"1970-01-01T00:07:00Z" ,
+				"1970-01-01T00:08:00Z" ,"1970-01-01T00:09:00Z" ,"1970-01-01T03:05:00Z" ,"1970-01-01T03:06:00Z" ,"1970-01-01T03:07:00Z" ,
+				"1970-01-01T03:08:00Z" ,"1970-01-01T03:09:00Z" ,"1970-01-01T03:33:00Z" ,"1970-01-01T03:34:00Z" ,"1970-01-01T03:35:00Z" ,
+				"1970-01-01T03:36:00Z" ,"1970-01-01T03:37:00Z" ,"1970-01-01T06:33:00Z" ,"1970-01-01T06:34:00Z" ,"1970-01-01T06:35:00Z" ,
+				"1970-01-01T06:36:00Z" ,"1970-01-01T06:37:00Z");
 
 		assertEquals(2, entryList.size(), "Both matching entities should have been returned.");
 		entryList.forEach(entry -> {
