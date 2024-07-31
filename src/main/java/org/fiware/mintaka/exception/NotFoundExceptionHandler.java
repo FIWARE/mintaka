@@ -10,16 +10,16 @@ import lombok.extern.slf4j.Slf4j;
 import javax.inject.Singleton;
 
 /**
- * Handle all errors due to failing jackson conversions.
+ * Handle all not-found cases
  */
 @Produces
 @Singleton
-@Requires(classes = {JacksonConversionException.class, ExceptionHandler.class})
+@Requires(classes = {NotFoundException.class, ExceptionHandler.class})
 @Slf4j
-public class JacksonConversionExceptionHandler extends NGSICompliantExceptionHandler<JacksonConversionException>{
+public class NotFoundExceptionHandler extends NGSICompliantExceptionHandler<NotFoundException>{
 
-	private static final ErrorType ASSOCIATED_ERROR = ErrorType.INTERNAL_ERROR;
-	private static final String ERROR_TITLE = "Jackson conversion failed.";
+	private static final ErrorType ASSOCIATED_ERROR = ErrorType.RESOURCE_NOT_FOUND;
+	private static final String ERROR_TITLE = "Resource Not Found.";
 
 	@Override
 	public ErrorType getAssociatedErrorType() {
@@ -37,7 +37,7 @@ public class JacksonConversionExceptionHandler extends NGSICompliantExceptionHan
 	}
 
 	@Override
-	public String getInstance(HttpRequest request, JacksonConversionException exception) {
+	public String getInstance(HttpRequest request, NotFoundException exception) {
 		return null;
 	}
 }
