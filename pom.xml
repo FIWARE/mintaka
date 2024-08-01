@@ -62,7 +62,7 @@
 
         <!-- lazy dev -->
 
-        <version.org.projectlombok>1.18.28</version.org.projectlombok>
+        <version.org.projectlombok>1.18.32</version.org.projectlombok>
         <version.org.mapstruct>1.5.5.Final</version.org.mapstruct>
 
 
