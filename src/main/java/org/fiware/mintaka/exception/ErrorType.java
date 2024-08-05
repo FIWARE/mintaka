@@ -11,7 +11,7 @@ public enum ErrorType {
 	INVALID_REQUEST(HttpStatus.BAD_REQUEST, "https://uri.etsi.org/ngsi-ld/errors/InvalidRequest"),
 	BAD_REQUEST_DATA(HttpStatus.BAD_REQUEST, "https://uri.etsi.org/ngsi-ld/errors/BadRequestData"),
 	OPERATION_NOT_SUPPORTED(HttpStatus.UNPROCESSABLE_ENTITY, "https://uri.etsi.org/ngsi-ld/errors/OperationNotSupported"),
-	RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "https://uri.etsi.org/ngsi-ld/errors/ResourceNotFound "),
+	RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "https://uri.etsi.org/ngsi-ld/errors/ResourceNotFound"),
 	INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "https://uri.etsi.org/ngsi-ld/errors/InternalError"),
 	TOO_COMPLEX_QUERY(HttpStatus.FORBIDDEN, "https://uri.etsi.org/ngsi-ld/errors/TooComplexQuery"),
 	TOO_MANY_RESULTS(HttpStatus.FORBIDDEN, "https://uri.etsi.org/ngsi-ld/errors/TooManyResults "),
