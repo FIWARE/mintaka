@@ -120,7 +120,7 @@ public class EntityTemporalSerializer extends JsonSerializer<EntityTemporalVO> {
 			throw new JacksonConversionException("Was not able to deserialize the retrieved object.", e);
 		} catch (JsonLdError jsonLdError) {
 			log.error("Was not able to deserialize object", jsonLdError);
-			throw new JacksonConversionException(jsonLdError.getMessage());
+ 			throw new JacksonConversionException(jsonLdError.getMessage());
 		}
 	}
 
