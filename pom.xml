@@ -76,7 +76,7 @@
         <!-- json -->
         <version.com.google.guava>33.2.0-jre</version.com.google.guava>
         <version.com.github.jsonld-java>0.13.6</version.com.github.jsonld-java>
-        <version.com.apicatalog.titanium-json-ld>1.3.2</version.com.apicatalog.titanium-json-ld>
+        <version.com.apicatalog.titanium-json-ld>1.4.0</version.com.apicatalog.titanium-json-ld>
         <version.org.glassfish.jakarta-json>2.0.1</version.org.glassfish.jakarta-json>
         <version.de.grundid.opendatalab.geojson-jackson>1.14</version.de.grundid.opendatalab.geojson-jackson>
         <version.com.fasterxml.jackson.datatype.jackson-datatype-jsr310>2.15.3</version.com.fasterxml.jackson.datatype.jackson-datatype-jsr310>
