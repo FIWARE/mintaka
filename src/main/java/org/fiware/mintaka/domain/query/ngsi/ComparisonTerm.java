@@ -11,10 +11,7 @@ import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.StringJoiner;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.fiware.mintaka.rest.TemporalApiController.COMMA_SEPERATOR;
@@ -367,9 +364,13 @@ public class ComparisonTerm extends QueryTerm {
 		return getStringValue(comparisonValue);
 	}
 
+	/**
+	 * Extract number given string. Formatting is bound to the english locale which uses a dot to separate integer from
+	 * fractional digits
+	 */
 	private Optional<Number> getNumberValue(String toCheck) {
 		try {
-			return Optional.of(NumberFormat.getInstance().parse(toCheck));
+			return Optional.of(NumberFormat.getInstance(Locale.ENGLISH).parse(toCheck));
 		} catch (ParseException e) {
 			return Optional.empty();
 		}
