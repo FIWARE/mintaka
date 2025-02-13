@@ -25,6 +25,21 @@
     "compatible": false
   },
   {
+    "orion": "1.6.0",
+    "mintaka": "0.0.12",
+    "compatible": false
+  },
+  {
+    "orion": "1.7.1",
+    "mintaka": "0.0.12",
+    "compatible": false
+  },
+  {
+    "orion": "1.8.0",
+    "mintaka": "0.0.12",
+    "compatible": false
+  },
+  {
     "orion": "0.8.0",
     "mintaka": "0.1.1",
     "compatible": false
@@ -55,6 +70,21 @@
     "compatible": false
   },
   {
+    "orion": "1.6.0",
+    "mintaka": "0.1.1",
+    "compatible": false
+  },
+  {
+    "orion": "1.7.1",
+    "mintaka": "0.1.1",
+    "compatible": false
+  },
+  {
+    "orion": "1.8.0",
+    "mintaka": "0.1.1",
+    "compatible": false
+  },
+  {
     "orion": "0.8.0",
     "mintaka": "0.2.1",
     "compatible": false
@@ -81,6 +111,21 @@
   },
   {
     "orion": "1.1.2",
+    "mintaka": "0.2.1",
+    "compatible": false
+  },
+  {
+    "orion": "1.6.0",
+    "mintaka": "0.2.1",
+    "compatible": false
+  },
+  {
+    "orion": "1.7.1",
+    "mintaka": "0.2.1",
+    "compatible": false
+  },
+  {
+    "orion": "1.8.0",
     "mintaka": "0.2.1",
     "compatible": false
   },
@@ -120,6 +165,21 @@
     "compatible": false
   },
   {
+    "orion": "1.6.0",
+    "mintaka": "0.3.42",
+    "compatible": false
+  },
+  {
+    "orion": "1.7.1",
+    "mintaka": "0.3.42",
+    "compatible": false
+  },
+  {
+    "orion": "1.8.0",
+    "mintaka": "0.3.42",
+    "compatible": false
+  },
+  {
     "orion": "0.7.0",
     "mintaka": "0.4.1",
     "compatible": false
@@ -161,6 +221,11 @@
   },
   {
     "orion": "1.1.2",
+    "mintaka": "0.4.3",
+    "compatible": false
+  },
+  {
+    "orion": "1.8.0",
     "mintaka": "0.4.3",
     "compatible": false
   },
@@ -335,6 +400,11 @@
     "compatible": false
   },
   {
+    "orion": "0.7.0",
+    "mintaka": "0.5.41",
+    "compatible": false
+  },
+  {
     "orion": "1.0.1",
     "mintaka": "0.5.5",
     "compatible": false
@@ -352,6 +422,16 @@
   {
     "orion": "0.7.0",
     "mintaka": "0.5.9",
+    "compatible": false
+  },
+  {
+    "orion": "0.8.0",
+    "mintaka": "0.6.18",
+    "compatible": false
+  },
+  {
+    "orion": "1.8.0",
+    "mintaka": "0.6.18",
     "compatible": false
   },
   {
@@ -545,6 +625,16 @@
     "compatible": true
   },
   {
+    "orion": "1.6.0",
+    "mintaka": "0.4.3",
+    "compatible": true
+  },
+  {
+    "orion": "1.7.1",
+    "mintaka": "0.4.3",
+    "compatible": true
+  },
+  {
     "orion": "0.7.0",
     "mintaka": "0.5.0",
     "compatible": true
@@ -827,6 +917,26 @@
   {
     "orion": "1.0.1",
     "mintaka": "0.5.4",
+    "compatible": true
+  },
+  {
+    "orion": "0.8.0",
+    "mintaka": "0.5.41",
+    "compatible": true
+  },
+  {
+    "orion": "1.6.0",
+    "mintaka": "0.5.41",
+    "compatible": true
+  },
+  {
+    "orion": "1.7.1",
+    "mintaka": "0.5.41",
+    "compatible": true
+  },
+  {
+    "orion": "1.8.0",
+    "mintaka": "0.5.41",
     "compatible": true
   },
   {
@@ -882,6 +992,21 @@
   {
     "orion": "1.0.1",
     "mintaka": "0.5.9",
+    "compatible": true
+  },
+  {
+    "orion": "0.7.0",
+    "mintaka": "0.6.18",
+    "compatible": true
+  },
+  {
+    "orion": "1.6.0",
+    "mintaka": "0.6.18",
+    "compatible": true
+  },
+  {
+    "orion": "1.7.1",
+    "mintaka": "0.6.18",
     "compatible": true
   }
 ]
