@@ -25,6 +25,7 @@ jobs:
           minMinor: "6"
           versionField: "TAG-NAME"
           repository: fiware/context.Orion-LD
+          token: ${{ secrets.ADMIN_TOKEN }}
 
     outputs:
       mintaka-matrix: ${{ steps.mintaka-version.outputs.releases }}
