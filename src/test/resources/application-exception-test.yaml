@@ -1,6 +1,6 @@
 micronaut:
 
-loggers:
+logger:
   level:
     root: ERROR
     org:

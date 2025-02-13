@@ -9,7 +9,7 @@ micronaut:
         path: /
         url: http://localhost:8080
 
-loggers:
+logger:
   level:
     root: ERROR
     org:
