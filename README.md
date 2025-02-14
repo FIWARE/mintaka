@@ -99,7 +99,7 @@ The following table concentrates on the most important configuration parameters 
 | `datasources.default.database` | `DATASOURCES_DEFAULT_DATABASE` | Name of the default database, needs to coincide with orion-ld | orion |
 | `datasources.default.username` | `DATASOURCES_DEFAULT_USERNAME` | Username to be used for db connections | orion | 
 | `datasources.default.password` | `DATASOURCES_DEFAULT_PASSWORD` | Password to be used for db connections | orion | 
-| `loggers.levels.ROOT` | `LOGGERS_LEVELS_ROOT` | Root log level of mintaka | ERROR |
+| `logger.levels.ROOT` | `LOGGER_LEVELS_ROOT` | Root log level of mintaka | ERROR |
 | `basepath` | `BASEPATH` | The basepath to be used for the api. Could for example be `/ngsi-ld/v1` | `` | 
 
 #### Operations 
