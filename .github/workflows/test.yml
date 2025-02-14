@@ -24,6 +24,6 @@ jobs:
           java-package: jdk
 
       - name: Run tests
-        run: mvn clean test
+        run: mvn clean test coveralls:report -Dcoveralls.token=${{ secrets.COVERALLS_TOKEN }}
         env:
           ORION_IMAGE: fiware/orion-ld:${{ steps.orion-version.outputs.release }}
