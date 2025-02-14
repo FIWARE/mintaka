@@ -51,6 +51,6 @@ jpa:
         # set to true if you want to see the queries.
         show_sql: false
 
-loggers:
+logger:
   levels:
     ROOT: ERROR

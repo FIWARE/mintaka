@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - id: mintaka-version
-        uses: wistefan/get-releases-by-semver@0.1.1
+        uses: wistefan/get-releases-by-semver@master
         with:
           include: "MINOR"
           repository: fiware/mintaka
@@ -25,6 +25,7 @@ jobs:
           minMinor: "6"
           versionField: "TAG-NAME"
           repository: fiware/context.Orion-LD
+          token: ${{ secrets.ADMIN_TOKEN }}
 
     outputs:
       mintaka-matrix: ${{ steps.mintaka-version.outputs.releases }}
@@ -41,7 +42,7 @@ jobs:
 
     steps:
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - uses: wistefan/check-compatibility@master
         id: check-compatibility
@@ -58,7 +59,7 @@ jobs:
           java-version: '17'
           java-package: jdk
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           ref: ${{ matrix.mintaka }}
 
@@ -95,7 +96,7 @@ jobs:
           compatible: "False"
 
       - name: Upload report
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.orion }}-${{ matrix.mintaka }}
           path: compatibility.json
@@ -105,7 +106,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           ref: compat-matrix
 
@@ -114,7 +115,7 @@ jobs:
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4
         with:
           path: results
           token: ${{ secrets.ADMIN_TOKEN }}
