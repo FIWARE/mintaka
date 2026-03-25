@@ -207,7 +207,7 @@
   {
     "orion": "0.8.0",
     "mintaka": "0.4.3",
-    "compatible": false
+    "compatible": true
   },
   {
     "orion": "0.8.0",
@@ -707,7 +707,7 @@
   {
     "orion": "1.11.1",
     "mintaka": "0.4.3",
-    "compatible": false
+    "compatible": true
   },
   {
     "orion": "1.11.1",
@@ -747,7 +747,7 @@
   {
     "orion": "1.12.0",
     "mintaka": "0.4.3",
-    "compatible": false
+    "compatible": true
   },
   {
     "orion": "1.12.0",
@@ -867,7 +867,7 @@
   {
     "orion": "1.8.0",
     "mintaka": "0.4.3",
-    "compatible": false
+    "compatible": true
   },
   {
     "orion": "1.8.0",
