@@ -13,6 +13,16 @@
 | ⚠️ **Mintaka will not longer be supported, since [Orion-LD](https://github.com/FIWARE/context.Orion-LD) now natively supports the NGSI-LD Temporal API. Please check the Orion-LD repo on how to migrate.**  
 
 
+
+
+
+
+
+
+
+
+
+
 Mintaka is an implementation of the [NGSI-LD](https://www.etsi.org/deliver/etsi_gs/CIM/001_099/009/01.04.01_60/gs_cim009v010401p.pdf) temporal retrieval
 api. It relies on the [Orion-LD Context Broker](https://github.com/FIWARE/context.Orion-LD) to provide the underlying database. 
 
